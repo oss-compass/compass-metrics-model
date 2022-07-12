@@ -5,7 +5,7 @@ params:
   {
     'issue_index': 'gitee_issues-enriched',
     'pr_index':'gitee-prs_enriched', 
-    'json_file': '/root/tmp/metrics_model/projects-gitee-yehui-pure-mindspore.json',
+    'json_file': '/root/tmp/metrics_model/projects-gitee-mindspore.json',
     'git_index': 'git_demo_enriched',
     'git_branch': None,
     'from_date': '2012-12-01',
