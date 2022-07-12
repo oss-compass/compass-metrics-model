@@ -32,6 +32,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
+from utils import get_activity_score, code_function_quality, community_support, perserve_model
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -78,9 +79,20 @@ def get_time_diff_months(start, end):
 
     return diff_months
 
+def get_medium(L):
+    L.sort()
+    n = len(L)
+    m = int(n/2)
+    if n == 0:
+        return None
+    elif n%2 == 0:
+        return (L[m]+L[m-1])/2.0
+    else:
+        return L[m]
+
 
 class MetricsModel:
-    def __init__(self, json_file, out_index=None, community=None, level=None):
+    def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param json_file: the path of json file containing repository message. 
         :param out_index: target index for Metrics Model.
@@ -91,6 +103,7 @@ class MetricsModel:
         self.out_index = out_index
         self.community = community
         self.level = level
+        self.date_list = get_date_list(from_date, end_date)
     
     def metrics_model_metrics(self):
         self.es_in = Elasticsearch(elastic_url, use_ssl=True,verify_certs=False, connection_class=RequestsHttpConnection)
@@ -113,12 +126,28 @@ class MetricsModel:
                 for j in all_repo_json[project][self.issue_index.split('_')[0]]:
                     self.metrics_model_enrich([j], j)
     
+    
     def metrics_model_enrich(repos_list, label):
         pass
 
-    def get_uuid_count_query(self, option, repos_list, field, date_field="grimoire_creation_date", from_date=str_to_datetime("1970-01-01"), to_date= datetime_utcnow()):
+    def created_since(self, date, repos_list):
+        created_since_list = []
+        for repo in repos_list:
+            query_first_commit_since = self.get_updated_since_query([repo], date_field='grimoire_creation_date', to_date=date, order="asc")
+            first_commit_since = self.es_in.search(index=self.git_index, body=query_first_commit_since)['hits']['hits']
+            if len(first_commit_since) > 0:
+                creation_since = first_commit_since[0]['_source']["grimoire_creation_date"]
+                created_since_list.append(get_time_diff_months(creation_since, str(date)))
+                # print(get_time_diff_months(creation_since, str(date)))
+                # print(repo)
+        if created_since_list:
+            return sum(created_since_list) / len(created_since_list)
+        else:
+            return 0
+
+    def get_uuid_count_query(self, option, repos_list, field, date_field="grimoire_creation_date", size = 0, from_date=str_to_datetime("1970-01-01"), to_date= datetime_utcnow()):
         query = {
-            "size": 0,
+            "size": size,
             "track_total_hits": "true",
             "aggs": {"count_of_uuid":
                      {option:
@@ -131,7 +160,7 @@ class MetricsModel:
               [{"simple_query_string":
                {"query": i + "*",
                 "fields":
-                ["origin"]}}for i in repos_list],
+                ["tag"]}}for i in repos_list],
               "minimum_should_match": 1,
               "filter":
                  {"range":
@@ -143,13 +172,13 @@ class MetricsModel:
         return query
 
 
-    def get_uuid_count_contribute_query(self, project, company=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    def get_uuid_count_contribute_query(self, repos_list, company=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
             "size": 0,
             "aggs": {
                 "count_of_contributors": {
                     "cardinality": {
-                        "script": "if (doc['author_domain'].size()>0){ return doc['author_name'].value }  else { return doc['author_name'].value}"
+                        "field": "author_name"
                     }
                 }
             },
@@ -157,10 +186,10 @@ class MetricsModel:
                 "bool": {
                     "should": [{
                         "simple_query_string": {
-                            "query": i,
-                            "fields": ["project"]
+                            "query": i+'*',
+                            "fields": ["tag"]
                         }
-                    } for i in project],
+                    } for i in repos_list],
                     "minimum_should_match": 1,
                     "filter": {
                         "range": {
@@ -179,17 +208,17 @@ class MetricsModel:
                 "should": [
                     {
                         "simple_query_string": {
-                            "query": j + "*",
+                            "query": company + "*",
                             "fields": [
                                 "author_domain"
                             ]
                         }
-                    } for j in company],
+                    } ],
                 "minimum_should_match": 1}}]
         return query
 
 
-    def get_created_since_query(self, repo, order="asc"):
+    def get_updated_since_query(self, repos_list, date_field="grimoire_creation_date",order="desc", to_date=datetime_utcnow()):
         query = {
             "query": {
                 "bool": {
@@ -197,49 +226,26 @@ class MetricsModel:
                         {
                             "match_phrase": {
                                 "tag": repo + ".git"
-                            } }
-                    ],
-                    "minimum_should_match": 1
+                            }} for repo in repos_list],
+                    "minimum_should_match": 1,
+                    "filter": {
+                        "range": {
+                                date_field: {
+                                    "lt": to_date.strftime("%Y-%m-%d")
+                                }
+                            }
+                    }
                 }
             },
             "sort": [
                 {
-                    "grimoire_creation_date": {"order": order}
+                    date_field: {"order": order}
                 }
             ]
         }
         return query
     
-    def get_updated_since_query(self, repository_url, date):
-        query = """
-            {
-                "track_total_hits":true,
-                "query": {
-                    "bool": {
-                        "filter": [
-                            {
-                                "term": {
-                                    "origin": "%s"
-                                }
-                            },
-                            {
-                                "range": {
-                                    "metadata__updated_on": {
-                                        "lt": "%s"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                },
-                    "sort": [
-                {
-                "metadata__updated_on": { "order": "desc"}
-                }]
-            }
-            """ % (repository_url, date.strftime("%Y-%m-%d"))
-        return query
-    
+
     def get_issue_closed_uuid_count(self, option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date= datetime_utcnow()):
         query = {
             "size": 0,
@@ -284,41 +290,37 @@ class MetricsModel:
 
 
 
-class Activity_MetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None):
-        super().__init__(json_file, out_index, community, level)
+class ActivityMetricsModel(MetricsModel):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
         self.git_index = git_index
+        self.pr_index = pr_index
         self.git_branch = git_branch
-        self.date_list = get_date_list(from_date, end_date)
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index.split('_')[0])
+        self.model_name = 'Activity'
 
-    def countributor_count(self, date, repos_list):
+    def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index), body=query_author_uuid_data)['aggregations']["count_of_contributors"]['value']
+        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index), body=query_author_uuid_data)['aggregations']["count_of_contributors"]['value']
         return author_uuid_count
 
-    def countributor_count_D2(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)['aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
 
-    def commit_frequence(self, date, repos_list):
-        query_commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash","grimoire_creation_date", from_date=date - timedelta(days=90), to_date=date)
+    def commit_frequency(self, date, repos_list):
+        query_commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash","grimoire_creation_date", size = 0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
-        return commit_frequency
-
-    def created_since(self, date, repos_list):
+        return commit_frequency/12.85
+    
+    def updated_since(self, date, repos_list):
         updated_since_list = []
         for repo in repos_list:
-            query_first_commit_since = self.get_created_since_query(repo, order="asc")
-            first_commit_since = self.es_in.search(index=self.git_index, body=query_first_commit_since)['hits']['hits']
-            if len(first_commit_since) > 0:
-                creation_since = first_commit_since[0]['_source']["grimoire_creation_date"]
-                updated_since_list.append(get_time_diff_months(creation_since, str(date)))
+            query_updated_since = self.get_updated_since_query([repo], date_field='metadata__updated_on', to_date=date)
+            updated_since = self.es_in.search(index=self.git_index, body=query_updated_since)['hits']['hits']
+            if updated_since:
+                updated_since_list.append(get_time_diff_months(updated_since[0]['_source']["metadata__updated_on"], str(date)))
         if updated_since_list:
             return sum(updated_since_list) / len(updated_since_list)
         else:
@@ -330,11 +332,25 @@ class Activity_MetricsModel(MetricsModel):
         return issue_closed
      
     def updated_issue_count(self, date, repos_list):
-        query_issue_updated_since = self.get_uuid_count_query("cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)),to_date=date)
+        query_issue_updated_since = self.get_uuid_count_query("cardinality", repos_list, "uuid", date_field='metadata__updated_on', size=0, from_date=(date-timedelta(days=90)),to_date=date)
         updated_issues_count = self.es_in.search(index=self.issue_index, body=query_issue_updated_since)['aggregations']["count_of_uuid"]['value']
         return updated_issues_count
 
-    
+    def comment_frequency(self, date, repos_list):
+        query_issue_comments_count = self.get_uuid_count_query("sum", repos_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        issue = self.es_in.search(index=self.issue_index, body=query_issue_comments_count)           
+        try:                                               
+            return float(issue['aggregations']["count_of_uuid"]['value']/issue["hits"]["total"]["value"])
+        except ZeroDivisionError:
+            return 0
+
+    def code_review_count(self, date, repos_list):
+        query_pr_comments_count = self.get_uuid_count_query("sum", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        prs = self.es_in.search(index=self.pr_index, body=query_pr_comments_count)           
+        try:                                               
+            return prs['aggregations']["count_of_uuid"]['value']/prs["hits"]["total"]["value"]
+        except ZeroDivisionError:
+            return 0
 
     def metrics_model_enrich(self,repos_list, label):
         item_datas = []
@@ -345,18 +361,23 @@ class Activity_MetricsModel(MetricsModel):
             if created_since < 0:
                 continue
             metrics_data = {
-                'uuid': uuid(str(date), self.community, self.level, label),
+                'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level':self.level,
                 'label':label,
-                'contributor_count': self.countributor_count(date, repos_list),
-                'D2_contributor_count': self.countributor_count_D2(date, repos_list),
-                'commit_frequence': self.commit_frequence(date, repos_list),
-                'created_since': '%.4f' %self.created_since(date, repos_list),
-                'closed_issue_count': self.closed_issue_count(date, repos_list),
-                'updated_issue_count':self.updated_issue_count(date, repos_list),
+                'model_name': self.model_name,
+                'contributor_count': int(self.contributor_count(date, repos_list)),
+                'commit_frequency': round(self.commit_frequency(date, repos_list), 4),
+                'created_since': round(self.created_since(date, repos_list), 4),
+                'comment_frequency': float(round(self.comment_frequency(date, repos_list), 4)),
+                'code_review_count': round(self.code_review_count(date, repos_list), 4),
+                'updated_since': float(round(self.updated_since(date, repos_list), 4)),
+                'closed_issues_count': self.closed_issue_count(date, repos_list),
+                'updated_issues_count':self.updated_issue_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
+            score = get_activity_score(metrics_data)
+            metrics_data["activity_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
                 self.es_out.bulk_upload(item_datas, "uuid")
@@ -364,10 +385,15 @@ class Activity_MetricsModel(MetricsModel):
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
 
-
 if __name__ == '__main__':
-    CONF = yaml.safe_load(open('conf.yaml'))
+    CONF = yaml.safe_load(open('/root/tmp/metrics_model/conf.yaml'))
     elastic_url = CONF['url']
-    kwargs = CONF['params']
-    activity_model = Activity_MetricsModel(**kwargs)
-    activity_model.metrics_model_metrics()
+    params = CONF['params']
+    kwargs = {}
+    
+    for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
+        kwargs[item] = params[item]
+    model_activity = ActivityMetricsModel(**kwargs)
+    model_activity.metrics_model_metrics()
+    
+
