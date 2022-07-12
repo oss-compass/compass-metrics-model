@@ -386,7 +386,7 @@ class ActivityMetricsModel(MetricsModel):
         item_datas = []
 
 if __name__ == '__main__':
-    CONF = yaml.safe_load(open('/root/tmp/metrics_model/conf.yaml'))
+    CONF = yaml.safe_load(open('conf.yaml'))
     elastic_url = CONF['url']
     params = CONF['params']
     kwargs = {}
