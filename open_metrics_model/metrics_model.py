@@ -32,7 +32,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
-from utils import get_activity_score, community_support
+from .utils import get_activity_score, community_support
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -105,7 +105,7 @@ class MetricsModel:
         self.level = level
         self.date_list = get_date_list(from_date, end_date)
     
-    def metrics_model_metrics(self):
+    def metrics_model_metrics(self, elastic_url):
         self.es_in = Elasticsearch(elastic_url, use_ssl=True,verify_certs=False, connection_class=RequestsHttpConnection)
         self.es_out = ElasticSearch(elastic_url, self.out_index)
         
@@ -439,7 +439,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(
             self.json_file, self.issue_index.split('_')[0])
-        self.model_name = 'Community Support and Service'
+        self.model_name = ' SuppoCommunityrt and Service'
         self.pr_index = pr_index
         self.git_index = git_index
 
