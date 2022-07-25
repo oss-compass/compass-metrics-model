@@ -38,6 +38,34 @@ UPDATED_ISSUES_THRESHOLD_ACTIVITY = 5000
 COMMENT_FREQUENCY_THRESHOLD_ACTIVITY = 5
 DEPENDENTS_COUNT_THRESHOLD_ACTIVITY = 500000
 
+ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY = -0.1437
+ISSUE_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
+PR_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
+COMMENT_FREQUENCY_WEIGHT_COMMUNITY = 0.1022
+UPDATED_ISSUES_WEIGHT_COMMUNITY = 0.1972
+CODE_REVIEW_WEIGHT_COMMUNITY = 0.1022
+CLOSED_PRS_WEIGHT_COMMUNITY = 0.1972
+
+ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY = 15
+ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY = 60
+CI_BUILD_TIME_THRESHOLD_COMMUNITY = 0
+CLOSED_PR_TIME_THRESHOLD_COMMUNITY = 90
+PR_OPEN_TIME_THRESHOLD_COMMUNITY = 30
+MAIL_THREAD_OUT_THRESHOLD_COMMUNITY = 0
+EVENT_COUNT_THRESHOLD_COMMUNITY = 0
+COMMENT_FREQUENCY_THRESHOLD_COMMUNITY = 5
+UPDATED_ISSUES_THRESHOLD_COMMUNITY = 2000
+CODE_REVIEW_THRESHOLD_COMMUNITY = 8
+CLOSED_PRS_THRESHOLD_COMMUNITY = 4500
+
+MIN_ACTIVITY_SCORE = -0.23786
+MAX_ACTIVITY_SCORE = 1.23786
+MIN_COMMUNITY_SCORE = -2.0319
+MAX_COMMUNITY_SCORE = 3.03189
+
+
+def normalize(score, min_score, max_score):
+    return (score-min_score)/(max_score-min_score)
 
 def get_param_score(param, max_value, weight=1):
     """Return paramater score given its current value, max value and
@@ -83,4 +111,40 @@ def get_activity_score(item):
                             (get_param_score(item["comment_frequency"],
                                             COMMENT_FREQUENCY_THRESHOLD_ACTIVITY, COMMENT_FREQUENCY_WEIGHT_ACTIVITY))) /
                             total_weight_ACTIVITY, 5)
-    return activity_score
+    return normalize(activity_score, MIN_ACTIVITY_SCORE, MAX_ACTIVITY_SCORE)
+
+def community_support(item):
+    for i in ["issue_first_reponse_avg",  "issue_open_time_avg", "pr_open_time_avg"]:
+        if not item[i]:
+            return None
+    total_weight_COMMUNITY = ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY + ISSUE_OPEN_TIME_WEIGHT_COMMUNITY + PR_OPEN_TIME_WEIGHT_COMMUNITY + \
+        COMMENT_FREQUENCY_WEIGHT_COMMUNITY + UPDATED_ISSUES_WEIGHT_COMMUNITY + \
+        CODE_REVIEW_WEIGHT_COMMUNITY + CLOSED_PRS_WEIGHT_COMMUNITY
+    score = round(
+                ((get_param_score(item["issue_first_reponse_avg"],
+                                ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY , ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5)) +
+                (get_param_score(item["issue_first_reponse_mid"],
+                                ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
+                                ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["issue_open_time_avg"],
+                                ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["issue_open_time_mid"],
+                                ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["pr_open_time_avg"],
+                                PR_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["pr_open_time_mid"],
+                                PR_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["comment_frequency"],
+                                COMMENT_FREQUENCY_THRESHOLD_COMMUNITY, COMMENT_FREQUENCY_WEIGHT_COMMUNITY))+
+                (get_param_score(item["updated_issues_count"],
+                                UPDATED_ISSUES_THRESHOLD_COMMUNITY, UPDATED_ISSUES_WEIGHT_COMMUNITY))+
+                (get_param_score(item["code_review_count"],
+                                CODE_REVIEW_THRESHOLD_COMMUNITY, CODE_REVIEW_WEIGHT_COMMUNITY)) +
+                (get_param_score(item["closed_prs_count"],
+                                CLOSED_PRS_THRESHOLD_COMMUNITY, CLOSED_PRS_WEIGHT_COMMUNITY)))/
+                total_weight_COMMUNITY, 5)
+    return normalize(score, MIN_COMMUNITY_SCORE, MAX_COMMUNITY_SCORE)

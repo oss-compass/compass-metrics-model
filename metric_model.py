@@ -32,7 +32,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
-from utils import get_activity_score, code_function_quality, community_support, perserve_model
+from utils import get_activity_score, community_support
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -288,6 +288,52 @@ class MetricsModel:
 
         return query
 
+    def get_pr_closed_uuid_count(self, option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query = {
+            "size": 0,
+            "track_total_hits": True,
+            "aggs": {
+                "count_of_uuid": {
+                    option: {
+                        "field": field
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "must": [{
+                        "bool": {
+                            "should": [{
+                                "simple_query_string": {
+                                    "query": i,
+                                    "fields": ["tag"]
+                                }}for i in repos_list],
+                            "minimum_should_match": 1
+                        }
+                    },
+                      {
+                    "match_phrase": {
+                        "pull_request": "true"
+                    }
+                }
+                    ],
+                    "must_not": [
+                        {"term": {"state": "open"}},
+                        {"term": {"state": "progressing"}}
+                    ],
+                    "filter": {
+                        "range": {
+                            "closed_at": {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return query
 
 
 class ActivityMetricsModel(MetricsModel):
@@ -385,15 +431,164 @@ class ActivityMetricsModel(MetricsModel):
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
 
+
+class CommunitySupportMetricsModel(MetricsModel):
+    def __init__(self, issue_index=None, pr_index=None, git_index=None,  json_file=None, out_index=None, from_date=None, end_date=None, community=None, level=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level)
+        self.issue_index = issue_index
+        self.all_project = get_all_project(self.json_file)
+        self.all_repo = get_all_repo(
+            self.json_file, self.issue_index.split('_')[0])
+        self.model_name = 'Community Support and Service'
+        self.pr_index = pr_index
+        self.git_index = git_index
+
+
+    def issue_first_reponse(self, date, repos_list):
+        query_issue_first_reponse_avg = self.get_uuid_count_query(
+            "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        issue_first_reponse_avg = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)[
+            'aggregations']["count_of_uuid"]['value']
+        query_issue_first_reponse_mid = self.get_uuid_count_query(
+            "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
+            50]
+        issue_first_reponse_mid = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_mid)[
+            'aggregations']["count_of_uuid"]['values']['50.0']
+        return issue_first_reponse_avg, issue_first_reponse_mid if issue_first_reponse_avg else 0,0
+
+    def issue_open_time(self, date, repos_list):
+        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
+                                                      "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        issue_opens_items = self.es_in.search(
+            index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        issue_open_time_repo = []
+        for item in issue_opens_items:
+            if 'state' in item['_source']:
+                if item['_source']['closed_at']:
+                    if item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+                        issue_open_time_repo.append(get_time_diff_days(
+                            item['_source']['created_at'], item['_source']['closed_at']))
+                    # else:
+                    #     issue_open_time_repo.append(get_time_diff_days(
+                    #         item['_source']['created_at'], str(date)))
+                else:
+                    issue_open_time_repo.append(get_time_diff_days(
+                            item['_source']['created_at'], str(date)))
+        try:
+            issue_open_time_repo_avg = sum(
+                issue_open_time_repo)/len(issue_open_time_repo)
+        except ZeroDivisionError:
+            issue_open_time_repo_avg = 0
+
+        issue_open_time_repo_mid = get_medium(issue_open_time_repo)
+        return issue_open_time_repo_avg, issue_open_time_repo_mid
+
+    def pr_open_time(self, date, repos_list):
+        query_pr_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
+                                                   "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        pr_opens_items = self.es_in.search(
+            index=self.pr_index, body=query_pr_opens)['hits']['hits']
+        pr_open_time_repo = []
+        for item in pr_opens_items:
+            if 'state' in item['_source']:
+                if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and str_to_datetime(item['_source']['merged_at']) < date:
+                    pr_open_time_repo.append(get_time_diff_days(
+                        item['_source']['created_at'], item['_source']['merged_at']))
+                if item['_source']['state'] == 'closed' and str_to_datetime(item['_source']['closed_at']) < date:
+                    pr_open_time_repo.append(get_time_diff_days(
+                        item['_source']['created_at'], item['_source']['closed_at']))
+                else:
+                    pr_open_time_repo.append(get_time_diff_days(
+                        item['_source']['created_at'], str(date)))
+        try:
+            pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
+        except ZeroDivisionError:
+            pr_open_time_repo_avg = 0
+        pr_open_time_repo_mid = get_medium(pr_open_time_repo)
+        return pr_open_time_repo_avg, pr_open_time_repo_mid
+
+    def comment_frequency(self, date, repos_list):
+        query_issue_comments_count = self.get_uuid_count_query(
+            "sum", repos_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        issue = self.es_in.search(
+            index=self.issue_index, body=query_issue_comments_count)
+        try:
+            return float(issue['aggregations']["count_of_uuid"]['value']/issue["hits"]["total"]["value"])
+        except ZeroDivisionError:
+            return 0
+     
+    def updated_issue_count(self, date, repos_list):
+        query_issue_updated_since = self.get_uuid_count_query(
+            "cardinality", repos_list, "uuid", date_field='metadata__updated_on', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        updated_issues_count = self.es_in.search(index=self.issue_index, body=query_issue_updated_since)[
+            'aggregations']["count_of_uuid"]['value']
+        return updated_issues_count
+
+    def code_review_count(self, date, repos_list):
+        query_pr_comments_count = self.get_uuid_count_query(
+            "avg", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        prs = self.es_in.search(index=self.pr_index,
+                                body=query_pr_comments_count)[
+            'aggregations']["count_of_uuid"]['value']
+        return prs if prs else 0.0   
+    
+    def closed_pr_count(self, date, repos_list):
+        query_pr_closed = self.get_pr_closed_uuid_count(
+            "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
+        pr_closed = self.es_in.search(index=self.pr_index, body=query_pr_closed)[
+            'aggregations']["count_of_uuid"]['value']
+        return pr_closed
+        
+    def metrics_model_enrich(self, repos_list, label):
+        item_datas = []
+        for date in self.date_list:
+            print(date)
+            created_since = self.created_since(date, repos_list)
+            if created_since < 0:
+                continue
+            issue_first = self.issue_first_reponse(date, repos_list)
+            issue_open_time = self.issue_open_time(date, repos_list)
+            pr_open_time = self.pr_open_time(date, repos_list)
+            metrics_data = {
+                'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
+                'level': self.level,
+                'label': label,
+                'model_name': self.model_name,
+                'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] else 0.0,
+                'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] else 0.0,
+                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] else 0.0,
+                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] else 0.0,
+                'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] else 0.0,
+                'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] else 0.0,
+                'comment_frequency': float(round(self.comment_frequency(date, repos_list), 4)),
+                'code_review_count': float(self.code_review_count(date, repos_list)),
+                'updated_issues_count': self.updated_issue_count(date, repos_list),
+                'closed_prs_count': self.closed_pr_count(date, repos_list),
+                'grimoire_creation_date': date.isoformat(),
+                'metadata__enriched_on': datetime_utcnow().isoformat()
+            }
+            score = community_support(metrics_data)
+            metrics_data["community_support_score"] = score
+            item_datas.append(metrics_data)
+            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                self.es_out.bulk_upload(item_datas, "uuid")
+                item_datas = []
+        self.es_out.bulk_upload(item_datas, "uuid")
+        item_datas = []
+
 if __name__ == '__main__':
     CONF = yaml.safe_load(open('conf.yaml'))
     elastic_url = CONF['url']
     params = CONF['params']
     kwargs = {}
     
-    for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
-        kwargs[item] = params[item]
-    model_activity = ActivityMetricsModel(**kwargs)
-    model_activity.metrics_model_metrics()
+    # for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
+    #     kwargs[item] = params[item]
+    # model_activity = ActivityMetricsModel(**kwargs)
+    # model_activity.metrics_model_metrics()
     
-
+    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level']:
+        kwargs[item] = params[item]
+    model_community = CommunitySupportMetricsModel(**kwargs)
+    model_community.metrics_model_metrics()
