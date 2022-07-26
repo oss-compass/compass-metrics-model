@@ -6,7 +6,7 @@ import re
 from setuptools import setup
 
 
-setup(name="grimoire-elk-gitee",
+setup(name="open-metrics-model",
       description="Metric Model",
       url="https://github.com/open-metrics-code/open-metrics-model",
       version="0.1.0",
