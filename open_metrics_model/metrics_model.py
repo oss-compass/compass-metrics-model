@@ -439,7 +439,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(
             self.json_file, self.issue_index.split('_')[0])
-        self.model_name = ' SuppoCommunityrt and Service'
+        self.model_name = 'Community Support and Service'
         self.pr_index = pr_index
         self.git_index = git_index
 
