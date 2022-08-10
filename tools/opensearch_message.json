@@ -1,0 +1,6 @@
+{
+    "HOST": "0.0.0.0",
+    "PORT": "9200",
+    "USER": "admin",
+    "PASSWD": "password"
+}
