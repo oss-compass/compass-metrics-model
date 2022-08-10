@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2021-2022 Yehu Wang, Chenqi Shan
+# Copyright (C) 2021-2022 Yehui Wang, Chenqi Shan
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 # Authors:
-#     Yehu Wang <yehui.wang.mdh@gmail.com>
+#     Yehui Wang <yehui.wang.mdh@gmail.com>
 #     Chenqi Shan <chenqishan337@gmail.com>
 
 from perceval.backend import uuid
