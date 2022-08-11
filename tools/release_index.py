@@ -48,7 +48,7 @@ def add_release_message(out_index, repo_url, releases,):
                             "id": item["id"],
                             "tag": repo_url,
                             "tag_name": item["tag_name"],
-                            "tag_commitish": item["tag_commitish"],
+                            "target_commitish": item["target_commitish"],
                             "prerelease": item["prerelease"],
                             "name": item["name"],
                             "body": item["body"],
@@ -56,7 +56,7 @@ def add_release_message(out_index, repo_url, releases,):
                             "author_name": item["author"]["name"],
                             "grimoire_creation_date": item["created_at"]}}
         all_bulk_data.append(release_data)
-        if len(release_data) > 10:
+        if len(all_bulk_data) > 10:
             helpers.bulk(client=opensearch_client, actions=all_bulk_data)
             all_bulk_data = []
     helpers.bulk(client=opensearch_client, actions=all_bulk_data)
@@ -65,7 +65,7 @@ def add_release_message(out_index, repo_url, releases,):
 
 if __name__ == "__main__":
     repo_url = "https://gitee.com/mindspore/mindspore"
-    opensearch_conn_infos = json.load(open("/root/tmp/tools/opensearch_message.json"))
+    opensearch_conn_infos = json.load(open("opensearch_message.json"))
     opensearch_client = get_opensearch_client(opensearch_conn_infos)
     query = newest_message(repo_url)
     items = opensearch_search("gitee_repo-enriched",query)["hits"]["hits"][0]["_source"]["releases"]
