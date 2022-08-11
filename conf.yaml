@@ -5,6 +5,7 @@ params:
   {
     'issue_index': 'gitee_issues-enriched',
     'pr_index':'gitee-prs_enriched', 
+    'release_index': 'repo_release_enriched',
     'json_file': '/root/tmp/metrics_model/projects-gitee-mindspore.json',
     'git_index': 'git_demo_enriched',
     'git_branch': None,
