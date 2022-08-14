@@ -32,7 +32,13 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
-from .utils import get_activity_score, community_support
+from utils import get_activity_score, community_support
+import os,inspect
+import sys
+current_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+os.chdir(current_dir)
+sys.path.append('../')
+from tools.release_index import get_opensearch_client,newest_message,opensearch_search,add_release_message
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -51,6 +57,16 @@ def get_all_repo(file, source):
         for j in all_repo_json[i][source]:
             all_repo.append(j)
     return all_repo
+
+def create_release_index(all_repo, release_index):
+    opensearch_conn_infos = json.load(open("../tools/opensearch_message.json"))
+    opensearch_client = get_opensearch_client(opensearch_conn_infos)
+    for repo_url in all_repo:
+        query = newest_message(repo_url)
+        query_hits = opensearch_search(opensearch_client, "gitee_repo-enriched", query)["hits"]["hits"]
+        if len(query_hits) > 0 :
+            items = query_hits[0]["_source"]["releases"]
+            add_release_message(opensearch_client, release_index, repo_url, items)
 
 
 def get_all_project(file):
@@ -335,18 +351,58 @@ class MetricsModel:
 
         return query
 
+    def get_recent_releases_uuid_count(self, option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date= datetime_utcnow()):
+        query = {
+            "size": 0,
+            "track_total_hits": True,
+            "aggs": {
+                "count_of_uuid": {
+                    option: {
+                        "field": field + '.keyword'
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "must": [{
+                        "bool": {
+                            "should": [{
+                                "simple_query_string": {
+                                    "query": i,
+                                    "fields": ["tag.keyword"]
+                                }}for i in repos_list],
+                            "minimum_should_match": 1
+                        }
+                    }
+                    ],
+                    "filter": {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return query
+
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, release_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
         self.git_index = git_index
         self.pr_index = pr_index
+        self.release_index = release_index
         self.git_branch = git_branch
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index.split('_')[0])
         self.model_name = 'Activity'
+        create_release_index(self.all_repo, release_index)
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
@@ -397,6 +453,11 @@ class ActivityMetricsModel(MetricsModel):
             return prs['aggregations']["count_of_uuid"]['value']/prs["hits"]["total"]["value"]
         except ZeroDivisionError:
             return 0
+    
+    def recent_releases_count(self, date, repos_list):
+        query_recent_releases_count = self.get_recent_releases_uuid_count("cardinality", repos_list, "uuid", from_date=(date-timedelta(days=365)), to_date=date)
+        releases_count = self.es_in.search(index=self.release_index, body=query_recent_releases_count)['aggregations']["count_of_uuid"]['value']
+        return releases_count
 
     def metrics_model_enrich(self,repos_list, label):
         item_datas = []
@@ -419,6 +480,7 @@ class ActivityMetricsModel(MetricsModel):
                 'updated_since': float(round(self.updated_since(date, repos_list), 4)),
                 'closed_issues_count': self.closed_issue_count(date, repos_list),
                 'updated_issues_count':self.updated_issue_count(date, repos_list),
+                'recent_releases_count':self.recent_releases_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
@@ -578,17 +640,17 @@ class CommunitySupportMetricsModel(MetricsModel):
         item_datas = []
 
 if __name__ == '__main__':
-    CONF = yaml.safe_load(open('conf.yaml'))
+    CONF = yaml.safe_load(open('../conf.yaml'))
     elastic_url = CONF['url']
     params = CONF['params']
     kwargs = {}
     
-    # for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
-    #     kwargs[item] = params[item]
-    # model_activity = ActivityMetricsModel(**kwargs)
-    # model_activity.metrics_model_metrics()
-    
-    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level']:
+    for item in ['issue_index', 'pr_index','release_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
         kwargs[item] = params[item]
-    model_community = CommunitySupportMetricsModel(**kwargs)
-    model_community.metrics_model_metrics()
+    model_activity = ActivityMetricsModel(**kwargs)
+    model_activity.metrics_model_metrics(elastic_url)
+    
+    # for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level']:
+    #     kwargs[item] = params[item]
+    # model_community = CommunitySupportMetricsModel(**kwargs)
+    # model_community.metrics_model_metrics()
