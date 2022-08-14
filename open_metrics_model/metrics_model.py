@@ -33,6 +33,12 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
 from utils import get_activity_score, community_support
+import os,inspect
+import sys
+current_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+os.chdir(current_dir)
+sys.path.append('../')
+from tools.release_index import get_opensearch_client,newest_message,opensearch_search,add_release_message
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -51,6 +57,16 @@ def get_all_repo(file, source):
         for j in all_repo_json[i][source]:
             all_repo.append(j)
     return all_repo
+
+def create_release_index(all_repo, release_index):
+    opensearch_conn_infos = json.load(open("../tools/opensearch_message.json"))
+    opensearch_client = get_opensearch_client(opensearch_conn_infos)
+    for repo_url in all_repo:
+        query = newest_message(repo_url)
+        query_hits = opensearch_search(opensearch_client, "gitee_repo-enriched", query)["hits"]["hits"]
+        if len(query_hits) > 0 :
+            items = query_hits[0]["_source"]["releases"]
+            add_release_message(opensearch_client, release_index, repo_url, items)
 
 
 def get_all_project(file):
@@ -353,7 +369,7 @@ class MetricsModel:
                             "should": [{
                                 "simple_query_string": {
                                     "query": i,
-                                    "fields": ["tag"]
+                                    "fields": ["tag.keyword"]
                                 }}for i in repos_list],
                             "minimum_should_match": 1
                         }
@@ -386,6 +402,7 @@ class ActivityMetricsModel(MetricsModel):
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index.split('_')[0])
         self.model_name = 'Activity'
+        create_release_index(self.all_repo, release_index)
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)

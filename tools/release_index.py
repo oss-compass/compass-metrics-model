@@ -19,7 +19,7 @@ def get_opensearch_client(opensearch_conn_infos):
     return client
 
 
-def opensearch_search(index, query):
+def opensearch_search(opensearch_client, index, query):
     results = opensearch_client.search(index=index,body=query)
 
     return results
@@ -38,7 +38,7 @@ def newest_message(repo_url):
     return query
 
 
-def add_release_message(out_index, repo_url, releases,):
+def add_release_message(opensearch_client, out_index, repo_url, releases,):
     all_bulk_data = []
     for item in releases:
         release_data = {"_index": out_index,
@@ -67,6 +67,6 @@ if __name__ == "__main__":
     repo_url = "https://gitee.com/mindspore/mindspore"
     opensearch_conn_infos = json.load(open("opensearch_message.json"))
     opensearch_client = get_opensearch_client(opensearch_conn_infos)
-    query = newest_message(repo_url)
-    items = opensearch_search("gitee_repo-enriched",query)["hits"]["hits"][0]["_source"]["releases"]
+    query = newest_message(opensearch_client, repo_url)
+    items = opensearch_search(opensearch_client, "gitee_repo-enriched",query)["hits"]["hits"][0]["_source"]["releases"]
     add_release_message("repo_release_enriched", repo_url, items)
