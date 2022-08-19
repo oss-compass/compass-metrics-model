@@ -446,6 +446,7 @@ class ActivityMetricsModel(MetricsModel):
     def closed_issue_count(self, date, repos_list):
         query_issue_closed = self.get_issue_closed_uuid_count(
             "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_closed["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_closed = self.es_in.search(index=self.issue_index, body=query_issue_closed)[
             'aggregations']["count_of_uuid"]['value']
         return issue_closed
@@ -453,6 +454,7 @@ class ActivityMetricsModel(MetricsModel):
     def updated_issue_count(self, date, repos_list):
         query_issue_updated_since = self.get_uuid_count_query(
             "cardinality", repos_list, "uuid", date_field='metadata__updated_on', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_updated_since["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         updated_issues_count = self.es_in.search(index=self.issue_index, body=query_issue_updated_since)[
             'aggregations']["count_of_uuid"]['value']
         return updated_issues_count
@@ -460,6 +462,7 @@ class ActivityMetricsModel(MetricsModel):
     def comment_frequency(self, date, repos_list):
         query_issue_comments_count = self.get_uuid_count_query(
             "sum", repos_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue = self.es_in.search(
             index=self.issue_index, body=query_issue_comments_count)
         try:
@@ -470,8 +473,8 @@ class ActivityMetricsModel(MetricsModel):
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
             "sum", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
-        prs = self.es_in.search(index=self.pr_index,
-                                body=query_pr_comments_count)
+        query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        prs = self.es_in.search(index=self.pr_index,body=query_pr_comments_count)
         try:
             return prs['aggregations']["count_of_uuid"]['value']/prs["hits"]["total"]["value"]
         except ZeroDivisionError:
@@ -555,15 +558,11 @@ class CommunitySupportMetricsModel(MetricsModel):
                     if item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
                         issue_open_time_repo.append(get_time_diff_days(
                             item['_source']['created_at'], item['_source']['closed_at']))
-                    # else:
-                    #     issue_open_time_repo.append(get_time_diff_days(
-                    #         item['_source']['created_at'], str(date)))
                 else:
                     issue_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
         try:
-            issue_open_time_repo_avg = sum(
-                issue_open_time_repo)/len(issue_open_time_repo)
+            issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
         except ZeroDivisionError:
             issue_open_time_repo_avg = 0
 
