@@ -6,9 +6,9 @@ import re
 from setuptools import setup
 
 
-setup(name="open-metrics-model",
-      description="Metric Model",
-      url="https://github.com/open-metrics-code/open-metrics-model",
+setup(name="compass_metrics_model",
+      description="Metrics Model",
+      url="https://github.com/open-metrics-code/compass-metrics-model",
       version="0.1.0",
       author="Chenqi Shan, Yehui Wang",
       author_email="chenqishan337@gmail.com",
@@ -21,8 +21,8 @@ setup(name="open-metrics-model",
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.4',
           'Programming Language :: Python :: 3.5'],
-      keywords="Metric Model for gitee",
-      packages=['open_metrics_model'],
+      keywords="Metric Model",
+      packages=['metrics_model'],
       python_requires='>=3.4',
       setup_requires=['wheel'],
       zip_safe=False
