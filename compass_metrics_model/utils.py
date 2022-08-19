@@ -58,6 +58,22 @@ UPDATED_ISSUES_THRESHOLD_COMMUNITY = 2000
 CODE_REVIEW_THRESHOLD_COMMUNITY = 8
 CLOSED_PRS_THRESHOLD_COMMUNITY = 4500
 
+LOC_FREQUENCY_WEIGHT_CODE = 0.05939
+CODE_MERGE_RATIO_WEIGHT_CODE = 0.09599
+CODE_REVIEW_RATIO_WEIGHT_CODE = 0.09599
+PR_ISSUE_LINKED_WEIGHT_CODE = 0.13410
+IS_MAINTAINED_WEIGHT_CODE = 0.16412
+COMMIT_FREQUENCY_WEIGHT_CODE = 0.19160
+CONTRIBUTOR_COUNT_WEIGHT_CODE = 0.25881
+
+LOC_FREQUENCY_THRESHOLD_CODE = 300000
+CODE_MERGE_RATIO_THRESHOLD_CODE = 1
+CODE_REVIEW_RATIO_THRESHOLD_CODE = 1
+PR_ISSUE_LINKED_THRESHOLD_CODE = 1
+IS_MAINTAINED_THRESHOLD_CODE = 1
+COMMIT_FREQUENCY_THRESHOLD_CODE = 1000
+CONTRIBUTOR_COUNT_THRESHOLD_CODE = 1000
+
 MIN_ACTIVITY_SCORE = -0.23786
 MAX_ACTIVITY_SCORE = 1.23786
 MIN_COMMUNITY_SCORE = -2.0319
@@ -148,3 +164,28 @@ def community_support(item):
                                 CLOSED_PRS_THRESHOLD_COMMUNITY, CLOSED_PRS_WEIGHT_COMMUNITY)))/
                 total_weight_COMMUNITY, 5)
     return normalize(score, MIN_COMMUNITY_SCORE, MAX_COMMUNITY_SCORE)
+
+def code_quality_guarantee(item):
+    total_weight_CODE  = (LOC_FREQUENCY_WEIGHT_CODE + CONTRIBUTOR_COUNT_WEIGHT_CODE + 
+                            IS_MAINTAINED_WEIGHT_CODE + COMMIT_FREQUENCY_WEIGHT_CODE +
+                            CODE_MERGE_RATIO_WEIGHT_CODE + CODE_REVIEW_RATIO_WEIGHT_CODE +
+                            PR_ISSUE_LINKED_WEIGHT_CODE )
+    score = round(  
+                ((get_param_score(item["LOC_frequency"],
+                                LOC_FREQUENCY_THRESHOLD_CODE , LOC_FREQUENCY_WEIGHT_CODE)) +
+                (get_param_score(item["contributor_count"],
+                                CONTRIBUTOR_COUNT_THRESHOLD_CODE,
+                                CONTRIBUTOR_COUNT_WEIGHT_CODE)) +                   
+                (get_param_score(item["commit_frequency"],
+                                COMMIT_FREQUENCY_THRESHOLD_CODE,
+                                COMMIT_FREQUENCY_WEIGHT_CODE)) +                
+                (get_param_score(item["is_maintained"],
+                                IS_MAINTAINED_THRESHOLD_CODE, IS_MAINTAINED_WEIGHT_CODE)) +
+                (get_param_score(item["code_merge_ratio"],
+                                CODE_MERGE_RATIO_THRESHOLD_CODE, CODE_MERGE_RATIO_WEIGHT_CODE)) +
+                (get_param_score(item["code_review_ratio"],
+                                CODE_REVIEW_RATIO_THRESHOLD_CODE, CODE_REVIEW_RATIO_WEIGHT_CODE)) +
+                (get_param_score(item["pr_issue_linked_ratio"],
+                                PR_ISSUE_LINKED_THRESHOLD_CODE, PR_ISSUE_LINKED_WEIGHT_CODE))) /
+                total_weight_CODE, 5)
+    return score

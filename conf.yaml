@@ -1,17 +1,18 @@
 url:
   "https://admin:password@localhost:8200"
-  
+ 
 params:
   {
-    'issue_index': 'gitee_issues-enriched',
-    'pr_index':'gitee-prs_enriched', 
-    'release_index': 'repo_release_enriched',
-    'json_file': '/root/tmp/metrics_model/projects-gitee-mindspore.json',
-    'git_index': 'git_demo_enriched',
-    'git_branch': None,
-    'from_date': '2012-12-01',
-    'end_date': '2022-07-01',
-    'out_index': 'mindspore_metric_model',
-    'community': 'mindspore',
-    'level': 'repo'
+      'issue_index': 'gitee_issues-enriched',
+      'pr_index':'gitee-prs_enriched', 
+      'json_file': '/root/tmp/metrics_model/projects-gitee-yehui-pure-mindspore.json',
+      'git_index': 'git_demo_enriched',
+      'git_branch': None,
+      'from_date': '2020-03-30',
+      'end_date': '2022-08-18',
+      'out_index': 'mindspore2_metric_model',
+      'community': 'mindspore',
+      'level': 'repo',
+      'company': 'Huawei',
+      'pr_comments_index':'gitee2-pull_enriched'
   }
