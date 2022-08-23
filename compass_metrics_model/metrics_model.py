@@ -20,7 +20,6 @@
 #     Yehui Wang <yehui.wang.mdh@gmail.com>
 #     Chenqi Shan <chenqishan337@gmail.com>
 
-from tools.release_index import get_opensearch_client, newest_message, opensearch_search, add_release_message
 from perceval.backend import uuid
 from datetime import datetime, timedelta
 import json
@@ -34,7 +33,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from grimoire_elk.elastic import ElasticSearch
-from .utils import get_activity_score, community_support, code_quality_guarantee
+from utils import get_activity_score, community_support, code_quality_guarantee, community_decay
 import os
 import inspect
 import sys
@@ -42,6 +41,7 @@ current_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 os.chdir(current_dir)
 sys.path.append('../')
+from tools.release_index import get_opensearch_client,newest_message,opensearch_search,add_release_message
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -63,17 +63,15 @@ def get_all_repo(file, source):
     return all_repo
 
 
-def create_release_index(all_repo, release_index):
-    opensearch_conn_infos = json.load(open("../tools/opensearch_message.json"))
+def create_release_index(all_repo, repo_index, release_index, opensearch_config_file):
+    opensearch_conn_infos = json.load(open(opensearch_config_file))
     opensearch_client = get_opensearch_client(opensearch_conn_infos)
     for repo_url in all_repo:
         query = newest_message(repo_url)
-        query_hits = opensearch_search(
-            opensearch_client, "gitee_repo-enriched", query)["hits"]["hits"]
-        if len(query_hits) > 0:
+        query_hits = opensearch_search(opensearch_client, repo_index, query)["hits"]["hits"]
+        if len(query_hits) > 0 :
             items = query_hits[0]["_source"]["releases"]
-            add_release_message(opensearch_client,
-                                release_index, repo_url, items)
+            add_release_message(opensearch_client, release_index, repo_url, items)
 
 
 def get_all_project(file):
@@ -400,7 +398,7 @@ class MetricsModel:
 
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, release_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
@@ -412,7 +410,7 @@ class ActivityMetricsModel(MetricsModel):
         self.all_repo = get_all_repo(
             self.json_file, self.issue_index.split('_')[0])
         self.model_name = 'Activity'
-        create_release_index(self.all_repo, release_index)
+        create_release_index(self.all_repo, repo_index, release_index, opensearch_config_file)
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
@@ -628,6 +626,7 @@ class CommunitySupportMetricsModel(MetricsModel):
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
+        last_metrics_data = {}
         for date in self.date_list:
             print(date)
             created_since = self.created_since(date, repos_list)
@@ -636,25 +635,28 @@ class CommunitySupportMetricsModel(MetricsModel):
             issue_first = self.issue_first_reponse(date, repos_list)
             issue_open_time = self.issue_open_time(date, repos_list)
             pr_open_time = self.pr_open_time(date, repos_list)
+            comment_frequency = self.comment_frequency(date, repos_list)
+            code_review_count = self.code_review_count(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
                 'label': label,
                 'model_name': self.model_name,
-                'issue_first_reponse_avg': round(issue_first[0], 4) if issue_first[0] else 0.0,
-                'issue_first_reponse_mid': round(issue_first[1], 4) if issue_first[1] else 0.0,
-                'issue_open_time_avg': round(issue_open_time[0], 4) if issue_open_time[0] else 0.0,
-                'issue_open_time_mid': round(issue_open_time[1], 4) if issue_open_time[1] else 0.0,
-                'pr_open_time_avg': round(pr_open_time[0], 4) if pr_open_time[0] else 0.0,
-                'pr_open_time_mid': round(pr_open_time[1], 4) if pr_open_time[1] else 0.0,
-                'comment_frequency': float(round(self.comment_frequency(date, repos_list), 4)),
-                'code_review_count': float(self.code_review_count(date, repos_list)),
+                'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] else None,
+                'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] else None,
+                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] else None,
+                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] else None,
+                'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] else None,
+                'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] else None,
+                'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency else None,
+                'code_review_count': float(code_review_count) if code_review_count else None,
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
                 'closed_prs_count': self.closed_pr_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
-            score = community_support(metrics_data)
+            self.cache_last_metrics_data(metrics_data, last_metrics_data)
+            score = community_support(community_decay(metrics_data, last_metrics_data))
             metrics_data["community_support_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -662,6 +664,15 @@ class CommunitySupportMetricsModel(MetricsModel):
                 item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
+
+    def cache_last_metrics_data(self, item, last_metrics_data):
+        for i in ["issue_first_reponse_avg",  "issue_first_reponse_mid", 
+                    "issue_open_time_avg", "issue_open_time_mid", 
+                    "pr_open_time_avg","pr_open_time_mid",
+                    "comment_frequency", "code_review_count"]:
+            if item[i] != None:
+                data = [item[i],item['grimoire_creation_date']]
+                last_metrics_data[i] = data
 
 
 class CodeQualityGuaranteeMetricsModel(MetricsModel):
@@ -972,7 +983,7 @@ if __name__ == '__main__':
     params = CONF['params']
     kwargs = {}
 
-    # for item in ['issue_index', 'pr_index','release_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
+    # for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'release_index', 'opensearch_config_file']:
     #     kwargs[item] = params[item]
     # model_activity = ActivityMetricsModel(**kwargs)
     # model_activity.metrics_model_metrics(elastic_url)
@@ -980,7 +991,7 @@ if __name__ == '__main__':
     # for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level']:
     #     kwargs[item] = params[item]
     # model_community = CommunitySupportMetricsModel(**kwargs)
-    # model_community.metrics_model_metrics()
+    # model_community.metrics_model_metrics(elastic_url)
 
     for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'pr_comments_index']:
         kwargs[item] = params[item]
