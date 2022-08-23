@@ -1,4 +1,5 @@
 import math
+import pendulum
 
 BACKOFF_FACTOR = 0.2
 MAX_RETRIES = 21
@@ -78,6 +79,8 @@ MIN_ACTIVITY_SCORE = -0.23786
 MAX_ACTIVITY_SCORE = 1.23786
 MIN_COMMUNITY_SCORE = -2.0319
 MAX_COMMUNITY_SCORE = 3.03189
+
+DECAY_COEFFICIENT = 0.001
 
 
 def normalize(score, min_score, max_score):
@@ -189,3 +192,33 @@ def code_quality_guarantee(item):
                                 PR_ISSUE_LINKED_THRESHOLD_CODE, PR_ISSUE_LINKED_WEIGHT_CODE))) /
                 total_weight_CODE, 5)
     return score
+
+def increment_decay(last_data, threshold, days):
+    return min(last_data + DECAY_COEFFICIENT * threshold * days, threshold)
+
+def decrease_decay(last_data, threshold, days):
+    return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
+
+def community_decay(item, last_data): 
+    decay_item = item.copy()
+    increment_decay_dict = {
+        "issue_first_reponse_avg":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
+        "issue_first_reponse_mid":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
+        "issue_open_time_avg":ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "issue_open_time_mid":ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "pr_open_time_avg":PR_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "pr_open_time_mid":PR_OPEN_TIME_THRESHOLD_COMMUNITY
+        }
+    decrease_decay_dict = {
+        "comment_frequency":COMMENT_FREQUENCY_THRESHOLD_COMMUNITY,
+        "code_review_count":CODE_REVIEW_THRESHOLD_COMMUNITY
+        }
+    for key, value in increment_decay_dict.items():
+        if item[key] == None and last_data.get(key) != None:
+            days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
+            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)
+    for key, value in decrease_decay_dict.items():
+        if item[key] == None and last_data.get(key) != None:
+            days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)          
+    return decay_item
