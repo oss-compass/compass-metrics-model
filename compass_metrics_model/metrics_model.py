@@ -908,20 +908,27 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
     def is_maintained(self, date, repos_list):
         is_maintained_list = []
-        date_list_maintained = get_date_list(begin_date=str(
-            date-timedelta(days=90)), end_date=str(date), freq='7D')
-        for repository_url in repos_list:
+        if self.level == "repo":
+            date_list_maintained = get_date_list(begin_date=str(
+                date-timedelta(days=90)), end_date=str(date), freq='7D')
             is_maintained = "True"
-
             for day in date_list_maintained:
                 query_git_commit_i = self.get_uuid_count_query(
-                    "cardinality", repository_url+'.git', "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
+                    "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
                 commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)[
                     'aggregations']["count_of_uuid"]['value']
                 if commit_frequency_i == 0:
                     is_maintained = "False"
-                    break
             is_maintained_list.append(is_maintained)
+
+        elif self.level == "project":
+            for repo in repos_list:
+                query_git_commit_i = self.get_uuid_count_query("cardinality",[repo+'.git'], "hash",from_date=date-timedelta(days=30), to_date=date)
+                commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
+                if commit_frequency_i > 0:
+                    is_maintained_list.append("True")
+                else:
+                    is_maintained_list.append("False")
         try:
             return is_maintained_list.count("True") / len(is_maintained_list)
         except ZeroDivisionError:
