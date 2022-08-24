@@ -32,6 +32,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
+from elasticsearch import helpers
 from grimoire_elk.elastic import ElasticSearch
 from utils import get_activity_score, community_support, code_quality_guarantee, community_decay
 import os
@@ -41,7 +42,6 @@ current_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 os.chdir(current_dir)
 sys.path.append('../')
-from tools.release_index import get_opensearch_client,newest_message,opensearch_search,add_release_message
 
 MAX_BULK_UPDATE_SIZE = 100
 
@@ -62,17 +62,55 @@ def get_all_repo(file, source):
             all_repo.append(j)
     return all_repo
 
+def newest_message(repo_url):
+    query = {
+        "query": {
+            "match": {
+                "tag": repo_url
+            }
+        },
+        "sort":[
+            {
+                "metadata__updated_on": { "order": "desc" }
+            }
+        ]
+    }
+    return query
 
-def create_release_index(all_repo, repo_index, release_index, opensearch_config_file):
-    opensearch_conn_infos = json.load(open(opensearch_config_file))
-    opensearch_client = get_opensearch_client(opensearch_conn_infos)
+def add_release_message(es_client, out_index, repo_url, releases,):
+    item_datas = []
+    for item in releases:
+        release_data = {
+            "_index": out_index,
+            "_id": uuid(str(item["id"])),
+            "_source": {
+                "uuid": uuid(str(item["id"])),
+                "id": item["id"],
+                "tag": repo_url,
+                "tag_name": item["tag_name"],
+                "target_commitish": item["target_commitish"],
+                "prerelease": item["prerelease"],
+                "name": item["name"],
+                "body": item["body"],
+                "author_login": item["author"]["login"],
+                "author_name": item["author"]["name"],
+                "grimoire_creation_date": item["created_at"]
+            }
+        }
+        item_datas.append(release_data)
+        if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+            helpers.bulk(client=es_client, actions=item_datas)
+            item_datas = []
+    helpers.bulk(client=es_client, actions=item_datas)
+    item_datas = []
+
+def create_release_index(es_client, all_repo, repo_index, release_index):
     for repo_url in all_repo:
         query = newest_message(repo_url)
-        query_hits = opensearch_search(opensearch_client, repo_index, query)["hits"]["hits"]
-        if len(query_hits) > 0 :
+        query_hits = es_client.search(index=repo_index, body=query)["hits"]["hits"]
+        if len(query_hits) > 0:
             items = query_hits[0]["_source"]["releases"]
-            add_release_message(opensearch_client, release_index, repo_url, items)
-
+            add_release_message(es_client, release_index, repo_url, items)
 
 def get_all_project(file):
     '''Get all projects from json file'''
@@ -410,7 +448,6 @@ class ActivityMetricsModel(MetricsModel):
         self.all_repo = get_all_repo(
             self.json_file, self.issue_index.split('_')[0])
         self.model_name = 'Activity'
-        create_release_index(self.all_repo, repo_index, release_index, opensearch_config_file)
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
@@ -487,6 +524,8 @@ class ActivityMetricsModel(MetricsModel):
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
+
+        create_release_index(self.es_in, repos_list, self.release_index)
 
         for date in self.date_list:
             print(date)

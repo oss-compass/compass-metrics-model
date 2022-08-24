@@ -16,6 +16,5 @@ params:
       'company': 'Huawei',
       'pr_comments_index':'gitee2-pull_enriched',
       'repo_index':'gitee_repo-enriched',
-      'release_index': 'repo_release_enriched',
-      'opensearch_config_file':'/root/repos/metrics-model/tools/opensearch_config.json'
+      'release_index': 'repo_release_enriched'
   }
