@@ -34,7 +34,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from grimoire_elk.elastic import ElasticSearch
-from utils import get_activity_score, community_support, code_quality_guarantee, community_decay
+from .utils import get_activity_score, community_support, code_quality_guarantee, community_decay
 import os
 import inspect
 import sys
@@ -573,8 +573,10 @@ class CommunitySupportMetricsModel(MetricsModel):
     def issue_first_reponse(self, date, repos_list):
         query_issue_first_reponse_avg = self.get_uuid_count_query(
             "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
-        issue_first_reponse_avg = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)[
-            'aggregations']["count_of_uuid"]['value']
+        issue_first_reponse = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)
+        if issue_first_reponse["hits"]["total"]["value"] == 0:
+            return None, None
+        issue_first_reponse_avg = issue_first_reponse['aggregations']["count_of_uuid"]['value']
         query_issue_first_reponse_mid = self.get_uuid_count_query(
             "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
@@ -588,6 +590,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                                                       "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
         issue_opens_items = self.es_in.search(
             index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        if len(issue_opens_items) == 0:
+            return None, None
         issue_open_time_repo = []
         for item in issue_opens_items:
             if 'state' in item['_source']:
@@ -598,11 +602,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     issue_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
-        try:
-            issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
-        except ZeroDivisionError:
-            issue_open_time_repo_avg = 0
-
+        issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
         issue_open_time_repo_mid = get_medium(issue_open_time_repo)
         return issue_open_time_repo_avg, issue_open_time_repo_mid
 
@@ -611,6 +611,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                                                    "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
         pr_opens_items = self.es_in.search(
             index=self.pr_index, body=query_pr_opens)['hits']['hits']
+        if len(pr_opens_items) == 0:
+            return None, None
         pr_open_time_repo = []
         for item in pr_opens_items:
             if 'state' in item['_source']:
@@ -623,11 +625,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
-        try:
-            pr_open_time_repo_avg = float(
-                sum(pr_open_time_repo)/len(pr_open_time_repo))
-        except ZeroDivisionError:
-            pr_open_time_repo_avg = 0
+        pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
         return pr_open_time_repo_avg, pr_open_time_repo_mid
 
@@ -639,7 +637,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         try:
             return float(issue['aggregations']["count_of_uuid"]['value']/issue["hits"]["total"]["value"])
         except ZeroDivisionError:
-            return 0
+            return None
 
     def updated_issue_count(self, date, repos_list):
         query_issue_updated_since = self.get_uuid_count_query(
@@ -651,11 +649,12 @@ class CommunitySupportMetricsModel(MetricsModel):
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
             "avg", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
-        prs = self.es_in.search(index=self.pr_index,
-                                body=query_pr_comments_count)[
-            'aggregations']["count_of_uuid"]['value']
-        return prs if prs else 0.0
-
+        prs = self.es_in.search(index=self.pr_index, body=query_pr_comments_count)
+        if prs["hits"]["total"]["value"] == 0:
+            return  None
+        else:
+            return prs['aggregations']["count_of_uuid"]['value']
+        
     def closed_pr_count(self, date, repos_list):
         query_pr_closed = self.get_pr_closed_uuid_count(
             "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
@@ -681,14 +680,14 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'level': self.level,
                 'label': label,
                 'model_name': self.model_name,
-                'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] else None,
-                'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] else None,
-                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] else None,
-                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] else None,
-                'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] else None,
-                'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] else None,
-                'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency else None,
-                'code_review_count': float(code_review_count) if code_review_count else None,
+                'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] != None else None,
+                'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] != None else None,
+                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] != None else None,
+                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] != None else None,
+                'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
+                'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] != None else None,
+                'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
+                'code_review_count': float(code_review_count) if code_review_count != None else None,
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
                 'closed_prs_count': self.closed_pr_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
@@ -908,20 +907,27 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
     def is_maintained(self, date, repos_list):
         is_maintained_list = []
-        date_list_maintained = get_date_list(begin_date=str(
-            date-timedelta(days=90)), end_date=str(date), freq='7D')
-        for repository_url in repos_list:
+        if self.level == "repo":
+            date_list_maintained = get_date_list(begin_date=str(
+                date-timedelta(days=90)), end_date=str(date), freq='7D')
             is_maintained = "True"
-
             for day in date_list_maintained:
                 query_git_commit_i = self.get_uuid_count_query(
-                    "cardinality", repository_url+'.git', "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
+                    "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
                 commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)[
                     'aggregations']["count_of_uuid"]['value']
                 if commit_frequency_i == 0:
                     is_maintained = "False"
-                    break
             is_maintained_list.append(is_maintained)
+
+        elif self.level in ["project", "community"]:
+            for repo in repos_list:
+                query_git_commit_i = self.get_uuid_count_query("cardinality",[repo+'.git'], "hash",from_date=date-timedelta(days=30), to_date=date)
+                commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
+                if commit_frequency_i > 0:
+                    is_maintained_list.append("True")
+                else:
+                    is_maintained_list.append("False")
         try:
             return is_maintained_list.count("True") / len(is_maintained_list)
         except ZeroDivisionError:
