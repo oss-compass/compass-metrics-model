@@ -40,7 +40,7 @@ COMMENT_FREQUENCY_THRESHOLD_ACTIVITY = 5
 DEPENDENTS_COUNT_THRESHOLD_ACTIVITY = 500000
 
 ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY = -0.1437
-ISSUE_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
+BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
 PR_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
 COMMENT_FREQUENCY_WEIGHT_COMMUNITY = 0.1022
 UPDATED_ISSUES_WEIGHT_COMMUNITY = 0.1972
@@ -48,7 +48,7 @@ CODE_REVIEW_WEIGHT_COMMUNITY = 0.1022
 CLOSED_PRS_WEIGHT_COMMUNITY = 0.1972
 
 ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY = 15
-ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY = 60
+BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY = 60
 CI_BUILD_TIME_THRESHOLD_COMMUNITY = 0
 CLOSED_PR_TIME_THRESHOLD_COMMUNITY = 90
 PR_OPEN_TIME_THRESHOLD_COMMUNITY = 30
@@ -136,7 +136,7 @@ def community_support(item):
     for i in ["issue_first_reponse_avg",  "issue_open_time_avg", "pr_open_time_avg"]:
         if not item[i]:
             return None
-    total_weight_COMMUNITY = ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY + ISSUE_OPEN_TIME_WEIGHT_COMMUNITY + PR_OPEN_TIME_WEIGHT_COMMUNITY + \
+    total_weight_COMMUNITY = ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY + BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY + PR_OPEN_TIME_WEIGHT_COMMUNITY + \
         COMMENT_FREQUENCY_WEIGHT_COMMUNITY + UPDATED_ISSUES_WEIGHT_COMMUNITY + \
         CODE_REVIEW_WEIGHT_COMMUNITY + CLOSED_PRS_WEIGHT_COMMUNITY
     score = round(
@@ -145,12 +145,12 @@ def community_support(item):
                 (get_param_score(item["issue_first_reponse_mid"],
                                 ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
                                 ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["issue_open_time_avg"],
-                                ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["issue_open_time_mid"],
-                                ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["bug_issue_open_time_avg"],
+                                BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
+                (get_param_score(item["bug_issue_open_time_avg"],
+                                BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+                                BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
                 (get_param_score(item["pr_open_time_avg"],
                                 PR_OPEN_TIME_THRESHOLD_COMMUNITY,
                                 PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
@@ -204,8 +204,8 @@ def community_decay(item, last_data):
     increment_decay_dict = {
         "issue_first_reponse_avg":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
         "issue_first_reponse_mid":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
-        "issue_open_time_avg":ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-        "issue_open_time_mid":ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "issue_open_time_avg":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "issue_open_time_mid":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
         "pr_open_time_avg":PR_OPEN_TIME_THRESHOLD_COMMUNITY,
         "pr_open_time_mid":PR_OPEN_TIME_THRESHOLD_COMMUNITY
         }

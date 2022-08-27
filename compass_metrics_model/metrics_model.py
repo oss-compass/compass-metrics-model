@@ -586,8 +586,41 @@ class CommunitySupportMetricsModel(MetricsModel):
         return issue_first_reponse_avg, issue_first_reponse_mid if issue_first_reponse_avg else 0, 0
 
     def issue_open_time(self, date, repos_list):
+        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        issue_opens_items = self.es_in.search(index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        if len(issue_opens_items) == 0:
+            return None, None
+        issue_open_time_repo = []
+        for item in issue_opens_items:
+            if 'state' in item['_source']:
+                if item['_source']['closed_at']:
+                    if item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+                        issue_open_time_repo.append(get_time_diff_days(
+                            item['_source']['created_at'], item['_source']['closed_at']))
+                else:
+                    issue_open_time_repo.append(get_time_diff_days(
+                        item['_source']['created_at'], str(date)))
+        issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
+        issue_open_time_repo_mid = get_medium(issue_open_time_repo)
+        return issue_open_time_repo_avg, issue_open_time_repo_mid
+ 
+    def bug_issue_open_time(self, date, repos_list):
         query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
                                                       "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        bug_query = {
+            "bool": {
+                "should": [{"script": {
+                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                }
+                },
+                    {"script": {
+                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0 &&doc['labels'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                    }
+                }],
+                "minimum_should_match": 1
+            }
+        }
+        query_issue_opens["query"]["bool"]["must"].append(bug_query)
         issue_opens_items = self.es_in.search(
             index=self.issue_index, body=query_issue_opens)['hits']['hits']
         if len(issue_opens_items) == 0:
@@ -672,6 +705,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 continue
             issue_first = self.issue_first_reponse(date, repos_list)
             issue_open_time = self.issue_open_time(date, repos_list)
+            bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
             pr_open_time = self.pr_open_time(date, repos_list)
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
@@ -684,6 +718,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] != None else None,
                 'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] != None else None,
                 'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] != None else None,
+                'bug_issue_open_time_avg': round(bug_issue_open_time[0],4) if bug_issue_open_time[0] != None else None,
+                'bug_issue_open_time_mid': round(bug_issue_open_time[1],4) if bug_issue_open_time[1] != None else None,
                 'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
                 'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] != None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
