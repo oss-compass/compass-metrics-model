@@ -573,6 +573,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def issue_first_reponse(self, date, repos_list):
         query_issue_first_reponse_avg = self.get_uuid_count_query(
             "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_first_reponse = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)
         if issue_first_reponse["hits"]["total"]["value"] == 0:
             return None, None
@@ -581,12 +582,14 @@ class CommunitySupportMetricsModel(MetricsModel):
             "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
             50]
+        query_issue_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_first_reponse_mid = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_mid)[
             'aggregations']["count_of_uuid"]['values']['50.0']
-        return issue_first_reponse_avg, issue_first_reponse_mid if issue_first_reponse_avg else 0, 0
+        return issue_first_reponse_avg, issue_first_reponse_mid 
 
     def issue_open_time(self, date, repos_list):
         query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_opens_items = self.es_in.search(index=self.issue_index, body=query_issue_opens)['hits']['hits']
         if len(issue_opens_items) == 0:
             return None, None
@@ -607,6 +610,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def bug_issue_open_time(self, date, repos_list):
         query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
                                                       "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         bug_query = {
             "bool": {
                 "should": [{"script": {
@@ -642,6 +646,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def pr_open_time(self, date, repos_list):
         query_pr_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
                                                    "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})                                    
         pr_opens_items = self.es_in.search(
             index=self.pr_index, body=query_pr_opens)['hits']['hits']
         if len(pr_opens_items) == 0:
@@ -662,9 +667,27 @@ class CommunitySupportMetricsModel(MetricsModel):
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
         return pr_open_time_repo_avg, pr_open_time_repo_mid
 
+    def pr_first_response_time(self, date, repos_list):
+        query_pr_first_reponse_avg = self.get_uuid_count_query(
+            "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }}) 
+        pr_first_reponse = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_avg)
+        if pr_first_reponse["hits"]["total"]["value"] == 0:
+            return None, None
+        pr_first_reponse_avg = pr_first_reponse['aggregations']["count_of_uuid"]['value']
+        query_pr_first_reponse_mid = self.get_uuid_count_query(
+            "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
+            50]
+        pr_first_reponse_mid = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_mid)[
+            'aggregations']["count_of_uuid"]['values']['50.0']
+        return pr_first_reponse_avg, pr_first_reponse_mid 
+
     def comment_frequency(self, date, repos_list):
         query_issue_comments_count = self.get_uuid_count_query(
             "sum", repos_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue = self.es_in.search(
             index=self.issue_index, body=query_issue_comments_count)
         try:
@@ -675,6 +698,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def updated_issue_count(self, date, repos_list):
         query_issue_updated_since = self.get_uuid_count_query(
             "cardinality", repos_list, "uuid", date_field='metadata__updated_on', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_updated_since["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         updated_issues_count = self.es_in.search(index=self.issue_index, body=query_issue_updated_since)[
             'aggregations']["count_of_uuid"]['value']
         return updated_issues_count
@@ -682,6 +706,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
             "avg", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         prs = self.es_in.search(index=self.pr_index, body=query_pr_comments_count)
         if prs["hits"]["total"]["value"] == 0:
             return  None
@@ -704,9 +729,9 @@ class CommunitySupportMetricsModel(MetricsModel):
             if created_since < 0:
                 continue
             issue_first = self.issue_first_reponse(date, repos_list)
-            issue_open_time = self.issue_open_time(date, repos_list)
             bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
             pr_open_time = self.pr_open_time(date, repos_list)
+            pr_first_response_time = self.pr_first_response_time(date, repos_list)
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
             metrics_data = {
@@ -716,12 +741,12 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'model_name': self.model_name,
                 'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] != None else None,
                 'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] != None else None,
-                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] != None else None,
-                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] != None else None,
                 'bug_issue_open_time_avg': round(bug_issue_open_time[0],4) if bug_issue_open_time[0] != None else None,
                 'bug_issue_open_time_mid': round(bug_issue_open_time[1],4) if bug_issue_open_time[1] != None else None,
                 'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
                 'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] != None else None,
+                'pr_first_response_time_avg': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
+                'pr_first_response_time_mid': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': float(code_review_count) if code_review_count != None else None,
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
