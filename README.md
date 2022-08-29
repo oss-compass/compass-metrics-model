@@ -27,4 +27,4 @@ params is designed to init Metric Model.
 
 ### Add dashboard for Metrics Model
 
-File metric_model_export.ndjson is imported to generate metric_model dashboard.
+File metric_model_export.ndjson is imported to generate metric_model dashboard .
