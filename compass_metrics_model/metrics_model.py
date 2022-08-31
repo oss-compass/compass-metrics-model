@@ -843,54 +843,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         }
         return query
 
-    def get_pr_merger_count(self, repos_list, field, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
-        query = {
-            "size": size,
-            "track_total_hits": True,
-            "aggs": {
-                "count_of_uuid": {
-                    "cardinality": {
-                        "field": field
-                    }
-                }
-            },
-            "query": {
-                "bool": {
-                    "must": [
-                        {
-                            "bool": {
-                                "should": [{
-                                    "simple_query_string": {
-                                        "query": i,
-                                        "fields": ["tag"]
-                                    }}for i in repos_list],
-                                "minimum_should_match": 1
-                            }},
-                        {
-                            "match_phrase": {
-                                "pull_request": "true"
-                            }},
-                        {
-                            "script": {
-                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
-                            }
-                        }
-                    ],
-                    "filter": [
-                        {
-                            "range":
-                            {
-                                date_field: {
-                                    "gte": from_date.strftime("%Y-%m-%d"),
-                                    "lt": to_date.strftime("%Y-%m-%d")
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-        return query
+   
 
     def get_pr_linked_issue_count(self, repo, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -1015,14 +968,51 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         except ZeroDivisionError:
             return prs
 
+
+    def git_pr_linked_ratio(self, date, repos_list):
+        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+        commits_without_merge_pr = {
+            "bool": {
+                "should": [{"script": {
+                    "script": "if (doc.containsKey('message') && doc['message'].size()>0 &&doc['message'].value.indexOf('Merge pull request') == -1){return true}"
+                }
+                }],
+                "minimum_should_match": 1}
+        }
+        commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr) 
+        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency)
+        commit_count = commit_message['aggregations']["count_of_uuid"]['value']
+        commit_pr_cout = 0
+        for commit_message_i in commit_message['hits']['hits']:
+            commit_hash = commit_message_i['_source']['hash']
+            pr_message = self.get_pr_message_count(repos_list, "uuid", "grimoire_creation_date", size=0, filter_field="num_review_comments_without_bot")
+            commit_hash_query = { "bool": {"should": [ {"match_phrase": {"commits_data": commit_hash} }],
+                                    "minimum_should_match": 1
+                                }
+                            }
+            pr_message["query"]["bool"]["must"].append(commit_hash_query)
+            prs = self.es_in.search(index=self.pr_index, body=pr_message)
+            if prs['aggregations']["count_of_uuid"]['value']>0:
+                commit_pr_cout += 1
+        if commit_count>0:
+            return commit_count, commit_pr_cout, commit_pr_cout/commit_count
+        else:
+            return 0, None, None
+
+
     def code_merge_ratio(self, date, repos_list):
         query_pr_count = self.get_uuid_count_query(
             "cardinality", repos_list, "uuid", size=0, from_date=(date-timedelta(days=90)), to_date=date)
         query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         pr_count = self.es_in.search(index=self.pr_index, body=query_pr_count)[
             'aggregations']["count_of_uuid"]['value']
-        query_pr_body = self.get_pr_merger_count(
-            repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_body = self.get_uuid_count_query( "cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_body["query"]["bool"]["must"].append({
+                            "script": {
+                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
+                            }
+                        })
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
             'aggregations']["count_of_uuid"]['value']
         try:
@@ -1058,6 +1048,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 continue
             commit_frequency = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
+            git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -1070,6 +1061,9 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
                 'code_review_ratio': self.code_review_ratio(date, repos_list),
                 'code_merge_ratio': self.code_merge_ratio(date, repos_list),
+                'pr_commit_count': git_pr_linked_ratio[0],
+                'pr_commit_linked_count': git_pr_linked_ratio[1],
+                'git_pr_linked_ratio': git_pr_linked_ratio[2],
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
