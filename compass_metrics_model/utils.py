@@ -109,7 +109,7 @@ def get_activity_score(item):
                                 CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY + 
                                 COMMIT_FREQUENCY_WEIGHT_ACTIVITY + CODE_REVIEW_COUNT_WEIGHT_ACTIVITY +
                                 CLOSED_ISSUES_WEIGHT_ACTIVITY + UPDATED_ISSUES_WEIGHT_ACTIVITY +
-                                COMMENT_FREQUENCY_WEIGHT_ACTIVITY )
+                                COMMENT_FREQUENCY_WEIGHT_ACTIVITY + RECENT_RELEASES_WEIGHT_ACTIVITY )
     activity_score = round(  
                             ((get_param_score(item["created_since"],
                                             CREATED_SINCE_THRESHOLD_ACTIVITY, CREATED_SINCE_WEIGHT_ACTIVITY)) +
@@ -128,12 +128,14 @@ def get_activity_score(item):
                             (get_param_score(item["code_review_count"],
                                             CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY, CODE_REVIEW_COUNT_WEIGHT_ACTIVITY)) +
                             (get_param_score(item["comment_frequency"],
-                                            COMMENT_FREQUENCY_THRESHOLD_ACTIVITY, COMMENT_FREQUENCY_WEIGHT_ACTIVITY))) /
+                                            COMMENT_FREQUENCY_THRESHOLD_ACTIVITY, COMMENT_FREQUENCY_WEIGHT_ACTIVITY)) +
+                            (get_param_score(item["recent_releases_count"],
+                                            RECENT_RELEASES_THRESHOLD_ACTIVITY, RECENT_RELEASES_WEIGHT_ACTIVITY))) /
                             total_weight_ACTIVITY, 5)
     return normalize(activity_score, MIN_ACTIVITY_SCORE, MAX_ACTIVITY_SCORE)
 
 def community_support(item):
-    for i in ["issue_first_reponse_avg",  "issue_open_time_avg", "pr_open_time_avg"]:
+    for i in ["issue_first_reponse_avg",  "bug_issue_open_time_avg", "pr_open_time_avg"]:
         if not item[i]:
             return None
     total_weight_COMMUNITY = ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY + BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY + PR_OPEN_TIME_WEIGHT_COMMUNITY + \
@@ -204,8 +206,8 @@ def community_decay(item, last_data):
     increment_decay_dict = {
         "issue_first_reponse_avg":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
         "issue_first_reponse_mid":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
-        "issue_open_time_avg":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-        "issue_open_time_mid":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "bug_issue_open_time_avg":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
+        "bug_issue_open_time_mid":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
         "pr_open_time_avg":PR_OPEN_TIME_THRESHOLD_COMMUNITY,
         "pr_open_time_mid":PR_OPEN_TIME_THRESHOLD_COMMUNITY
         }
@@ -221,4 +223,30 @@ def community_decay(item, last_data):
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)          
+    return decay_item
+
+def activity_decay(item, last_data): 
+    decay_item = item.copy()
+    increment_decay_dict = {
+        "comment_frequency":COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
+        "code_review_count":CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
+        }
+    for key, value in increment_decay_dict.items():
+        if item[key] == None and last_data.get(key) != None:
+            days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
+            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
+    return decay_item
+
+def code_quality_decay(item, last_data): 
+    decay_item = item.copy()
+    increment_decay_dict = {
+        "code_merge_ratio": CODE_MERGE_RATIO_THRESHOLD_CODE,
+        "code_review_ratio":CODE_REVIEW_RATIO_THRESHOLD_CODE,
+        "pr_issue_linked_ratio":PR_ISSUE_LINKED_THRESHOLD_CODE,
+        }
+    
+    for key, value in increment_decay_dict.items():
+        if item[key] == None and last_data.get(key) != None:
+            days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
+            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
     return decay_item
