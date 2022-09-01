@@ -34,7 +34,12 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from grimoire_elk.elastic import ElasticSearch
-from .utils import get_activity_score, community_support, code_quality_guarantee, community_decay
+from .utils import (get_activity_score, 
+                    community_support, 
+                    code_quality_guarantee, 
+                    community_decay,
+                    activity_decay,
+                    code_quality_decay)
 import os
 import inspect
 import sys
@@ -108,7 +113,7 @@ def create_release_index(es_client, all_repo, repo_index, release_index):
     for repo_url in all_repo:
         query = newest_message(repo_url)
         query_hits = es_client.search(index=repo_index, body=query)["hits"]["hits"]
-        if len(query_hits) > 0:
+        if len(query_hits) > 0 and query_hits[0]["_source"].get("releases"):
             items = query_hits[0]["_source"]["releases"]
             add_release_message(es_client, release_index, repo_url, items)
 
@@ -206,7 +211,7 @@ class MetricsModel:
         if created_since_list:
             return sum(created_since_list) / len(created_since_list)
         else:
-            return 0
+            return None
 
     def get_uuid_count_query(self, option, repos_list, field, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -503,7 +508,7 @@ class ActivityMetricsModel(MetricsModel):
         try:
             return float(issue['aggregations']["count_of_uuid"]['value']/issue["hits"]["total"]["value"])
         except ZeroDivisionError:
-            return 0
+            return None
 
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
@@ -513,7 +518,7 @@ class ActivityMetricsModel(MetricsModel):
         try:
             return prs['aggregations']["count_of_uuid"]['value']/prs["hits"]["total"]["value"]
         except ZeroDivisionError:
-            return 0
+            return None
 
     def recent_releases_count(self, date, repos_list):
         query_recent_releases_count = self.get_recent_releases_uuid_count(
@@ -524,14 +529,16 @@ class ActivityMetricsModel(MetricsModel):
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
-
-        create_release_index(self.es_in, repos_list, self.release_index)
+        last_metrics_data = {}
+        create_release_index(self.es_in, repos_list, self.repo_index ,self.release_index)
 
         for date in self.date_list:
             print(date)
             created_since = self.created_since(date, repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
+            comment_frequency = self.comment_frequency(date, repos_list)
+            code_review_count = self.code_review_count(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -540,8 +547,8 @@ class ActivityMetricsModel(MetricsModel):
                 'contributor_count': int(self.contributor_count(date, repos_list)),
                 'commit_frequency': round(self.commit_frequency(date, repos_list), 4),
                 'created_since': round(self.created_since(date, repos_list), 4),
-                'comment_frequency': float(round(self.comment_frequency(date, repos_list), 4)),
-                'code_review_count': round(self.code_review_count(date, repos_list), 4),
+                'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
+                'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
                 'updated_since': float(round(self.updated_since(date, repos_list), 4)),
                 'closed_issues_count': self.closed_issue_count(date, repos_list),
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
@@ -549,7 +556,8 @@ class ActivityMetricsModel(MetricsModel):
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
-            score = get_activity_score(metrics_data)
+            self.cache_last_metrics_data(metrics_data, last_metrics_data)
+            score = get_activity_score(activity_decay(metrics_data, last_metrics_data))
             metrics_data["activity_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -557,6 +565,12 @@ class ActivityMetricsModel(MetricsModel):
                 item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
+
+    def cache_last_metrics_data(self, item, last_metrics_data):
+        for i in ["comment_frequency",  "code_review_count"]:
+            if item[i] != None:
+                data = [item[i],item['grimoire_creation_date']]
+                last_metrics_data[i] = data
 
 
 class CommunitySupportMetricsModel(MetricsModel):
@@ -620,6 +634,10 @@ class CommunitySupportMetricsModel(MetricsModel):
                     {"script": {
                         "script": "if (doc.containsKey('labels') && doc['labels'].size()>0 &&doc['labels'].value.toLowerCase().indexOf('bug') != -1){return true}"
                     }
+                },
+                {"script": {
+                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('缺陷') != -1){return true}"
+                }
                 }],
                 "minimum_should_match": 1
             }
@@ -632,8 +650,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         issue_open_time_repo = []
         for item in issue_opens_items:
             if 'state' in item['_source']:
-                if item['_source']['closed_at']:
-                    if item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+                if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
                         issue_open_time_repo.append(get_time_diff_days(
                             item['_source']['created_at'], item['_source']['closed_at']))
                 else:
@@ -726,7 +743,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         for date in self.date_list:
             print(date)
             created_since = self.created_since(date, repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
             issue_first = self.issue_first_reponse(date, repos_list)
             bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
@@ -766,8 +783,9 @@ class CommunitySupportMetricsModel(MetricsModel):
 
     def cache_last_metrics_data(self, item, last_metrics_data):
         for i in ["issue_first_reponse_avg",  "issue_first_reponse_mid", 
-                    "issue_open_time_avg", "issue_open_time_mid", 
+                    "bug_issue_open_time_avg", "bug_issue_open_time_mid", 
                     "pr_open_time_avg","pr_open_time_mid",
+                    "pr_first_response_time_avg", "pr_first_response_time_mid",
                     "comment_frequency", "code_review_count"]:
             if item[i] != None:
                 data = [item[i],item['grimoire_creation_date']]
@@ -966,7 +984,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         try:
             return prs/pr_count
         except ZeroDivisionError:
-            return prs
+            return None
 
 
     def git_pr_linked_ratio(self, date, repos_list):
@@ -1018,7 +1036,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         try:
             return prs/pr_count
         except ZeroDivisionError:
-            return prs
+            return None
 
     def pr_issue_linked(self, date, repos_list):
         pr_linked_issue = 0
@@ -1036,15 +1054,16 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         try:
             return pr_linked_issue/pr_count
         except ZeroDivisionError:
-            return pr_linked_issue
+            return None
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
+        last_metrics_data = {}
         for date in self.date_list:
             print(date)
             created_since = self.created_since(
                 date-timedelta(days=90), repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
             commit_frequency = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
@@ -1067,7 +1086,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
-            score = code_quality_guarantee(metrics_data)
+            self.cache_last_metrics_data(metrics_data, last_metrics_data)
+            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data))
             metrics_data["code_quality_guarantee"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1075,6 +1095,12 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
+
+    def cache_last_metrics_data(self, item, last_metrics_data):
+        for i in ["code_merge_ratio",  "code_review_ratio", "pr_issue_linked_ratio"]:
+            if item[i] != None:
+                data = [item[i],item['grimoire_creation_date']]
+                last_metrics_data[i] = data
 
 
 if __name__ == '__main__':
