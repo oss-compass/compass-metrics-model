@@ -104,96 +104,65 @@ def perserve_model(item):
                         total_weight_PRESERVE, 5)
     return perserve_model_score
 
-def get_activity_score(item): 
-    total_weight_ACTIVITY  = ( CREATED_SINCE_WEIGHT_ACTIVITY + UPDATED_SINCE_WEIGHT_ACTIVITY +
-                                CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY + 
-                                COMMIT_FREQUENCY_WEIGHT_ACTIVITY + CODE_REVIEW_COUNT_WEIGHT_ACTIVITY +
-                                CLOSED_ISSUES_WEIGHT_ACTIVITY + UPDATED_ISSUES_WEIGHT_ACTIVITY +
-                                COMMENT_FREQUENCY_WEIGHT_ACTIVITY + RECENT_RELEASES_WEIGHT_ACTIVITY )
-    activity_score = round(  
-                            ((get_param_score(item["created_since"],
-                                            CREATED_SINCE_THRESHOLD_ACTIVITY, CREATED_SINCE_WEIGHT_ACTIVITY)) +
-                            (get_param_score(item["updated_since"],
-                                            UPDATED_SINCE_THRESHOLD_ACTIVITY, UPDATED_SINCE_WEIGHT_ACTIVITY)) +
-                            (get_param_score(item["contributor_count"],
-                                            CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY,
-                                            CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY)) +                   
-                            (get_param_score(item["commit_frequency"],
-                                            COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
-                                            COMMIT_FREQUENCY_WEIGHT_ACTIVITY)) +                
-                            (get_param_score(item["closed_issues_count"],
-                                            CLOSED_ISSUES_THRESHOLD_ACTIVITY, CLOSED_ISSUES_WEIGHT_ACTIVITY)) +
-                            (get_param_score(item["updated_issues_count"],
-                                            UPDATED_ISSUES_THRESHOLD_ACTIVITY, UPDATED_ISSUES_WEIGHT_ACTIVITY))+
-                            (get_param_score(item["code_review_count"],
-                                            CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY, CODE_REVIEW_COUNT_WEIGHT_ACTIVITY)) +
-                            (get_param_score(item["comment_frequency"],
-                                            COMMENT_FREQUENCY_THRESHOLD_ACTIVITY, COMMENT_FREQUENCY_WEIGHT_ACTIVITY)) +
-                            (get_param_score(item["recent_releases_count"],
-                                            RECENT_RELEASES_THRESHOLD_ACTIVITY, RECENT_RELEASES_WEIGHT_ACTIVITY))) /
-                            total_weight_ACTIVITY, 5)
-    return normalize(activity_score, MIN_ACTIVITY_SCORE, MAX_ACTIVITY_SCORE)
+def get_score_ahp(item, param_dict):
+    total_weight = 0
+    total_param_score = 0
+    for key, value in param_dict.items():
+        total_weight += value[0]
+        param = 0
+        if item[key] is None:
+            if value[0] < 0:
+                param = value[1]    
+        else:
+           param = item[key] 
+        total_param_score += get_param_score(param,value[1] ,value[0])
+    try:
+        return round(total_param_score / total_weight, 5)
+    except ZeroDivisionError:
+        return 0.0
+
+def get_activity_score(item):
+    param_dict = {
+        "created_since":[CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_THRESHOLD_ACTIVITY],
+        "updated_since":[UPDATED_SINCE_WEIGHT_ACTIVITY, UPDATED_SINCE_THRESHOLD_ACTIVITY],
+        "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY, CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY],
+        "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_ACTIVITY, COMMIT_FREQUENCY_THRESHOLD_ACTIVITY],
+        "closed_issues_count":[CLOSED_ISSUES_WEIGHT_ACTIVITY, CLOSED_ISSUES_THRESHOLD_ACTIVITY],
+        "updated_issues_count":[UPDATED_ISSUES_WEIGHT_ACTIVITY, UPDATED_ISSUES_THRESHOLD_ACTIVITY],
+        "code_review_count":[CODE_REVIEW_COUNT_WEIGHT_ACTIVITY, CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY],
+        "comment_frequency":[COMMENT_FREQUENCY_WEIGHT_ACTIVITY, COMMENT_FREQUENCY_THRESHOLD_ACTIVITY],
+        "recent_releases_count":[RECENT_RELEASES_WEIGHT_ACTIVITY, RECENT_RELEASES_THRESHOLD_ACTIVITY]
+    }
+    score = get_score_ahp(item, param_dict)
+    return normalize(score, MIN_ACTIVITY_SCORE, MAX_ACTIVITY_SCORE)
 
 def community_support(item):
-    for i in ["issue_first_reponse_avg",  "bug_issue_open_time_avg", "pr_open_time_avg"]:
-        if not item[i]:
-            return None
-    total_weight_COMMUNITY = ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY + BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY + PR_OPEN_TIME_WEIGHT_COMMUNITY + \
-        COMMENT_FREQUENCY_WEIGHT_COMMUNITY + UPDATED_ISSUES_WEIGHT_COMMUNITY + \
-        CODE_REVIEW_WEIGHT_COMMUNITY + CLOSED_PRS_WEIGHT_COMMUNITY
-    score = round(
-                ((get_param_score(item["issue_first_reponse_avg"],
-                                ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY , ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5)) +
-                (get_param_score(item["issue_first_reponse_mid"],
-                                ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
-                                ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["bug_issue_open_time_avg"],
-                                BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["bug_issue_open_time_avg"],
-                                BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["pr_open_time_avg"],
-                                PR_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["pr_open_time_mid"],
-                                PR_OPEN_TIME_THRESHOLD_COMMUNITY,
-                                PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5))+
-                (get_param_score(item["comment_frequency"],
-                                COMMENT_FREQUENCY_THRESHOLD_COMMUNITY, COMMENT_FREQUENCY_WEIGHT_COMMUNITY))+
-                (get_param_score(item["updated_issues_count"],
-                                UPDATED_ISSUES_THRESHOLD_COMMUNITY, UPDATED_ISSUES_WEIGHT_COMMUNITY))+
-                (get_param_score(item["code_review_count"],
-                                CODE_REVIEW_THRESHOLD_COMMUNITY, CODE_REVIEW_WEIGHT_COMMUNITY)) +
-                (get_param_score(item["closed_prs_count"],
-                                CLOSED_PRS_THRESHOLD_COMMUNITY, CLOSED_PRS_WEIGHT_COMMUNITY)))/
-                total_weight_COMMUNITY, 5)
+    param_dict = {
+        "issue_first_reponse_avg":[ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5, ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY],
+        "issue_first_reponse_mid":[ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5, ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY],
+        "bug_issue_open_time_avg":[BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5, BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY],
+        "bug_issue_open_time_mid":[BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5, BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY],
+        "pr_open_time_avg":[PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5, PR_OPEN_TIME_THRESHOLD_COMMUNITY],
+        "pr_open_time_mid":[PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5, PR_OPEN_TIME_THRESHOLD_COMMUNITY],
+        "comment_frequency":[COMMENT_FREQUENCY_WEIGHT_COMMUNITY, COMMENT_FREQUENCY_THRESHOLD_COMMUNITY],
+        "updated_issues_count":[UPDATED_ISSUES_WEIGHT_COMMUNITY, UPDATED_ISSUES_THRESHOLD_COMMUNITY],
+        "code_review_count":[CODE_REVIEW_WEIGHT_COMMUNITY, CODE_REVIEW_THRESHOLD_COMMUNITY],
+        "closed_prs_count":[CLOSED_PRS_WEIGHT_COMMUNITY, CLOSED_PRS_THRESHOLD_COMMUNITY]
+    }
+    score = get_score_ahp(item, param_dict)
     return normalize(score, MIN_COMMUNITY_SCORE, MAX_COMMUNITY_SCORE)
 
 def code_quality_guarantee(item):
-    total_weight_CODE  = (LOC_FREQUENCY_WEIGHT_CODE + CONTRIBUTOR_COUNT_WEIGHT_CODE + 
-                            IS_MAINTAINED_WEIGHT_CODE + COMMIT_FREQUENCY_WEIGHT_CODE +
-                            CODE_MERGE_RATIO_WEIGHT_CODE + CODE_REVIEW_RATIO_WEIGHT_CODE +
-                            PR_ISSUE_LINKED_WEIGHT_CODE )
-    score = round(  
-                ((get_param_score(item["LOC_frequency"],
-                                LOC_FREQUENCY_THRESHOLD_CODE , LOC_FREQUENCY_WEIGHT_CODE)) +
-                (get_param_score(item["contributor_count"],
-                                CONTRIBUTOR_COUNT_THRESHOLD_CODE,
-                                CONTRIBUTOR_COUNT_WEIGHT_CODE)) +                   
-                (get_param_score(item["commit_frequency"],
-                                COMMIT_FREQUENCY_THRESHOLD_CODE,
-                                COMMIT_FREQUENCY_WEIGHT_CODE)) +                
-                (get_param_score(item["is_maintained"],
-                                IS_MAINTAINED_THRESHOLD_CODE, IS_MAINTAINED_WEIGHT_CODE)) +
-                (get_param_score(item["code_merge_ratio"],
-                                CODE_MERGE_RATIO_THRESHOLD_CODE, CODE_MERGE_RATIO_WEIGHT_CODE)) +
-                (get_param_score(item["code_review_ratio"],
-                                CODE_REVIEW_RATIO_THRESHOLD_CODE, CODE_REVIEW_RATIO_WEIGHT_CODE)) +
-                (get_param_score(item["pr_issue_linked_ratio"],
-                                PR_ISSUE_LINKED_THRESHOLD_CODE, PR_ISSUE_LINKED_WEIGHT_CODE))) /
-                total_weight_CODE, 5)
-    return score
+    param_dict = {
+        "LOC_frequency":[LOC_FREQUENCY_WEIGHT_CODE, LOC_FREQUENCY_THRESHOLD_CODE],
+        "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_CODE, CONTRIBUTOR_COUNT_THRESHOLD_CODE],
+        "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_CODE, COMMIT_FREQUENCY_THRESHOLD_CODE],
+        "is_maintained":[IS_MAINTAINED_WEIGHT_CODE, IS_MAINTAINED_THRESHOLD_CODE],
+        "code_merge_ratio":[CODE_MERGE_RATIO_WEIGHT_CODE, CODE_MERGE_RATIO_THRESHOLD_CODE],
+        "code_review_ratio":[CODE_REVIEW_RATIO_WEIGHT_CODE, CODE_REVIEW_RATIO_THRESHOLD_CODE],
+        "pr_issue_linked_ratio":[PR_ISSUE_LINKED_WEIGHT_CODE, PR_ISSUE_LINKED_THRESHOLD_CODE],
+    }
+    return get_score_ahp(item, param_dict)
 
 def increment_decay(last_data, threshold, days):
     return min(last_data + DECAY_COEFFICIENT * threshold * days, threshold)
