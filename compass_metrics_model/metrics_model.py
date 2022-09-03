@@ -22,17 +22,20 @@
 
 from perceval.backend import uuid
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 import json
 import yaml
 import pandas as pd
 import ssl
 import certifi
+import re
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
+from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
 from .utils import (get_activity_score, 
                     community_support, 
@@ -58,12 +61,15 @@ def get_date_list(begin_date, end_date, freq='W-MON'):
     return date_list
 
 
+## [Fixme] In fact, origin should not be distinguished by this form of string.
+## Maybe pass parameters through configuration file is better.
 def get_all_repo(file, source):
     '''Get all repo from json file'''
     all_repo_json = json.load(open(file))
     all_repo = []
+    origin = 'gitee' if 'gitee' in source else 'github'
     for i in all_repo_json:
-        for j in all_repo_json[i][source]:
+        for j in all_repo_json[i][origin]:
             all_repo.append(j)
     return all_repo
 
@@ -171,8 +177,9 @@ class MetricsModel:
         self.date_list = get_date_list(from_date, end_date)
 
     def metrics_model_metrics(self, elastic_url):
+        is_https = urlparse(elastic_url).scheme == 'https'
         self.es_in = Elasticsearch(
-            elastic_url, use_ssl=True, verify_certs=False, connection_class=RequestsHttpConnection)
+            elastic_url, use_ssl=is_https, verify_certs=False, connection_class=RequestsHttpConnection)
         self.es_out = ElasticSearch(elastic_url, self.out_index)
 
         if self.level == "community":
@@ -183,13 +190,15 @@ class MetricsModel:
             all_repo_json = json.load(open(self.json_file))
             for project in all_repo_json:
                 repos_list = []
-                for j in all_repo_json[project][self.issue_index.split('_')[0]]:
+                origin = 'gitee' if 'gitee' in self.issue_index else 'github'
+                for j in all_repo_json[project][origin]:
                     repos_list.append(j)
                 self.metrics_model_enrich(repos_list, project)
         if self.level == "repo":
             all_repo_json = json.load(open(self.json_file))
             for project in all_repo_json:
-                for j in all_repo_json[project][self.issue_index.split('_')[0]]:
+                origin = 'gitee' if 'gitee' in self.issue_index else 'github'
+                for j in all_repo_json[project][origin]:
                     self.metrics_model_enrich([j], j)
 
     def metrics_model_enrich(repos_list, label):
@@ -450,8 +459,7 @@ class ActivityMetricsModel(MetricsModel):
         self.release_index = release_index
         self.git_branch = git_branch
         self.all_project = get_all_project(self.json_file)
-        self.all_repo = get_all_repo(
-            self.json_file, self.issue_index.split('_')[0])
+        self.all_repo = get_all_repo(self.json_file, self.issue_index)
         self.model_name = 'Activity'
 
     def contributor_count(self, date, repos_list):
@@ -521,11 +529,14 @@ class ActivityMetricsModel(MetricsModel):
             return None
 
     def recent_releases_count(self, date, repos_list):
-        query_recent_releases_count = self.get_recent_releases_uuid_count(
-            "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=365)), to_date=date)
-        releases_count = self.es_in.search(index=self.release_index, body=query_recent_releases_count)[
-            'aggregations']["count_of_uuid"]['value']
-        return releases_count
+        try:
+            query_recent_releases_count = self.get_recent_releases_uuid_count(
+                "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=365)), to_date=date)
+            releases_count = self.es_in.search(index=self.release_index, body=query_recent_releases_count)[
+                'aggregations']["count_of_uuid"]['value']
+            return releases_count
+        except NotFoundError:
+            return 0
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
@@ -578,8 +589,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.all_project = get_all_project(self.json_file)
-        self.all_repo = get_all_repo(
-            self.json_file, self.issue_index.split('_')[0])
+        self.all_repo = get_all_repo(self.json_file, self.issue_index)
         self.model_name = 'Community Support and Service'
         self.pr_index = pr_index
         self.git_index = git_index
@@ -617,6 +627,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     issue_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
+        if len(issue_open_time_repo) == 0:
+            return None, None
         issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
         issue_open_time_repo_mid = get_medium(issue_open_time_repo)
         return issue_open_time_repo_avg, issue_open_time_repo_mid
@@ -674,12 +686,14 @@ class CommunitySupportMetricsModel(MetricsModel):
                 if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and str_to_datetime(item['_source']['merged_at']) < date:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], item['_source']['merged_at']))
-                if item['_source']['state'] == 'closed' and str_to_datetime(item['_source']['closed_at']) < date:
+                if item['_source']['state'] == 'closed' and str_to_datetime(item['_source']['closed_at'] or item['_source']['updated_at']) < date:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], item['_source']['closed_at']))
+                        item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
+        if len(pr_open_time_repo):
+            return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
         return pr_open_time_repo_avg, pr_open_time_repo_mid
@@ -800,8 +814,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.git_index = git_index
         self.git_branch = git_branch
         self.all_project = get_all_project(self.json_file)
-        self.all_repo = get_all_repo(
-            self.json_file, self.issue_index.split('_')[0])
+        self.all_repo = get_all_repo(self.json_file, self.issue_index)
         self.model_name = 'Code_Quality_Guarantee'
         self.pr_index = pr_index
         self.company = company
