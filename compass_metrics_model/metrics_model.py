@@ -34,7 +34,12 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from grimoire_elk.elastic import ElasticSearch
-from .utils import get_activity_score, community_support, code_quality_guarantee, community_decay
+from .utils import (get_activity_score, 
+                    community_support, 
+                    code_quality_guarantee, 
+                    community_decay,
+                    activity_decay,
+                    code_quality_decay)
 import os
 import inspect
 import sys
@@ -108,7 +113,7 @@ def create_release_index(es_client, all_repo, repo_index, release_index):
     for repo_url in all_repo:
         query = newest_message(repo_url)
         query_hits = es_client.search(index=repo_index, body=query)["hits"]["hits"]
-        if len(query_hits) > 0:
+        if len(query_hits) > 0 and query_hits[0]["_source"].get("releases"):
             items = query_hits[0]["_source"]["releases"]
             add_release_message(es_client, release_index, repo_url, items)
 
@@ -206,7 +211,7 @@ class MetricsModel:
         if created_since_list:
             return sum(created_since_list) / len(created_since_list)
         else:
-            return 0
+            return None
 
     def get_uuid_count_query(self, option, repos_list, field, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -503,7 +508,7 @@ class ActivityMetricsModel(MetricsModel):
         try:
             return float(issue['aggregations']["count_of_uuid"]['value']/issue["hits"]["total"]["value"])
         except ZeroDivisionError:
-            return 0
+            return None
 
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
@@ -513,7 +518,7 @@ class ActivityMetricsModel(MetricsModel):
         try:
             return prs['aggregations']["count_of_uuid"]['value']/prs["hits"]["total"]["value"]
         except ZeroDivisionError:
-            return 0
+            return None
 
     def recent_releases_count(self, date, repos_list):
         query_recent_releases_count = self.get_recent_releases_uuid_count(
@@ -524,14 +529,16 @@ class ActivityMetricsModel(MetricsModel):
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
-
-        create_release_index(self.es_in, repos_list, self.release_index)
+        last_metrics_data = {}
+        create_release_index(self.es_in, repos_list, self.repo_index ,self.release_index)
 
         for date in self.date_list:
             print(date)
             created_since = self.created_since(date, repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
+            comment_frequency = self.comment_frequency(date, repos_list)
+            code_review_count = self.code_review_count(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -540,8 +547,8 @@ class ActivityMetricsModel(MetricsModel):
                 'contributor_count': int(self.contributor_count(date, repos_list)),
                 'commit_frequency': round(self.commit_frequency(date, repos_list), 4),
                 'created_since': round(self.created_since(date, repos_list), 4),
-                'comment_frequency': float(round(self.comment_frequency(date, repos_list), 4)),
-                'code_review_count': round(self.code_review_count(date, repos_list), 4),
+                'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
+                'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
                 'updated_since': float(round(self.updated_since(date, repos_list), 4)),
                 'closed_issues_count': self.closed_issue_count(date, repos_list),
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
@@ -549,7 +556,8 @@ class ActivityMetricsModel(MetricsModel):
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
-            score = get_activity_score(metrics_data)
+            self.cache_last_metrics_data(metrics_data, last_metrics_data)
+            score = get_activity_score(activity_decay(metrics_data, last_metrics_data))
             metrics_data["activity_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -557,6 +565,12 @@ class ActivityMetricsModel(MetricsModel):
                 item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
+
+    def cache_last_metrics_data(self, item, last_metrics_data):
+        for i in ["comment_frequency",  "code_review_count"]:
+            if item[i] != None:
+                data = [item[i],item['grimoire_creation_date']]
+                last_metrics_data[i] = data
 
 
 class CommunitySupportMetricsModel(MetricsModel):
@@ -573,6 +587,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def issue_first_reponse(self, date, repos_list):
         query_issue_first_reponse_avg = self.get_uuid_count_query(
             "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_first_reponse = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)
         if issue_first_reponse["hits"]["total"]["value"] == 0:
             return None, None
@@ -581,15 +596,15 @@ class CommunitySupportMetricsModel(MetricsModel):
             "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
             50]
+        query_issue_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue_first_reponse_mid = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_mid)[
             'aggregations']["count_of_uuid"]['values']['50.0']
-        return issue_first_reponse_avg, issue_first_reponse_mid if issue_first_reponse_avg else 0, 0
+        return issue_first_reponse_avg, issue_first_reponse_mid 
 
     def issue_open_time(self, date, repos_list):
-        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
-                                                      "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
-        issue_opens_items = self.es_in.search(
-            index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+        issue_opens_items = self.es_in.search(index=self.issue_index, body=query_issue_opens)['hits']['hits']
         if len(issue_opens_items) == 0:
             return None, None
         issue_open_time_repo = []
@@ -605,10 +620,50 @@ class CommunitySupportMetricsModel(MetricsModel):
         issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
         issue_open_time_repo_mid = get_medium(issue_open_time_repo)
         return issue_open_time_repo_avg, issue_open_time_repo_mid
+ 
+    def bug_issue_open_time(self, date, repos_list):
+        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
+                                                      "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+        bug_query = {
+            "bool": {
+                "should": [{"script": {
+                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                }
+                },
+                    {"script": {
+                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0 &&doc['labels'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                    }
+                },
+                {"script": {
+                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('缺陷') != -1){return true}"
+                }
+                }],
+                "minimum_should_match": 1
+            }
+        }
+        query_issue_opens["query"]["bool"]["must"].append(bug_query)
+        issue_opens_items = self.es_in.search(
+            index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        if len(issue_opens_items) == 0:
+            return None, None
+        issue_open_time_repo = []
+        for item in issue_opens_items:
+            if 'state' in item['_source']:
+                if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+                        issue_open_time_repo.append(get_time_diff_days(
+                            item['_source']['created_at'], item['_source']['closed_at']))
+                else:
+                    issue_open_time_repo.append(get_time_diff_days(
+                        item['_source']['created_at'], str(date)))
+        issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
+        issue_open_time_repo_mid = get_medium(issue_open_time_repo)
+        return issue_open_time_repo_avg, issue_open_time_repo_mid
 
     def pr_open_time(self, date, repos_list):
         query_pr_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
                                                    "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})                                    
         pr_opens_items = self.es_in.search(
             index=self.pr_index, body=query_pr_opens)['hits']['hits']
         if len(pr_opens_items) == 0:
@@ -629,9 +684,27 @@ class CommunitySupportMetricsModel(MetricsModel):
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
         return pr_open_time_repo_avg, pr_open_time_repo_mid
 
+    def pr_first_response_time(self, date, repos_list):
+        query_pr_first_reponse_avg = self.get_uuid_count_query(
+            "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }}) 
+        pr_first_reponse = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_avg)
+        if pr_first_reponse["hits"]["total"]["value"] == 0:
+            return None, None
+        pr_first_reponse_avg = pr_first_reponse['aggregations']["count_of_uuid"]['value']
+        query_pr_first_reponse_mid = self.get_uuid_count_query(
+            "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        query_pr_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
+            50]
+        pr_first_reponse_mid = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_mid)[
+            'aggregations']["count_of_uuid"]['values']['50.0']
+        return pr_first_reponse_avg, pr_first_reponse_mid 
+
     def comment_frequency(self, date, repos_list):
         query_issue_comments_count = self.get_uuid_count_query(
             "sum", repos_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         issue = self.es_in.search(
             index=self.issue_index, body=query_issue_comments_count)
         try:
@@ -642,6 +715,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def updated_issue_count(self, date, repos_list):
         query_issue_updated_since = self.get_uuid_count_query(
             "cardinality", repos_list, "uuid", date_field='metadata__updated_on', size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_issue_updated_since["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         updated_issues_count = self.es_in.search(index=self.issue_index, body=query_issue_updated_since)[
             'aggregations']["count_of_uuid"]['value']
         return updated_issues_count
@@ -649,6 +723,7 @@ class CommunitySupportMetricsModel(MetricsModel):
     def code_review_count(self, date, repos_list):
         query_pr_comments_count = self.get_uuid_count_query(
             "avg", repos_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         prs = self.es_in.search(index=self.pr_index, body=query_pr_comments_count)
         if prs["hits"]["total"]["value"] == 0:
             return  None
@@ -668,11 +743,12 @@ class CommunitySupportMetricsModel(MetricsModel):
         for date in self.date_list:
             print(date)
             created_since = self.created_since(date, repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
             issue_first = self.issue_first_reponse(date, repos_list)
-            issue_open_time = self.issue_open_time(date, repos_list)
+            bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
             pr_open_time = self.pr_open_time(date, repos_list)
+            pr_first_response_time = self.pr_first_response_time(date, repos_list)
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
             metrics_data = {
@@ -682,10 +758,12 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'model_name': self.model_name,
                 'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] != None else None,
                 'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] != None else None,
-                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] != None else None,
-                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] != None else None,
+                'bug_issue_open_time_avg': round(bug_issue_open_time[0],4) if bug_issue_open_time[0] != None else None,
+                'bug_issue_open_time_mid': round(bug_issue_open_time[1],4) if bug_issue_open_time[1] != None else None,
                 'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
                 'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] != None else None,
+                'pr_first_response_time_avg': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
+                'pr_first_response_time_mid': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': float(code_review_count) if code_review_count != None else None,
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
@@ -705,8 +783,9 @@ class CommunitySupportMetricsModel(MetricsModel):
 
     def cache_last_metrics_data(self, item, last_metrics_data):
         for i in ["issue_first_reponse_avg",  "issue_first_reponse_mid", 
-                    "issue_open_time_avg", "issue_open_time_mid", 
+                    "bug_issue_open_time_avg", "bug_issue_open_time_mid", 
                     "pr_open_time_avg","pr_open_time_mid",
+                    "pr_first_response_time_avg", "pr_first_response_time_mid",
                     "comment_frequency", "code_review_count"]:
             if item[i] != None:
                 data = [item[i],item['grimoire_creation_date']]
@@ -727,7 +806,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.pr_index = pr_index
         self.company = company
         self.pr_comments_index = pr_comments_index
-        self.commits = {}
+        self.commit_message_dict = {}
 
     def get_pr_message_count(self, repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -782,54 +861,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         }
         return query
 
-    def get_pr_merger_count(self, repos_list, field, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
-        query = {
-            "size": size,
-            "track_total_hits": True,
-            "aggs": {
-                "count_of_uuid": {
-                    "cardinality": {
-                        "field": field
-                    }
-                }
-            },
-            "query": {
-                "bool": {
-                    "must": [
-                        {
-                            "bool": {
-                                "should": [{
-                                    "simple_query_string": {
-                                        "query": i,
-                                        "fields": ["tag"]
-                                    }}for i in repos_list],
-                                "minimum_should_match": 1
-                            }},
-                        {
-                            "match_phrase": {
-                                "pull_request": "true"
-                            }},
-                        {
-                            "script": {
-                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
-                            }
-                        }
-                    ],
-                    "filter": [
-                        {
-                            "range":
-                            {
-                                date_field: {
-                                    "gte": from_date.strftime("%Y-%m-%d"),
-                                    "lt": to_date.strftime("%Y-%m-%d")
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-        return query
+   
 
     def get_pr_linked_issue_count(self, repo, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -952,7 +984,47 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         try:
             return prs/pr_count
         except ZeroDivisionError:
-            return prs
+            return None
+
+
+    def git_pr_linked_ratio(self, date, repos_list):
+        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+        commits_without_merge_pr = {
+            "bool": {
+                "should": [{"script": {
+                    "script": "if (doc.containsKey('message') && doc['message'].size()>0 &&doc['message'].value.indexOf('Merge pull request') == -1){return true}"
+                }
+                }],
+                "minimum_should_match": 1}
+        }
+        commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr) 
+        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency)
+        commit_count = commit_message['aggregations']["count_of_uuid"]['value']
+        commit_pr_cout = 0
+        commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
+
+        for commit_message_i in set(commit_all_message):
+            commit_hash = commit_message_i
+            if commit_hash in self.commit_message_dict:
+                commit_pr_cout += self.commit_message_dict[commit_hash]
+            else:
+                pr_message = self.get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0)
+                commit_hash_query = { "bool": {"should": [ {"match_phrase": {"commits_data": commit_hash} }],
+                                        "minimum_should_match": 1
+                                    }
+                                }
+                pr_message["query"]["bool"]["must"].append(commit_hash_query)
+                prs = self.es_in.search(index=self.pr_index, body=pr_message)
+                if prs['aggregations']["count_of_uuid"]['value']>0:
+                    self.commit_message_dict[commit_hash] = 1
+                    commit_pr_cout += 1
+                else:
+                    self.commit_message_dict[commit_hash] = 0
+        if commit_count>0:
+            return len(commit_all_message), commit_pr_cout, commit_pr_cout/len(commit_all_message)
+        else:
+            return 0, None, None
+
 
     def code_merge_ratio(self, date, repos_list):
         query_pr_count = self.get_uuid_count_query(
@@ -960,14 +1032,19 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         pr_count = self.es_in.search(index=self.pr_index, body=query_pr_count)[
             'aggregations']["count_of_uuid"]['value']
-        query_pr_body = self.get_pr_merger_count(
-            repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_body = self.get_uuid_count_query( "cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_body["query"]["bool"]["must"].append({
+                            "script": {
+                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
+                            }
+                        })
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
             'aggregations']["count_of_uuid"]['value']
         try:
             return prs/pr_count
         except ZeroDivisionError:
-            return prs
+            return None
 
     def pr_issue_linked(self, date, repos_list):
         pr_linked_issue = 0
@@ -985,18 +1062,20 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         try:
             return pr_linked_issue/pr_count
         except ZeroDivisionError:
-            return pr_linked_issue
+            return None
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
+        last_metrics_data = {}
         for date in self.date_list:
             print(date)
             created_since = self.created_since(
                 date-timedelta(days=90), repos_list)
-            if created_since < 0:
+            if created_since is None:
                 continue
             commit_frequency = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
+            git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -1009,10 +1088,14 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
                 'code_review_ratio': self.code_review_ratio(date, repos_list),
                 'code_merge_ratio': self.code_merge_ratio(date, repos_list),
+                'pr_commit_count': git_pr_linked_ratio[0],
+                'pr_commit_linked_count': git_pr_linked_ratio[1],
+                'git_pr_linked_ratio': git_pr_linked_ratio[2],
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
-            score = code_quality_guarantee(metrics_data)
+            self.cache_last_metrics_data(metrics_data, last_metrics_data)
+            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data))
             metrics_data["code_quality_guarantee"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1020,6 +1103,12 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
         item_datas = []
+
+    def cache_last_metrics_data(self, item, last_metrics_data):
+        for i in ["code_merge_ratio",  "code_review_ratio", "pr_issue_linked_ratio"]:
+            if item[i] != None:
+                data = [item[i],item['grimoire_creation_date']]
+                last_metrics_data[i] = data
 
 
 if __name__ == '__main__':
