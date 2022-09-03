@@ -22,6 +22,7 @@
 
 from perceval.backend import uuid
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 import json
 import yaml
 import pandas as pd
@@ -33,6 +34,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           datetime_to_utc)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
+from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
 from .utils import (get_activity_score, 
                     community_support, 
@@ -171,8 +173,9 @@ class MetricsModel:
         self.date_list = get_date_list(from_date, end_date)
 
     def metrics_model_metrics(self, elastic_url):
+        is_https = urlparse(elastic_url).scheme == 'https'
         self.es_in = Elasticsearch(
-            elastic_url, use_ssl=True, verify_certs=False, connection_class=RequestsHttpConnection)
+            elastic_url, use_ssl=is_https, verify_certs=False, connection_class=RequestsHttpConnection)
         self.es_out = ElasticSearch(elastic_url, self.out_index)
 
         if self.level == "community":
@@ -521,11 +524,14 @@ class ActivityMetricsModel(MetricsModel):
             return None
 
     def recent_releases_count(self, date, repos_list):
-        query_recent_releases_count = self.get_recent_releases_uuid_count(
-            "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=365)), to_date=date)
-        releases_count = self.es_in.search(index=self.release_index, body=query_recent_releases_count)[
-            'aggregations']["count_of_uuid"]['value']
-        return releases_count
+        try:
+            query_recent_releases_count = self.get_recent_releases_uuid_count(
+                "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=365)), to_date=date)
+            releases_count = self.es_in.search(index=self.release_index, body=query_recent_releases_count)[
+                'aggregations']["count_of_uuid"]['value']
+            return releases_count
+        except NotFoundError:
+            return 0
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
