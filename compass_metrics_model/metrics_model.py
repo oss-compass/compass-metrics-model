@@ -777,7 +777,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
                 'pr_open_time_mid': round(pr_open_time[1],4) if pr_open_time[1] != None else None,
                 'pr_first_response_time_avg': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
-                'pr_first_response_time_mid': round(pr_first_response_time[0],4) if pr_first_response_time[0] != None else None,
+                'pr_first_response_time_mid': round(pr_first_response_time[1],4) if pr_first_response_time[1] != None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': float(code_review_count) if code_review_count != None else None,
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
@@ -955,15 +955,15 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         if self.level == "repo":
             date_list_maintained = get_date_list(begin_date=str(
                 date-timedelta(days=90)), end_date=str(date), freq='7D')
-            is_maintained = "True"
             for day in date_list_maintained:
                 query_git_commit_i = self.get_uuid_count_query(
                     "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
                 commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)[
                     'aggregations']["count_of_uuid"]['value']
-                if commit_frequency_i == 0:
-                    is_maintained = "False"
-            is_maintained_list.append(is_maintained)
+                if commit_frequency_i > 0:
+                    is_maintained_list.append("True")
+                else:
+                    is_maintained_list.append("False")
 
         elif self.level in ["project", "community"]:
             for repo in repos_list:
