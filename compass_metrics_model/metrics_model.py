@@ -51,7 +51,7 @@ current_dir = os.path.dirname(os.path.abspath(
 os.chdir(current_dir)
 sys.path.append('../')
 
-MAX_BULK_UPDATE_SIZE = 100
+MAX_BULK_UPDATE_SIZE = 10
 
 
 def get_date_list(begin_date, end_date, freq='W-MON'):
