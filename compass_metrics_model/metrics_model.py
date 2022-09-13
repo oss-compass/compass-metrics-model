@@ -978,11 +978,11 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         except ZeroDivisionError:
             return 0
 
-    def LOC_frequency(self, date, repos_list):
+    def LOC_frequency(self, date, repos_list, field='lines_changed'):
         query_LOC_frequency = self.get_uuid_count_query(
-            "sum", repos_list, "lines_changed", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
         LOC_frequency = self.es_in.search(index=self.git_index, body=query_LOC_frequency)[
-            'aggregations']["count_of_uuid"]['value']
+            'aggregations']['count_of_uuid']['value']
         return LOC_frequency/12.85
 
     def code_review_ratio(self, date, repos_list):
@@ -1055,9 +1055,9 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
             'aggregations']["count_of_uuid"]['value']
         try:
-            return prs/pr_count
+            return prs/pr_count, pr_count
         except ZeroDivisionError:
-            return None
+            return None, 0
 
     def pr_issue_linked(self, date, repos_list):
         pr_linked_issue = 0
@@ -1088,7 +1088,10 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 continue
             commit_frequency = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
+            lines_added_frequency = self.LOC_frequency(date, repos_list, 'lines_added')
+            lines_removed_frequency = self.LOC_frequency(date, repos_list, 'lines_removed')
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
+            code_merge_ratio, pr_count = self.code_merge_ratio(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -1098,9 +1101,12 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'commit_frequency': commit_frequency,
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
                 'LOC_frequency': LOC_frequency,
+                'lines_added_frequency': lines_added_frequency,
+                'lines_removed_frequency': lines_removed_frequency,
                 'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
                 'code_review_ratio': self.code_review_ratio(date, repos_list),
-                'code_merge_ratio': self.code_merge_ratio(date, repos_list),
+                'code_merge_ratio': code_merge_ratio,
+                'pr_count': pr_count,
                 'pr_commit_count': git_pr_linked_ratio[0],
                 'pr_commit_linked_count': git_pr_linked_ratio[1],
                 'git_pr_linked_ratio': git_pr_linked_ratio[2],
