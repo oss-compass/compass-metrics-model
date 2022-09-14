@@ -537,7 +537,7 @@ class ActivityMetricsModel(MetricsModel):
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
         
-        return commit_frequency/12.85, commit_frequency_company/12.85
+        return commit_frequency/12.85
 
     def updated_since(self, date, repos_list):
         updated_since_list = []
@@ -620,8 +620,7 @@ class ActivityMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': int(self.contributor_count(date, repos_list)),
-                'commit_frequency': commit_frequency_message[0],
-                'commit_frequency_company': commit_frequency_message[1],
+                'commit_frequency': commit_frequency_message,
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
