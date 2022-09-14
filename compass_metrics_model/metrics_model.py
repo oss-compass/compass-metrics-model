@@ -474,7 +474,8 @@ class ActivityMetricsModel(MetricsModel):
             "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
-        return commit_frequency/12.85
+        
+        return commit_frequency/12.85, commit_frequency_company/12.85
 
     def updated_since(self, date, repos_list):
         updated_since_list = []
@@ -550,13 +551,15 @@ class ActivityMetricsModel(MetricsModel):
                 continue
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
+            commit_frequency_message = self.commit_frequency(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': int(self.contributor_count(date, repos_list)),
-                'commit_frequency': round(self.commit_frequency(date, repos_list), 4),
+                'commit_frequency': commit_frequency_message[0],
+                'commit_frequency_company': commit_frequency_message[1],
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
@@ -639,17 +642,15 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         bug_query = {
             "bool": {
-                "should": [{"script": {
-                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('bug') != -1){return true}"
-                }
-                },
-                    {"script": {
-                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0 &&doc['labels'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                "should": [{
+                    "script": {
+                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0) { for (int i = 0; i < doc['labels'].length; ++i){ if(doc['labels'][i].toLowerCase().indexOf('bug')!=-1|| doc['labels'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
                     }
                 },
-                {"script": {
-                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('缺陷') != -1){return true}"
-                }
+                    {
+                    "script": {
+                        "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0) { for (int i = 0; i < doc['issue_type'].length; ++i){ if(doc['issue_type'][i].toLowerCase().indexOf('bug')!=-1 || doc['issue_type'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
+                    }
                 }],
                 "minimum_should_match": 1
             }
@@ -692,7 +693,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
-        if len(pr_open_time_repo):
+        if len(pr_open_time_repo) == 0:
             return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
@@ -899,7 +900,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                         },
                         {
                             "script": {
-                                "script": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf('"+repo+"') != -1){return true}"
+                                "script": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf('"+repo+"/issue') != -1){return true}"
                             }
                         }
                     ],
@@ -948,7 +949,10 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
-        return commit_frequency/12.85
+        query_commit_frequency["query"]["bool"]["must"].append({ "match": { "author_org_name": self.company } })
+        query_commit_frequency_commpany = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
+            'aggregations']["count_of_uuid"]['value']
+        return commit_frequency/12.85, query_commit_frequency_commpany/12.85
 
     def is_maintained(self, date, repos_list):
         is_maintained_list = []
@@ -1001,7 +1005,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
 
     def git_pr_linked_ratio(self, date, repos_list):
-        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=100000, from_date=date - timedelta(days=90), to_date=date)
         commits_without_merge_pr = {
             "bool": {
                 "should": [{"script": {
@@ -1049,7 +1053,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         query_pr_body["query"]["bool"]["must"].append({
                             "script": {
-                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
+                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['author_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
                             }
                         })
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
@@ -1086,7 +1090,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 date-timedelta(days=90), repos_list)
             if created_since is None:
                 continue
-            commit_frequency = self.commit_frequency(date, repos_list)
+            commit_frequency_message = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
             lines_added_frequency = self.LOC_frequency(date, repos_list, 'lines_added')
             lines_removed_frequency = self.LOC_frequency(date, repos_list, 'lines_removed')
@@ -1098,7 +1102,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': self.contributor_count(date, repos_list),
-                'commit_frequency': commit_frequency,
+                'commit_frequency': commit_frequency_message[0],
+                'commit_frequency_company': commit_frequency_message[1],
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
                 'LOC_frequency': LOC_frequency,
                 'lines_added_frequency': lines_added_frequency,
