@@ -512,7 +512,7 @@ class MetricsModel:
 
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None,issue_comments_index=None, pr_comments_index=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
@@ -520,14 +520,17 @@ class ActivityMetricsModel(MetricsModel):
         self.pr_index = pr_index
         self.release_index = release_index
         self.git_branch = git_branch
+        self.issue_comments_index = issue_comments_index
+        self.pr_comments_index = pr_comments_index
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index)
+
         self.model_name = 'Activity'
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index), body=query_author_uuid_data)[
+        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index, self.issue_comments_index,self.pr_comments_index), body=query_author_uuid_data)[
             'aggregations']["count_of_contributors"]['value']
         return author_uuid_count
 
