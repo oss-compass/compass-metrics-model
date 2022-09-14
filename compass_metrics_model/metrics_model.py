@@ -1189,7 +1189,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
                 'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message[0],
-                'commit_frequency_company': commit_frequency_message[1],
+                'commit_frequency_inside': commit_frequency_message[1],
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
                 'LOC_frequency': LOC_frequency,
                 'lines_added_frequency': lines_added_frequency,
