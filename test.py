@@ -1,4 +1,3 @@
-
 from compass_metrics_model.metrics_model import ActivityMetricsModel,CodeQualityGuaranteeMetricsModel
 import yaml
 if __name__ == '__main__':
@@ -7,7 +6,7 @@ if __name__ == '__main__':
     params = CONF['params']
     kwargs = {}
     
-    # for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level']:
+    # for item in ['issue_index', 'pr_index','json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level','issue_comments_index', 'pr_comments_index']:
     #     kwargs[item] = params[item]
     # model_activity = ActivityMetricsModel(**kwargs)
     # model_activity.metrics_model_metrics(elastic_url)

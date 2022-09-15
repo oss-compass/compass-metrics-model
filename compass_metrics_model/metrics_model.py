@@ -51,7 +51,7 @@ current_dir = os.path.dirname(os.path.abspath(
 os.chdir(current_dir)
 sys.path.append('../')
 
-MAX_BULK_UPDATE_SIZE = 100
+MAX_BULK_UPDATE_SIZE = 10
 
 
 def get_date_list(begin_date, end_date, freq='W-MON'):
@@ -448,9 +448,71 @@ class MetricsModel:
 
         return query
 
+    # name list of author_name in a index
+    def get_all_CX_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query_CX_users = {
+            "aggs": {
+                "name": {
+                    "terms": {
+                        "field": "author_name",
+                        "size": 100000
+                    }, "aggs": {
+                        "date": {
+                            "top_hits": {
+                                "sort": [{
+                                    "grimoire_creation_date": {"order": "asc"}
+                                }],
+                                "size": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "should": [
+                        {
+                            "simple_query_string": {
+                                "query": i+"(*) OR " + i+"*",
+                                "fields": [
+                                    "tag"
+                                ]
+                            }
+                        } for i in repos_list
+                    ],
+                    "minimum_should_match": 1,
+                    "filter": {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            },
+            "size": 0,
+            "from": 0
+        }
+        if pr:
+            query_CX_users["query"]["bool"]["must"] = {
+                "match_phrase": {
+                    "pull_request": "true"
+                }
+            }
+        if issue:
+            query_CX_users["query"]["bool"]["must"] = {
+                "match_phrase": {
+                    "pull_request": "false"
+                }
+            }
+        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
+            "aggregations"]["name"]["buckets"]
+        return [i["date"]["hits"]["hits"][0]["_source"] for i in CX_contributors]
+
+
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None,issue_comments_index=None, pr_comments_index=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
@@ -458,14 +520,17 @@ class ActivityMetricsModel(MetricsModel):
         self.pr_index = pr_index
         self.release_index = release_index
         self.git_branch = git_branch
+        self.issue_comments_index = issue_comments_index
+        self.pr_comments_index = pr_comments_index
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index)
+
         self.model_name = 'Activity'
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index), body=query_author_uuid_data)[
+        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index, self.issue_comments_index,self.pr_comments_index), body=query_author_uuid_data)[
             'aggregations']["count_of_contributors"]['value']
         return author_uuid_count
 
@@ -475,7 +540,7 @@ class ActivityMetricsModel(MetricsModel):
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
         
-        return commit_frequency/12.85, commit_frequency_company/12.85
+        return commit_frequency/12.85
 
     def updated_since(self, date, repos_list):
         updated_since_list = []
@@ -558,8 +623,7 @@ class ActivityMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': int(self.contributor_count(date, repos_list)),
-                'commit_frequency': commit_frequency_message[0],
-                'commit_frequency_company': commit_frequency_message[1],
+                'commit_frequency': commit_frequency_message,
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
@@ -1081,6 +1145,28 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         except ZeroDivisionError:
             return None
 
+    def active_C1_pr_create_contributor(self, date, repos_list):
+        C1_pr_contributors = self.get_all_CX_contributors(
+            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_pr_contributors)
+
+    def active_C1_pr_comments_contributor(self, date, repos_list):
+        C1_pr_comments_contributors = self.get_all_CX_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        C1_pr_comments_contributors["query"]["bool"]["must"] = [
+                                            {
+                                                "match_phrase": {
+                                                    "item_type": "comment"
+                                                }
+                                            }]
+        return len(C1_pr_comments_contributors)
+
+    def active_C2_contributor_count(self, date, repos_list):
+        query_author_uuid_data = self.get_uuid_count_contribute_query(
+            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
+        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
+            'aggregations']["count_of_contributors"]['value']
+        return author_uuid_count
+
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
         last_metrics_data = {}
@@ -1102,8 +1188,11 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': self.contributor_count(date, repos_list),
+                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
+                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
+                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message[0],
-                'commit_frequency_company': commit_frequency_message[1],
+                'commit_frequency_inside': commit_frequency_message[1],
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
                 'LOC_frequency': LOC_frequency,
                 'lines_added_frequency': lines_added_frequency,
