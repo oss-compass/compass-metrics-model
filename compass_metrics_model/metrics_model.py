@@ -527,6 +527,76 @@ class ActivityMetricsModel(MetricsModel):
 
         self.model_name = 'Activity'
 
+    def get_all_CX_comments_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query_CX_users = {
+            "aggs": {
+                "name": {
+                    "terms": {
+                        "field": "author_name",
+                        "size": 100000
+                    }, "aggs": {
+                        "date": {
+                            "top_hits": {
+                                "sort": [{
+                                    "grimoire_creation_date": {"order": "asc"}
+                                }],
+                                "size": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "should": [
+                        {
+                            "simple_query_string": {
+                                "query": i+"(*) OR " + i+"*",
+                                "fields": [
+                                    "tag"
+                                ]
+                            }
+                        } for i in repos_list
+                    ],
+                    "minimum_should_match": 1,
+                    "filter": {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            },
+            "size": 1,
+            "from": 0
+        }
+        if pr:
+            query_CX_users["query"]["bool"]["must"] = [
+                {
+                    "match_phrase": {
+                        "item_type": "comment"
+                    }
+                }]
+            # print(query_CX_users)
+        if issue:
+            query_CX_users["query"]["bool"]["must"] = [
+                {
+                    "match_phrase": {
+                        "item_type": "comment"
+                    }
+                }, {
+                    "match_phrase": {
+                        "issue_pull_request": "false"
+                    }
+                }]
+        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
+            "aggregations"]["name"]["buckets"]
+        all_contributors = [i["date"]["hits"]["hits"]
+                            [0]["_source"] for i in CX_contributors]
+        return all_contributors
+
+
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
@@ -604,6 +674,32 @@ class ActivityMetricsModel(MetricsModel):
         except NotFoundError:
             return 0
 
+    def active_C1_pr_create_contributor(self, date, repos_list):
+        C1_pr_contributors = self.get_all_CX_contributors(
+            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_pr_contributors)
+
+    def active_C1_pr_comments_contributor(self, date, repos_list):
+        C1_pr_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_pr_comments_contributors)
+    
+    def active_C1_issue_create_contributor(self, date, repos_list):
+        C1_issue_contributors = self.get_all_CX_contributors(
+            repos_list, (self.issue_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_issue_contributors)
+
+    def active_C1_issue_comments_contributor(self, date, repos_list):
+        C1_issue_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.issue_comments_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_issue_comments_contributors)
+
+    def active_C2_contributor_count(self, date, repos_list):
+        query_author_uuid_data = self.get_uuid_count_contribute_query(
+            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
+        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
+            'aggregations']["count_of_contributors"]['value']
+        return author_uuid_count
+
+
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
         last_metrics_data = {}
@@ -623,6 +719,11 @@ class ActivityMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': int(self.contributor_count(date, repos_list)),
+                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
+                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
+                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
+                'active_C1_issue_create_contributor': self.active_C1_issue_create_contributor(date, repos_list),
+                'active_C1_issue_comments_contributor': self.active_C1_issue_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message,
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
@@ -1001,6 +1102,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         }
         return query
 
+ 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
@@ -1145,28 +1247,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         except ZeroDivisionError:
             return None
 
-    def active_C1_pr_create_contributor(self, date, repos_list):
-        C1_pr_contributors = self.get_all_CX_contributors(
-            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_pr_contributors)
-
-    def active_C1_pr_comments_contributor(self, date, repos_list):
-        C1_pr_comments_contributors = self.get_all_CX_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        C1_pr_comments_contributors["query"]["bool"]["must"] = [
-                                            {
-                                                "match_phrase": {
-                                                    "item_type": "comment"
-                                                }
-                                            }]
-        return len(C1_pr_comments_contributors)
-
-    def active_C2_contributor_count(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(
-            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
-            'aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
-
+ 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
         last_metrics_data = {}
@@ -1188,9 +1269,6 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': self.contributor_count(date, repos_list),
-                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
-                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
-                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message[0],
                 'commit_frequency_inside': commit_frequency_message[1],
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
