@@ -51,7 +51,7 @@ current_dir = os.path.dirname(os.path.abspath(
 os.chdir(current_dir)
 sys.path.append('../')
 
-MAX_BULK_UPDATE_SIZE = 100
+MAX_BULK_UPDATE_SIZE = 10
 
 
 def get_date_list(begin_date, end_date, freq='W-MON'):
@@ -448,9 +448,71 @@ class MetricsModel:
 
         return query
 
+    # name list of author_name in a index
+    def get_all_CX_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query_CX_users = {
+            "aggs": {
+                "name": {
+                    "terms": {
+                        "field": "author_name",
+                        "size": 100000
+                    }, "aggs": {
+                        "date": {
+                            "top_hits": {
+                                "sort": [{
+                                    "grimoire_creation_date": {"order": "asc"}
+                                }],
+                                "size": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "should": [
+                        {
+                            "simple_query_string": {
+                                "query": i+"(*) OR " + i+"*",
+                                "fields": [
+                                    "tag"
+                                ]
+                            }
+                        } for i in repos_list
+                    ],
+                    "minimum_should_match": 1,
+                    "filter": {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            },
+            "size": 0,
+            "from": 0
+        }
+        if pr:
+            query_CX_users["query"]["bool"]["must"] = {
+                "match_phrase": {
+                    "pull_request": "true"
+                }
+            }
+        if issue:
+            query_CX_users["query"]["bool"]["must"] = {
+                "match_phrase": {
+                    "pull_request": "false"
+                }
+            }
+        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
+            "aggregations"]["name"]["buckets"]
+        return [i["date"]["hits"]["hits"][0]["_source"] for i in CX_contributors]
+
+
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None,issue_comments_index=None, pr_comments_index=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
@@ -458,14 +520,87 @@ class ActivityMetricsModel(MetricsModel):
         self.pr_index = pr_index
         self.release_index = release_index
         self.git_branch = git_branch
+        self.issue_comments_index = issue_comments_index
+        self.pr_comments_index = pr_comments_index
         self.all_project = get_all_project(self.json_file)
         self.all_repo = get_all_repo(self.json_file, self.issue_index)
+
         self.model_name = 'Activity'
+
+    def get_all_CX_comments_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query_CX_users = {
+            "aggs": {
+                "name": {
+                    "terms": {
+                        "field": "author_name",
+                        "size": 100000
+                    }, "aggs": {
+                        "date": {
+                            "top_hits": {
+                                "sort": [{
+                                    "grimoire_creation_date": {"order": "asc"}
+                                }],
+                                "size": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "should": [
+                        {
+                            "simple_query_string": {
+                                "query": i+"(*) OR " + i+"*",
+                                "fields": [
+                                    "tag"
+                                ]
+                            }
+                        } for i in repos_list
+                    ],
+                    "minimum_should_match": 1,
+                    "filter": {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                }
+            },
+            "size": 1,
+            "from": 0
+        }
+        if pr:
+            query_CX_users["query"]["bool"]["must"] = [
+                {
+                    "match_phrase": {
+                        "item_type": "comment"
+                    }
+                }]
+            # print(query_CX_users)
+        if issue:
+            query_CX_users["query"]["bool"]["must"] = [
+                {
+                    "match_phrase": {
+                        "item_type": "comment"
+                    }
+                }, {
+                    "match_phrase": {
+                        "issue_pull_request": "false"
+                    }
+                }]
+        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
+            "aggregations"]["name"]["buckets"]
+        all_contributors = [i["date"]["hits"]["hits"]
+                            [0]["_source"] for i in CX_contributors]
+        return all_contributors
+
 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index), body=query_author_uuid_data)[
+        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index, self.issue_comments_index,self.pr_comments_index), body=query_author_uuid_data)[
             'aggregations']["count_of_contributors"]['value']
         return author_uuid_count
 
@@ -474,6 +609,7 @@ class ActivityMetricsModel(MetricsModel):
             "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
+        
         return commit_frequency/12.85
 
     def updated_since(self, date, repos_list):
@@ -538,6 +674,32 @@ class ActivityMetricsModel(MetricsModel):
         except NotFoundError:
             return 0
 
+    def active_C1_pr_create_contributor(self, date, repos_list):
+        C1_pr_contributors = self.get_all_CX_contributors(
+            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_pr_contributors)
+
+    def active_C1_pr_comments_contributor(self, date, repos_list):
+        C1_pr_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_pr_comments_contributors)
+    
+    def active_C1_issue_create_contributor(self, date, repos_list):
+        C1_issue_contributors = self.get_all_CX_contributors(
+            repos_list, (self.issue_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_issue_contributors)
+
+    def active_C1_issue_comments_contributor(self, date, repos_list):
+        C1_issue_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.issue_comments_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
+        return len(C1_issue_comments_contributors)
+
+    def active_C2_contributor_count(self, date, repos_list):
+        query_author_uuid_data = self.get_uuid_count_contribute_query(
+            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
+        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
+            'aggregations']["count_of_contributors"]['value']
+        return author_uuid_count
+
+
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
         last_metrics_data = {}
@@ -550,13 +712,19 @@ class ActivityMetricsModel(MetricsModel):
                 continue
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
+            commit_frequency_message = self.commit_frequency(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': int(self.contributor_count(date, repos_list)),
-                'commit_frequency': round(self.commit_frequency(date, repos_list), 4),
+                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
+                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
+                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
+                'active_C1_issue_create_contributor': self.active_C1_issue_create_contributor(date, repos_list),
+                'active_C1_issue_comments_contributor': self.active_C1_issue_comments_contributor(date, repos_list),
+                'commit_frequency': commit_frequency_message,
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
@@ -639,17 +807,15 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
         bug_query = {
             "bool": {
-                "should": [{"script": {
-                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('bug') != -1){return true}"
-                }
-                },
-                    {"script": {
-                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0 &&doc['labels'].value.toLowerCase().indexOf('bug') != -1){return true}"
+                "should": [{
+                    "script": {
+                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0) { for (int i = 0; i < doc['labels'].length; ++i){ if(doc['labels'][i].toLowerCase().indexOf('bug')!=-1|| doc['labels'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
                     }
                 },
-                {"script": {
-                    "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0 &&doc['issue_type'].value.toLowerCase().indexOf('缺陷') != -1){return true}"
-                }
+                    {
+                    "script": {
+                        "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0) { for (int i = 0; i < doc['issue_type'].length; ++i){ if(doc['issue_type'][i].toLowerCase().indexOf('bug')!=-1 || doc['issue_type'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
+                    }
                 }],
                 "minimum_should_match": 1
             }
@@ -692,7 +858,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], str(date)))
-        if len(pr_open_time_repo):
+        if len(pr_open_time_repo) == 0:
             return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
         pr_open_time_repo_mid = get_medium(pr_open_time_repo)
@@ -899,7 +1065,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                         },
                         {
                             "script": {
-                                "script": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf('"+repo+"') != -1){return true}"
+                                "script": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf('"+repo+"/issue') != -1){return true}"
                             }
                         }
                     ],
@@ -936,6 +1102,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         }
         return query
 
+ 
     def contributor_count(self, date, repos_list):
         query_author_uuid_data = self.get_uuid_count_contribute_query(
             repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
@@ -948,7 +1115,10 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
-        return commit_frequency/12.85
+        query_commit_frequency["query"]["bool"]["must"].append({ "match": { "author_org_name": self.company } })
+        query_commit_frequency_commpany = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
+            'aggregations']["count_of_uuid"]['value']
+        return commit_frequency/12.85, query_commit_frequency_commpany/12.85
 
     def is_maintained(self, date, repos_list):
         is_maintained_list = []
@@ -1001,7 +1171,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
 
     def git_pr_linked_ratio(self, date, repos_list):
-        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=100000, from_date=date - timedelta(days=90), to_date=date)
         commits_without_merge_pr = {
             "bool": {
                 "should": [{"script": {
@@ -1049,7 +1219,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
         query_pr_body["query"]["bool"]["must"].append({
                             "script": {
-                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
+                                "script": "if(doc['merged_by_data_name'].size() > 0 && doc['author_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
                             }
                         })
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
@@ -1077,6 +1247,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         except ZeroDivisionError:
             return None
 
+ 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
         last_metrics_data = {}
@@ -1086,7 +1257,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 date-timedelta(days=90), repos_list)
             if created_since is None:
                 continue
-            commit_frequency = self.commit_frequency(date, repos_list)
+            commit_frequency_message = self.commit_frequency(date, repos_list)
             LOC_frequency = self.LOC_frequency(date, repos_list)
             lines_added_frequency = self.LOC_frequency(date, repos_list, 'lines_added')
             lines_removed_frequency = self.LOC_frequency(date, repos_list, 'lines_removed')
@@ -1098,7 +1269,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'label': label,
                 'model_name': self.model_name,
                 'contributor_count': self.contributor_count(date, repos_list),
-                'commit_frequency': commit_frequency,
+                'commit_frequency': commit_frequency_message[0],
+                'commit_frequency_inside': commit_frequency_message[1],
                 'is_maintained': round(self.is_maintained(date, repos_list), 4),
                 'LOC_frequency': LOC_frequency,
                 'lines_added_frequency': lines_added_frequency,
