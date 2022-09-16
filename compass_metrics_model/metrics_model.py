@@ -1115,9 +1115,11 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
         commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
             'aggregations']["count_of_uuid"]['value']
-        query_commit_frequency["query"]["bool"]["must"].append({ "match": { "author_org_name": self.company } })
-        query_commit_frequency_commpany = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
-            'aggregations']["count_of_uuid"]['value']
+        query_commit_frequency_commpany = 0
+        if self.company:
+            query_commit_frequency["query"]["bool"]["must"].append({ "match": { "author_org_name": self.company } })
+            query_commit_frequency_commpany = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
+                'aggregations']["count_of_uuid"]['value']
         return commit_frequency/12.85, query_commit_frequency_commpany/12.85
 
     def is_maintained(self, date, repos_list):
