@@ -40,6 +40,7 @@ from grimoire_elk.elastic import ElasticSearch
 from .utils import (get_activity_score, 
                     community_support, 
                     code_quality_guarantee, 
+                    organizations_activity,
                     community_decay,
                     activity_decay,
                     code_quality_decay)
@@ -260,25 +261,22 @@ class MetricsModel:
                     }
                 }
             },
-            "query": {
-                "bool": {
-                    "should": [{
-                        "simple_query_string": {
-                            "query": i+'*',
-                            "fields": ["tag"]
-                        }
-                    } for i in repos_list],
-                    "minimum_should_match": 1,
-                    "filter": {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "gte": from_date.strftime("%Y-%m-%d"),
-                                "lt": to_date.strftime("%Y-%m-%d")
-                            }
-                        }
-                    }
-                }
-            }
+            "query":
+            {"bool": {
+                "must": [
+                    {"bool":
+                     {"should":
+                      [{"simple_query_string":
+                        {"query": i + "*",
+                         "fields":
+                         ["tag"]}}for i in repos_list],
+                         "minimum_should_match": 1,
+                         "filter":
+                         {"range":
+                          {"grimoire_creation_date":
+                           {"gte": from_date.strftime("%Y-%m-%d"), "lt": to_date.strftime("%Y-%m-%d")}}}
+                      }
+                     }]}},
         }
 
         if company:
@@ -578,7 +576,6 @@ class MetricsModel:
         all_contributors = [i["date"]["hits"]["hits"]
                             [0]["_source"] for i in CX_contributors]
         return all_contributors
-
 
 
 
@@ -927,6 +924,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 continue
             issue_first = self.issue_first_reponse(date, repos_list)
             bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
+            issue_open_time = self.issue_open_time(date, repos_list)
             pr_open_time = self.pr_open_time(date, repos_list)
             pr_first_response_time = self.pr_first_response_time(date, repos_list)
             comment_frequency = self.comment_frequency(date, repos_list)
@@ -938,6 +936,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'model_name': self.model_name,
                 'issue_first_reponse_avg': round(issue_first[0],4) if issue_first[0] != None else None,
                 'issue_first_reponse_mid': round(issue_first[1],4) if issue_first[1] != None else None,
+                'issue_open_time_avg': round(issue_open_time[0],4) if issue_open_time[0] != None else None,
+                'issue_open_time_mid': round(issue_open_time[1],4) if issue_open_time[1] != None else None,
                 'bug_issue_open_time_avg': round(bug_issue_open_time[0],4) if bug_issue_open_time[0] != None else None,
                 'bug_issue_open_time_mid': round(bug_issue_open_time[1],4) if bug_issue_open_time[1] != None else None,
                 'pr_open_time_avg': round(pr_open_time[0],4) if pr_open_time[0] != None else None,
@@ -1320,6 +1320,309 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 data = [item[i],item['grimoire_creation_date']]
                 last_metrics_data[i] = data
 
+class OrganizationsActivityMetricsModel(MetricsModel):
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, company=None, issue_comments_index=None, pr_comments_index=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level)
+        self.issue_index = issue_index
+        self.repo_index = repo_index
+        self.git_index = git_index
+        self.pr_index = pr_index
+        self.git_branch = git_branch
+        self.issue_comments_index = issue_comments_index
+        self.pr_comments_index = pr_comments_index
+        self.company = company
+        self.all_project = get_all_project(self.json_file)
+        self.all_repo = get_all_repo(self.json_file, self.issue_index)
+        self.model_name = 'Organizations Activity'
+        self.org_name_dict = {}
+    
+    def get_organization_name_query(self, repos_list, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+        query = {
+            "size": size,
+            "track_total_hits": "true",
+            "aggs": {
+                "count_of_uuid": {
+                "terms": {
+                    "size": 10000,
+                    "field": "author_org_name"
+                },
+                "aggs": {
+                    "author_domain_count": {
+                    "terms": {
+                        "size": 10000,
+                        "field": "author_domain"
+                    },
+                    "aggs": {
+                        "hash_cardinality": {
+                        "cardinality": {
+                            "precision_threshold": 10000,
+                            "field": "hash"
+                        }
+                        }
+                    }
+                    }
+                }
+                }
+            },
+            "query": {
+                "bool": {
+                "must": [
+                    {
+                    "bool": {
+                        "should": [
+                        {
+                            "simple_query_string": {
+                                "query": i + "*",
+                                "fields": ["tag"]
+                            }
+                        } for i in repos_list
+                        ],
+                        "minimum_should_match": 1,
+                        "filter": [
+                        {
+                            "range": {
+                             date_field: {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                            }
+                        }
+                        ]
+                    }
+                    }
+                ]
+                }
+            }
+        }
+        return query
+
+    def contributor_count(self, date, repos_list):
+        query_contributor_count_data = self.get_uuid_count_contribute_query(
+            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
+        query_contributor_count_data["query"]["bool"]["must"].append({
+          "bool": {
+            "should": [
+              {
+                "bool": {
+                  "must": [
+                    {
+                      "match_phrase": {
+                        "author_org_name": "Unknown"
+                      }
+                    },
+                    {
+                      "bool": {
+                        "should": [
+                          {
+                            "script": {
+                              "script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('facebook.com')!=-1){return true}"
+                            }
+                          },
+                          {
+                            "script": {
+                              "script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.github.com')!=-1){return true}"
+                            }
+                          },
+                          {
+                            "script": {
+                              "script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.gitee.com')!=-1){return true}"
+                            }
+                          }
+                        ],
+                        "minimum_should_match": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "bool": {
+                  "must_not": [
+                    {
+                      "match_phrase": {
+                        "author_org_name": "Unknown"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "minimum_should_match": 1
+          }
+        })
+        contributor_count = self.es_in.search(index=self.git_index, body=query_contributor_count_data)[
+            'aggregations']["count_of_contributors"]['value']
+
+        contributor_org_count_dict = {}
+        for org_name in self.org_name_dict.keys():
+            query_contributor_org_count_data = self.get_uuid_count_contribute_query(
+                repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
+            if self.org_name_dict[org_name]:
+                query_contributor_org_count_data["query"]["bool"]["must"].append({
+                    "bool": {
+                        "should": [
+                        {
+                            "match_phrase": {
+                            "author_org_name": org_name
+                            }
+                        }
+                        ],
+                        "minimum_should_match": 1}})
+                if org_name == self.company:
+                    query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.github.com')!=-1){return true}"}})
+                    query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.gitee.com')!=-1){return true}"}})
+                if org_name == "Facebook":
+                    query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('facebook.com')!=-1){return true}"}})
+            else :
+                query_contributor_org_count_data["query"]["bool"]["must"].append({
+                    "bool": {
+                        "must": [
+                        {
+                            "match_phrase": {
+                            "author_org_name": "Unknown"
+                            }
+                        },
+                        {
+                            "match_phrase": {
+                            "author_domain": org_name
+                            }
+                        }]}})
+            contributor_org_count = self.es_in.search(index=self.git_index, body=query_contributor_org_count_data)[
+                'aggregations']["count_of_contributors"]['value']
+            if contributor_org_count > 0 :
+                contributor_org_count_dict[org_name] = contributor_org_count
+        return contributor_count, contributor_org_count_dict
+
+    def commit_frequency(self, date, repos_list):
+        query_commit_frequency = self.get_organization_name_query(
+            repos_list, "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
+        commit_frequency_buckets = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
+            'aggregations']["count_of_uuid"]['buckets']
+
+        commit_frequency = 0
+        commit_frequency_total = 0
+        commit_frequency_org = {}
+        for commit_frequency_bucket in commit_frequency_buckets:
+            commit_frequency_org_count_name = commit_frequency_bucket["key"]
+            if commit_frequency_org_count_name == "Unknown":
+                for bucket in commit_frequency_bucket["author_domain_count"]["buckets"]:
+                    commit_frequency_org_count_name = bucket["key"]
+                    commit_frequency_org_count = bucket["hash_cardinality"]["value"]
+                    commit_frequency_total += commit_frequency_org_count
+                    if "facebook.com" in commit_frequency_org_count_name:
+                        commit_frequency += commit_frequency_org_count
+                    if ("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name) :
+                        commit_frequency += commit_frequency_org_count
+            else:
+                for bucket in commit_frequency_bucket["author_domain_count"]["buckets"]:
+                    commit_frequency_org_count = bucket["hash_cardinality"]["value"]
+                    commit_frequency_total += commit_frequency_org_count
+                    commit_frequency += commit_frequency_org_count
+                    
+        for commit_frequency_bucket in commit_frequency_buckets:
+            is_org = True
+            commit_frequency_org_count_name = commit_frequency_bucket["key"]
+            if commit_frequency_org_count_name == "Unknown":
+                for bucket in commit_frequency_bucket["author_domain_count"]["buckets"]:
+                    is_org = False
+                    commit_frequency_org_count_name = bucket["key"]
+                    commit_frequency_org_count = bucket["hash_cardinality"]["value"]
+                    if "facebook.com" in commit_frequency_org_count_name:
+                        is_org = True
+                        commit_frequency_org_count_name = "Facebook"
+                        if commit_frequency_org.get(commit_frequency_org_count_name) is not None:
+                            commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
+                    if ("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name) :
+                        is_org = True
+                        commit_frequency_org_count_name = self.company
+                        if commit_frequency_org.get(commit_frequency_org_count_name) is not None:
+                            commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
+                    commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total] 
+                    self.org_name_dict[commit_frequency_org_count_name] = is_org
+            else:
+                commit_frequency_org_count = 0
+                for bucket in commit_frequency_bucket["author_domain_count"]["buckets"]:
+                    commit_frequency_org_count += bucket["hash_cardinality"]["value"]
+                if "Facebook" == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
+                    commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
+                if self.company == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
+                    commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
+                commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency),commit_frequency_org_count/commit_frequency_total] 
+                self.org_name_dict[commit_frequency_org_count_name] = is_org
+
+        return commit_frequency/12.85,commit_frequency_org
+
+    def org_count(self, date, repos_list):
+        query_org_count = self.get_uuid_count_query("cardinality", repos_list, "author_org_name", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
+        org_count_message = self.es_in.search(index=self.git_index, body=query_org_count)
+        org_count = org_count_message['aggregations']["count_of_uuid"]['value']
+        return org_count
+
+    def contribution_last(self, date, repos_list):
+        contribution_last = 0
+        date_list = get_date_list(begin_date=str(
+                date-timedelta(days=90)), end_date=str(date), freq='7D')
+        for day in date_list:
+            query_organization_name = self.get_organization_name_query(
+                repos_list, "grimoire_creation_date", size=0, from_date=day - timedelta(days=7), to_date=day)
+            organization_name_buckets = self.es_in.search(index=self.git_index, body=query_organization_name)[
+                'aggregations']["count_of_uuid"]['buckets']
+
+            org_name_set = set()
+            for organization_name_bucket in organization_name_buckets:
+                organization_name = organization_name_bucket["key"]
+                if organization_name == "Unknown":
+                    for bucket in organization_name_bucket["author_domain_count"]["buckets"]:
+                        author_domain_name = bucket["key"]
+                        if "facebook.com" in author_domain_name:
+                            author_domain_name = "Facebook"
+                        if ("noreply.github.com" in author_domain_name) or ("noreply.gitee.com" in author_domain_name) :
+                            author_domain_name = self.company
+                        org_name_set.add(author_domain_name)
+                else:
+                    org_name_set.add(organization_name)
+            contribution_last += len(org_name_set)
+        return contribution_last
+
+    def metrics_model_enrich(self, repos_list, label):
+        item_datas = []
+        for date in self.date_list:
+            print(date)
+            created_since = self.created_since(date, repos_list)
+            if created_since is None:
+                continue
+            commit_frequency_message = self.commit_frequency(date, repos_list)
+            contributor_count_message = self.contributor_count(date, repos_list)
+            org_count = self.org_count(date, repos_list)
+            contribution_last = self.contribution_last(date, repos_list)
+            for org_name in self.org_name_dict.keys():
+                metrics_data = {
+                    'uuid': uuid(str(date), org_name, self.community, self.level, label, self.model_name),
+                    'level': self.level,
+                    'label': label,
+                    'model_name': self.model_name,
+                    'org_name': org_name,
+                    'is_org': self.org_name_dict[org_name],
+                    'contributor_count': contributor_count_message[0],
+                    'contributor_org_count': contributor_count_message[1].get(org_name),
+                    'commit_frequency': round(commit_frequency_message[0], 4),
+                    'commit_frequency_org': round(commit_frequency_message[1][org_name][0], 4) if org_name in commit_frequency_message[1] else None,
+                    'commit_frequency_org_percentage': round(commit_frequency_message[1][org_name][1], 4) if org_name in commit_frequency_message[1] else None,
+                    'commit_frequency_percentage': round(commit_frequency_message[1][org_name][2], 4) if org_name in commit_frequency_message[1] else None,
+                    'org_count': org_count,
+                    'contribution_last': contribution_last,
+                    'grimoire_creation_date': date.isoformat(),
+                    'metadata__enriched_on': datetime_utcnow().isoformat()
+                }
+                score = organizations_activity(metrics_data)
+                metrics_data["organizations_activity"] = score
+                item_datas.append(metrics_data)
+                if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                    self.es_out.bulk_upload(item_datas, "uuid")
+                    item_datas = []
+        self.es_out.bulk_upload(item_datas, "uuid")
+        item_datas = []
+
 
 if __name__ == '__main__':
     CONF = yaml.safe_load(open('../conf.yaml'))
@@ -1341,3 +1644,8 @@ if __name__ == '__main__':
         kwargs[item] = params[item]
     model_code = CodeQualityGuaranteeMetricsModel(**kwargs)
     model_code.metrics_model_metrics()
+
+    # for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'issue_comments_index', 'pr_comments_index']:
+    #     kwargs[item] = params[item]
+    # model_organizations = OrganizationsActivityMetricsModel(**kwargs)
+    # model_organizations.metrics_model_metrics(elastic_url)
