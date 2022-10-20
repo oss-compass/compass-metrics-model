@@ -1269,8 +1269,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         last_metrics_data = {}
         for date in self.date_list:
             print(date)
-            created_since = self.created_since(
-                date-timedelta(days=90), repos_list)
+            created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
             commit_frequency_message = self.commit_frequency(date, repos_list)
