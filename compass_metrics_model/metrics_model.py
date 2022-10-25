@@ -37,9 +37,9 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
-from .utils import (get_activity_score, 
-                    community_support, 
-                    code_quality_guarantee, 
+from .utils import (get_activity_score,
+                    community_support,
+                    code_quality_guarantee,
                     organizations_activity,
                     community_decay,
                     activity_decay,
@@ -62,8 +62,8 @@ def get_date_list(begin_date, end_date, freq='W-MON'):
     return date_list
 
 
-## [Fixme] In fact, origin should not be distinguished by this form of string.
-## Maybe pass parameters through configuration file is better.
+# [Fixme] In fact, origin should not be distinguished by this form of string.
+# Maybe pass parameters through configuration file is better.
 def get_all_repo(file, source):
     '''Get all repo from json file'''
     all_repo_json = json.load(open(file))
@@ -81,9 +81,9 @@ def newest_message(repo_url):
                 "tag": repo_url
             }
         },
-        "sort":[
+        "sort": [
             {
-                "metadata__updated_on": { "order": "desc" }
+                "metadata__updated_on": {"order": "desc"}
             }
         ]
     }
@@ -166,7 +166,7 @@ def get_medium(L):
 class MetricsModel:
     def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
-        :param json_file: the path of json file containing repository message. 
+        :param json_file: the path of json file containing repository message.
         :param out_index: target index for Metrics Model.
         :param community: used to mark the repo belongs to which community.
         :param level: str representation of the metrics, choose from repo, project, community.
@@ -506,7 +506,6 @@ class MetricsModel:
         CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
             "aggregations"]["name"]["buckets"]
         return [i["date"]["hits"]["hits"][0]["_source"] for i in CX_contributors]
-
 
     def get_all_CX_comments_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query_CX_users = {
@@ -1467,12 +1466,12 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                         }
                         ],
                         "minimum_should_match": 1}})
-                if org_name == self.company:
+                if self.company and org_name == self.company:
                     query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.github.com')!=-1){return true}"}})
                     query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('noreply.gitee.com')!=-1){return true}"}})
                 if org_name == "Facebook":
                     query_contributor_org_count_data["query"]["bool"]["must"][1]["bool"]["should"].append({"script": {"script": "if(doc['author_domain'].size() > 0 && doc['author_domain'].value.indexOf('facebook.com')!=-1){return true}"}})
-            else :
+            else:
                 query_contributor_org_count_data["query"]["bool"]["must"].append({
                     "bool": {
                         "must": [
@@ -1488,7 +1487,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                         }]}})
             contributor_org_count = self.es_in.search(index=self.git_index, body=query_contributor_org_count_data)[
                 'aggregations']["count_of_contributors"]['value']
-            if contributor_org_count > 0 :
+            if contributor_org_count > 0:
                 contributor_org_count_dict[org_name] = contributor_org_count
         return contributor_count, contributor_org_count_dict
 
@@ -1510,14 +1509,14 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     commit_frequency_total += commit_frequency_org_count
                     if "facebook.com" in commit_frequency_org_count_name:
                         commit_frequency += commit_frequency_org_count
-                    if ("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name) :
+                    if ("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name):
                         commit_frequency += commit_frequency_org_count
             else:
                 for bucket in commit_frequency_bucket["author_domain_count"]["buckets"]:
                     commit_frequency_org_count = bucket["hash_cardinality"]["value"]
                     commit_frequency_total += commit_frequency_org_count
                     commit_frequency += commit_frequency_org_count
-                    
+
         for commit_frequency_bucket in commit_frequency_buckets:
             is_org = True
             commit_frequency_org_count_name = commit_frequency_bucket["key"]
@@ -1531,12 +1530,12 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                         commit_frequency_org_count_name = "Facebook"
                         if commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                             commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                    if ("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name) :
+                    if self.company and (("noreply.github.com" in commit_frequency_org_count_name) or ("noreply.gitee.com" in commit_frequency_org_count_name)):
                         is_org = True
                         commit_frequency_org_count_name = self.company
                         if commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                             commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                    commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total] 
+                    commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total]
                     self.org_name_dict[commit_frequency_org_count_name] = is_org
             else:
                 commit_frequency_org_count = 0
@@ -1544,12 +1543,12 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     commit_frequency_org_count += bucket["hash_cardinality"]["value"]
                 if "Facebook" == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                     commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                if self.company == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
+                if self.company and self.company == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                     commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency),commit_frequency_org_count/commit_frequency_total] 
+                commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total]
                 self.org_name_dict[commit_frequency_org_count_name] = is_org
 
-        return commit_frequency/12.85,commit_frequency_org
+        return commit_frequency/12.85, commit_frequency_org
 
     def org_count(self, date, repos_list):
         query_org_count = self.get_uuid_count_query("cardinality", repos_list, "author_org_name", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
@@ -1575,7 +1574,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                         author_domain_name = bucket["key"]
                         if "facebook.com" in author_domain_name:
                             author_domain_name = "Facebook"
-                        if ("noreply.github.com" in author_domain_name) or ("noreply.gitee.com" in author_domain_name) :
+                        if self.company and (("noreply.github.com" in author_domain_name) or ("noreply.gitee.com" in author_domain_name)):
                             author_domain_name = self.company
                         org_name_set.add(author_domain_name)
                 else:
