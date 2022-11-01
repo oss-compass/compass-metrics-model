@@ -694,7 +694,12 @@ class ActivityMetricsModel(MetricsModel):
         author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
             'aggregations']["count_of_contributors"]['value']
         return author_uuid_count
-
+    
+    def org_count(self, date, repos_list):
+        query_org_count = self.get_uuid_count_query("cardinality", repos_list, "author_org_name", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
+        org_count_message = self.es_in.search(index=self.git_index, body=query_org_count)
+        org_count = org_count_message['aggregations']["count_of_uuid"]['value']
+        return org_count
 
     def metrics_model_enrich(self, repos_list, label):
         item_datas = []
@@ -709,6 +714,7 @@ class ActivityMetricsModel(MetricsModel):
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
             commit_frequency_message = self.commit_frequency(date, repos_list)
+            org_count = self.org_count(date, repos_list)
             metrics_data = {
                 'uuid': uuid(str(date), self.community, self.level, label, self.model_name),
                 'level': self.level,
@@ -721,6 +727,7 @@ class ActivityMetricsModel(MetricsModel):
                 'active_C1_issue_create_contributor': self.active_C1_issue_create_contributor(date, repos_list),
                 'active_C1_issue_comments_contributor': self.active_C1_issue_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message,
+                'org_count': org_count,
                 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency != None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count != None else None,
