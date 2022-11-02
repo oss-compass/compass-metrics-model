@@ -174,6 +174,8 @@ def decrease_decay(last_data, threshold, days):
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
 def community_decay(item, last_data): 
+    if last_data == None:
+        return item
     decay_item = item.copy()
     increment_decay_dict = {
         "issue_first_reponse_avg":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
@@ -198,6 +200,8 @@ def community_decay(item, last_data):
     return decay_item
 
 def activity_decay(item, last_data): 
+    if last_data == None:
+        return item
     decay_item = item.copy()
     increment_decay_dict = {
         "comment_frequency":COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
@@ -210,13 +214,15 @@ def activity_decay(item, last_data):
     return decay_item
 
 def code_quality_decay(item, last_data): 
+    if last_data == None:
+        return item
     decay_item = item.copy()
     increment_decay_dict = {
         "code_merge_ratio": CODE_MERGE_RATIO_THRESHOLD_CODE,
         "code_review_ratio":CODE_REVIEW_RATIO_THRESHOLD_CODE,
         "pr_issue_linked_ratio":PR_ISSUE_LINKED_THRESHOLD_CODE,
+        "git_pr_linked_ratio":COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE
         }
-    
     for key, value in increment_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
