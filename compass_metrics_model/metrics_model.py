@@ -1523,6 +1523,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     commit_frequency_org_count = bucket["hash_cardinality"]["value"]
                     commit_frequency_total += commit_frequency_org_count
                     commit_frequency += commit_frequency_org_count
+        if commit_frequency_total == 0:
+            return 0, {}
 
         for commit_frequency_bucket in commit_frequency_buckets:
             is_org = True
@@ -1542,7 +1544,11 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                         commit_frequency_org_count_name = self.company
                         if commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                             commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                    commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total]
+                    if (is_org and commit_frequency == 0) or (not is_org and (commit_frequency_total - commit_frequency) == 0):
+                        org_percentage = 0
+                    else:
+                        org_percentage = commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency)
+                    commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, org_percentage, commit_frequency_org_count/commit_frequency_total]
                     self.org_name_dict[commit_frequency_org_count_name] = is_org
             else:
                 commit_frequency_org_count = 0
@@ -1552,9 +1558,12 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
                 if self.company and self.company == commit_frequency_org_count_name and commit_frequency_org.get(commit_frequency_org_count_name) is not None:
                     commit_frequency_org_count += commit_frequency_org[commit_frequency_org_count_name][0]
-                commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, commit_frequency_org_count/(commit_frequency if is_org else commit_frequency_total - commit_frequency), commit_frequency_org_count/commit_frequency_total]
+                if (is_org and commit_frequency == 0) or (not is_org and (commit_frequency_total - commit_frequency) == 0):
+                    org_percentage = 0
+                else:
+                    org_percentage = commit_frequency_org_count / (commit_frequency if is_org else commit_frequency_total - commit_frequency)
+                commit_frequency_org[commit_frequency_org_count_name] = [commit_frequency_org_count, org_percentage, commit_frequency_org_count/commit_frequency_total]
                 self.org_name_dict[commit_frequency_org_count_name] = is_org
-
         return commit_frequency/12.85, commit_frequency_org
 
     def org_count(self, date, repos_list):
