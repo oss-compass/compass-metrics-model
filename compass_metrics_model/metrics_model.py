@@ -197,10 +197,13 @@ class MetricsModel:
                 origin = 'gitee' if 'gitee' in self.issue_index else 'github'
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
-                for j in all_repo_json[project][origin_software_artifact]:
-                    software_artifact_repos_list.append(j)
-                for j in all_repo_json[project][origin_governance]:
-                    governance_repos_list.append(j)
+                for key in all_repo_json[project].keys():
+                    if key == origin_software_artifact:
+                        for j in all_repo_json[project].get(key):
+                            software_artifact_repos_list.append(j)
+                    if key == origin_governance:
+                        for j in all_repo_json[project].get(key):
+                            governance_repos_list.append(j)
             all_repo_list = software_artifact_repos_list + governance_repos_list
             if len(all_repo_list) > 0:
                 for repo in all_repo_list:
@@ -210,7 +213,7 @@ class MetricsModel:
                                                   date_list=get_date_list(self.from_date, self.end_date))
                     if last_time is not None and last_time < self.end_date:
                         self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
-                                                  date_list= get_date_list(last_time, self.end_date))
+                                                  date_list=get_date_list(last_time, self.end_date))
             if len(software_artifact_repos_list) > 0:
                 self.metrics_model_enrich(software_artifact_repos_list, self.community, "software-artifact")
             if len(governance_repos_list) > 0:
@@ -222,10 +225,13 @@ class MetricsModel:
                 origin = 'gitee' if 'gitee' in self.issue_index else 'github'
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
-                for j in all_repo_json[project][origin_software_artifact]:
-                    software_artifact_repos_list.append(j)
-                for j in all_repo_json[project][origin_governance]:
-                    governance_repos_list.append(j)
+                for key in all_repo_json[project].keys():
+                    if key == origin_software_artifact:
+                        for j in all_repo_json[project].get(key):
+                            software_artifact_repos_list.append(j)
+                    if key == origin_governance:
+                        for j in all_repo_json[project].get(key):
+                            governance_repos_list.append(j)
                 all_repo_list = software_artifact_repos_list + governance_repos_list
                 if len(all_repo_list) > 0:
                     for repo in all_repo_list:
@@ -245,10 +251,10 @@ class MetricsModel:
                 origin = 'gitee' if 'gitee' in self.issue_index else 'github'
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
-                for j in all_repo_json[project][origin_software_artifact]:
-                    self.metrics_model_enrich([j], j)
-                for j in all_repo_json[project][origin_governance]:
-                    self.metrics_model_enrich([j], j)
+                for key in all_repo_json[project].keys():
+                    if key == origin_software_artifact or key == origin_governance:
+                        for j in all_repo_json[project].get(key):
+                            self.metrics_model_enrich([j], j)
 
     def metrics_model_enrich(repos_list, label, type=None, level=None, date_list=None):
         pass
@@ -796,7 +802,7 @@ class ActivityMetricsModel(MetricsModel):
         last_metrics_data = {}
         create_release_index(self.es_in, repos_list, self.repo_index, self.release_index)
         for date in date_list:
-            print(date+"--"+label)
+            print(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -829,7 +835,7 @@ class ActivityMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = get_activity_score(activity_decay(metrics_data, last_metrics_data))
+            score = get_activity_score(activity_decay(metrics_data, last_metrics_data, level), level)
             metrics_data["activity_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1013,7 +1019,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         item_datas = []
         last_metrics_data = {}
         for date in date_list:
-            print(date+"--"+label)
+            print(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1048,7 +1054,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = community_support(community_decay(metrics_data, last_metrics_data))
+            score = community_support(community_decay(metrics_data, last_metrics_data, level), level)
             metrics_data["community_support_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1260,9 +1266,9 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
             'aggregations']["count_of_uuid"]['value']
         try:
-            return prs/pr_count
+            return prs/pr_count, pr_count
         except ZeroDivisionError:
-            return None
+            return None, 0
 
 
     def git_pr_linked_ratio(self, date, repos_list):
@@ -1305,13 +1311,11 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
 
     def code_merge_ratio(self, date, repos_list):
-        query_pr_count = self.get_uuid_count_query(
-            "cardinality", repos_list, "uuid", size=0, from_date=(date-timedelta(days=90)), to_date=date)
-        query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
-        pr_count = self.es_in.search(index=self.pr_index, body=query_pr_count)[
-            'aggregations']["count_of_uuid"]['value']
         query_pr_body = self.get_uuid_count_query( "cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
         query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"merged": "true" }})
+        pr_merged_count = self.es_in.search(index=self.pr_index, body=query_pr_body)[
+            'aggregations']["count_of_uuid"]['value']
         query_pr_body["query"]["bool"]["must"].append({
                             "script": {
                                 "script": "if(doc['merged_by_data_name'].size() > 0 && doc['author_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
@@ -1320,7 +1324,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         prs = self.es_in.search(index=self.pr_index, body=query_pr_body)[
             'aggregations']["count_of_uuid"]['value']
         try:
-            return prs/pr_count, pr_count
+            return prs/pr_merged_count, pr_merged_count
         except ZeroDivisionError:
             return None, 0
 
@@ -1364,7 +1368,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         last_metrics_data = {}
         self.commit_message_dict = {}
         for date in date_list:
-            print(date+"--"+label)
+            print(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1373,7 +1377,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             lines_added_frequency = self.LOC_frequency(date, repos_list, 'lines_added')
             lines_removed_frequency = self.LOC_frequency(date, repos_list, 'lines_removed')
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
-            code_merge_ratio, pr_count = self.code_merge_ratio(date, repos_list)
+            code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
+            code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
             metrics_data = {
                 'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
                 'level': level,
@@ -1391,9 +1396,10 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'lines_added_frequency': lines_added_frequency,
                 'lines_removed_frequency': lines_removed_frequency,
                 'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
-                'code_review_ratio': self.code_review_ratio(date, repos_list),
+                'code_review_ratio': code_review_ratio,
                 'code_merge_ratio': code_merge_ratio,
                 'pr_count': pr_count,
+                'pr_merged_count': pr_merged_count,
                 'pr_commit_count': git_pr_linked_ratio[0],
                 'pr_commit_linked_count': git_pr_linked_ratio[1],
                 'git_pr_linked_ratio': git_pr_linked_ratio[2],
@@ -1401,7 +1407,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data))
+            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data, level), level)
             metrics_data["code_quality_guarantee"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1436,19 +1442,19 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             "aggs": {
                 "count_of_uuid": {
                 "terms": {
-                    "size": 10000,
+                    "size": 100000,
                     "field": "author_org_name"
                 },
                 "aggs": {
                     "author_domain_count": {
                     "terms": {
-                        "size": 10000,
+                        "size": 100000,
                         "field": "author_domain"
                     },
                     "aggs": {
                         "hash_cardinality": {
                         "cardinality": {
-                            "precision_threshold": 10000,
+                            "precision_threshold": 100000,
                             "field": "hash"
                         }
                         }
@@ -1693,7 +1699,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         item_datas = []
         self.org_name_dict = {}
         for date in date_list:
-            print(date+"--"+label)
+            print(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1721,7 +1727,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'grimoire_creation_date': date.isoformat(),
                     'metadata__enriched_on': datetime_utcnow().isoformat()
                 }
-                score = organizations_activity(metrics_data)
+                score = organizations_activity(metrics_data, level)
                 metrics_data["organizations_activity"] = score
                 item_datas.append(metrics_data)
                 if len(item_datas) > MAX_BULK_UPDATE_SIZE:
