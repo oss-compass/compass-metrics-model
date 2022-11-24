@@ -252,7 +252,7 @@ class MetricsModel:
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
                 for key in all_repo_json[project].keys():
-                    if key == origin_software_artifact or key == origin_governance:
+                    if key == origin_software_artifact or key == origin_governance or key == origin:
                         for j in all_repo_json[project].get(key):
                             self.metrics_model_enrich([j], j)
 
@@ -1734,30 +1734,3 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     self.es_out.bulk_upload(item_datas, "uuid")
                     item_datas = []
         self.es_out.bulk_upload(item_datas, "uuid")
-
-
-if __name__ == '__main__':
-    CONF = yaml.safe_load(open('../conf.yaml'))
-    elastic_url = CONF['url']
-    params = CONF['params']
-    kwargs = {}
-
-    # for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'release_index', 'opensearch_config_file']:
-    #     kwargs[item] = params[item]
-    # model_activity = ActivityMetricsModel(**kwargs)
-    # model_activity.metrics_model_metrics(elastic_url)
-
-    # for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level']:
-    #     kwargs[item] = params[item]
-    # model_community = CommunitySupportMetricsModel(**kwargs)
-    # model_community.metrics_model_metrics(elastic_url)
-
-    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'pr_comments_index']:
-        kwargs[item] = params[item]
-    model_code = CodeQualityGuaranteeMetricsModel(**kwargs)
-    model_code.metrics_model_metrics()
-
-    # for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'issue_comments_index', 'pr_comments_index']:
-    #     kwargs[item] = params[item]
-    # model_organizations = OrganizationsActivityMetricsModel(**kwargs)
-    # model_organizations.metrics_model_metrics(elastic_url)
