@@ -791,6 +791,7 @@ class ActivityMetricsModel(MetricsModel):
 
     def org_count(self, date, repos_list):
         query_org_count = self.get_uuid_count_query("cardinality", repos_list, "author_org_name", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
+        query_org_count["query"]["bool"]["must_not"] = [{"match_phrase": {"author_org_name": "Unknown"}}]
         org_count_message = self.es_in.search(index=self.git_index, body=query_org_count)
         org_count = org_count_message['aggregations']["count_of_uuid"]['value']
         return org_count
@@ -1082,7 +1083,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.git_branch = git_branch
         self.model_name = 'Code_Quality_Guarantee'
         self.pr_index = pr_index
-        self.company = company
+        self.company = None if company == None or company == 'None' else company
         self.pr_comments_index = pr_comments_index
         self.commit_message_dict = {}
 
@@ -1431,7 +1432,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         self.git_branch = git_branch
         self.issue_comments_index = issue_comments_index
         self.pr_comments_index = pr_comments_index
-        self.company = company
+        self.company = None if company == None or company == 'None' else company
         self.model_name = 'Organizations Activity'
         self.org_name_dict = {}
 
@@ -1662,6 +1663,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
 
     def org_count(self, date, repos_list):
         query_org_count = self.get_uuid_count_query("cardinality", repos_list, "author_org_name", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
+        query_org_count["query"]["bool"]["must_not"] = [{"match_phrase": {"author_org_name": "Unknown"}}]
         org_count_message = self.es_in.search(index=self.git_index, body=query_org_count)
         org_count = org_count_message['aggregations']["count_of_uuid"]['value']
         return org_count
@@ -1708,6 +1710,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             org_count = self.org_count(date, repos_list)
             contribution_last = self.contribution_last(date, repos_list)
             for org_name in self.org_name_dict.keys():
+                if org_name not in commit_frequency_message[1]:
+                    continue
                 metrics_data = {
                     'uuid': get_uuid(str(date), org_name, self.community, level, label, self.model_name, type),
                     'level': level,
@@ -1719,9 +1723,9 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'contributor_count': contributor_count_message[0],
                     'contributor_org_count': contributor_count_message[1].get(org_name),
                     'commit_frequency': round(commit_frequency_message[0], 4),
-                    'commit_frequency_org': round(commit_frequency_message[1][org_name][0], 4) if org_name in commit_frequency_message[1] else None,
-                    'commit_frequency_org_percentage': round(commit_frequency_message[1][org_name][1], 4) if org_name in commit_frequency_message[1] else None,
-                    'commit_frequency_percentage': round(commit_frequency_message[1][org_name][2], 4) if org_name in commit_frequency_message[1] else None,
+                    'commit_frequency_org': round(commit_frequency_message[1][org_name][0], 4),
+                    'commit_frequency_org_percentage': round(commit_frequency_message[1][org_name][1], 4),
+                    'commit_frequency_percentage': round(commit_frequency_message[1][org_name][2], 4),
                     'org_count': org_count,
                     'contribution_last': contribution_last,
                     'grimoire_creation_date': date.isoformat(),
