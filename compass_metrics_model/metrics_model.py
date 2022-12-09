@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 import json
 import yaml
 import pandas as pd
+import logging
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime,
@@ -48,6 +49,8 @@ current_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 os.chdir(current_dir)
 sys.path.append('../')
+
+logger = logging.getLogger(__name__)
 
 MAX_BULK_UPDATE_SIZE = 10
 
@@ -803,7 +806,7 @@ class ActivityMetricsModel(MetricsModel):
         last_metrics_data = {}
         create_release_index(self.es_in, repos_list, self.repo_index, self.release_index)
         for date in date_list:
-            print(str(date)+"--"+self.model_name+"--"+label)
+            logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1020,7 +1023,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         item_datas = []
         last_metrics_data = {}
         for date in date_list:
-            print(str(date)+"--"+self.model_name+"--"+label)
+            logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1369,7 +1372,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         last_metrics_data = {}
         self.commit_message_dict = {}
         for date in date_list:
-            print(str(date)+"--"+self.model_name+"--"+label)
+            logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
@@ -1701,7 +1704,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         item_datas = []
         self.org_name_dict = {}
         for date in date_list:
-            print(str(date)+"--"+self.model_name+"--"+label)
+            logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
