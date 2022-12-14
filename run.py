@@ -2,6 +2,14 @@ from compass_metrics_model.metrics_model import (ActivityMetricsModel,
                                                  CommunitySupportMetricsModel,
                                                  CodeQualityGuaranteeMetricsModel,
                                                  OrganizationsActivityMetricsModel)
+
+from compass_metrics_model.metrics_model_summary import (
+   ActivityMetricsSummary,
+   CommunitySupportMetricsSummary,
+   CodeQualityGuaranteeMetricsSummary,
+   OrganizationsActivityMetricsSummary
+)
+
 import yaml
 
 if __name__ == '__main__':
@@ -34,3 +42,15 @@ if __name__ == '__main__':
        kwargs[item] = params[item]
    model_organizations = OrganizationsActivityMetricsModel(**kwargs)
    model_organizations.metrics_model_metrics(elastic_url)
+
+   activity_summary = ActivityMetricsSummary(params['out_index'], 'Activity', params['from_date'], params['end_date'], params['out_index'])
+   activity_summary.metrics_model_summary(elastic_url)
+
+   community_summary = CommunitySupportMetricsSummary(params['out_index'], 'Community Support and Service', params['from_date'], params['end_date'], params['out_index'])
+   community_summary.metrics_model_summary(elastic_url)
+
+   codequality_summary = CodeQualityGuaranteeMetricsSummary(params['out_index'], 'Code_Quality_Guarantee', params['from_date'], params['end_date'], params['out_index'])
+   codequality_summary.metrics_model_summary(elastic_url)
+
+   organizations_activity_summary = OrganizationsActivityMetricsSummary(params['out_index'], 'Organizations Activity', params['from_date'], params['end_date'], params['out_index'])
+   organizations_activity_summary.metrics_model_summary(elastic_url)
