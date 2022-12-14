@@ -28,19 +28,22 @@ import yaml
 import pandas as pd
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
-                                          str_to_datetime,
-                                          datetime_to_utc)
+                                          str_to_datetime)
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
-from .utils import (get_activity_score,
+
+from .utils import (get_uuid,
+                    get_date_list,
+                    get_activity_score,
                     community_support,
                     code_quality_guarantee,
                     organizations_activity,
                     community_decay,
                     activity_decay,
                     code_quality_decay)
+
 import os
 import inspect
 import sys
@@ -50,14 +53,6 @@ os.chdir(current_dir)
 sys.path.append('../')
 
 MAX_BULK_UPDATE_SIZE = 10
-
-
-def get_date_list(begin_date, end_date, freq='W-MON'):
-    '''Get date list from begin_date to end_date every Monday'''
-    date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
-        str_to_datetime(begin_date)), end=datetime_to_utc(str_to_datetime(end_date))))]
-    return date_list
-
 
 # [Fixme] In fact, origin should not be distinguished by this form of string.
 # Maybe pass parameters through configuration file is better.
@@ -157,14 +152,6 @@ def get_medium(L):
         return (L[m]+L[m-1])/2.0
     else:
         return L[m]
-
-def get_uuid(*args):
-    args_list = []
-    for arg in args:
-        if arg is None or arg == '':
-            continue
-        args_list.append(arg)
-    return uuid(*args_list)
 
 
 class MetricsModel:

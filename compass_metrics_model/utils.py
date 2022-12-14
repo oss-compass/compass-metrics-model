@@ -1,5 +1,9 @@
 import math
 import pendulum
+import pandas as pd
+
+from perceval.backend import uuid
+from grimoirelab_toolkit.datetime import (datetime_to_utc,str_to_datetime)
 
 BACKOFF_FACTOR = 0.2
 MAX_RETRIES = 21
@@ -127,6 +131,19 @@ MAX_COMMUNITY_SCORE = 3.03189
 
 DECAY_COEFFICIENT = 0.001
 
+def get_uuid(*args):
+    args_list = []
+    for arg in args:
+        if arg is None or arg == '':
+            continue
+        args_list.append(arg)
+    return uuid(*args_list)
+
+def get_date_list(begin_date, end_date, freq='W-MON'):
+    '''Get date list from begin_date to end_date every Monday'''
+    date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
+        str_to_datetime(begin_date)), end=datetime_to_utc(str_to_datetime(end_date))))]
+    return date_list
 
 def normalize(score, min_score, max_score):
     return (score-min_score)/(max_score-min_score)
