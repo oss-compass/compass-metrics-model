@@ -110,7 +110,102 @@ def add_release_message(es_client, out_index, repo_url, releases,):
             item_datas = []
     helpers.bulk(client=es_client, actions=item_datas)
 
+
+def get_release_index_mapping():
+    mapping = {
+    "mappings" : {
+      "properties" : {
+        "author_login" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "author_name" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "body" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "grimoire_creation_date" : {
+          "type" : "date"
+        },
+        "id" : {
+          "type" : "long"
+        },
+        "name" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "prerelease" : {
+          "type" : "boolean"
+        },
+        "tag" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "tag_name" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "target_commitish" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "uuid" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        }
+      }
+    }
+    }
+    return mapping
+
+
 def create_release_index(es_client, all_repo, repo_index, release_index):
+    es_exist = es_client.indices.exists(index=release_index)
+    if not es_exist:
+        res = es_client.indices.create(index=release_index, body=get_release_index_mapping())
     for repo_url in all_repo:
         query = newest_message(repo_url)
         query_hits = es_client.search(index=repo_index, body=query)["hits"]["hits"]
