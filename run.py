@@ -10,6 +10,8 @@ from compass_metrics_model.metrics_model_summary import (
    OrganizationsActivityMetricsSummary
 )
 
+from compass_contributor.contributor_dev_org_repo import ContributorDevOrgRepo
+
 import yaml
 
 if __name__ == '__main__':
@@ -19,7 +21,14 @@ if __name__ == '__main__':
    params = CONF['params']
 
    kwargs = {}
-   for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'release_index','issue_comments_index', 'pr_comments_index']:
+   for item in ['json_file', 'identities_config_file', 'organizations_config_file', 'issue_index', 'pr_index',
+                    'issue_comments_index', 'pr_comments_index', 'git_index', 'contributors_index', 'from_date', 'end_date', 'company']:
+        kwargs[item] = params[item]
+   contributor = ContributorDevOrgRepo(**kwargs)
+   contributor.run(elastic_url)
+
+   kwargs = {}
+   for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'release_index','issue_comments_index', 'pr_comments_index', 'contributors_index']:
        kwargs[item] = params[item]
    model_activity = ActivityMetricsModel(**kwargs)
    model_activity.metrics_model_metrics(elastic_url)
@@ -38,7 +47,7 @@ if __name__ == '__main__':
    model_code.metrics_model_metrics(elastic_url)
 
    kwargs = {}
-   for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'issue_comments_index', 'pr_comments_index']:
+   for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date', 'out_index', 'community', 'level', 'company', 'issue_comments_index', 'pr_comments_index', 'contributors_index']:
        kwargs[item] = params[item]
    model_organizations = OrganizationsActivityMetricsModel(**kwargs)
    model_organizations.metrics_model_metrics(elastic_url)

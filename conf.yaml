@@ -16,5 +16,8 @@ params:
       'company': 'Huawei',
       'pr_comments_index':'gitee2-pull_enriched',
       'repo_index':'gitee_repo-enriched',
-      'release_index': 'repo_release_enriched'
+      'release_index': 'repo_release_enriched',
+      'contributors_index':'gitee_contributors_org_repo',
+      'identities_config_file': '/root/lsb_metric_model/compass-metrics-model/identities.yml',
+      'organizations_config_file': '/root/lsb_metric_model/compass-metrics-model/organizations.json'
   }

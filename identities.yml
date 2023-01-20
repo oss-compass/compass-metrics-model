@@ -1,0 +1,46 @@
+- profile:
+    name: GitHub No Reply
+    is_bot: true
+  email:
+    - noreply@github.com
+
+- profile:
+    name: Owlbert Einstein
+  enrollments:
+    - organization: Bitergia
+  email:
+    - owlbert_einstein@bitergia.com
+  github:
+    - owlbert_einstein
+
+- profile:
+    name: Owlfred Hitchcock
+  enrollments:
+    - organization: Hogwarts
+      end: 2012-05-31
+    - organization: Bitergia
+      start: 2012-06-01
+  email:
+    - owl_hitchcock@hogwarts.com
+    - owl_hitchcock@bitergia.com
+  github:
+    - owl_hitchcock
+
+- profile:
+    name: Owl Capone
+  enrollments:
+    - organization: Hogwarts
+      end: 2012-05-31
+    - organization: Bitergia
+      start: 2012-06-01
+  email:
+    - owl_capone@bitergia.com
+  github:
+    - owl_capone
+
+- profile:
+    name: i-robot
+  enrollments:
+    - organization: Huawei
+  email:
+    - huawei_ci_bot@163.com
