@@ -3,7 +3,7 @@ import os
 import re
 
 # Always prefer setuptools over distutils
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name="compass_metrics_model",
@@ -22,7 +22,7 @@ setup(name="compass_metrics_model",
           'Programming Language :: Python :: 3.4',
           'Programming Language :: Python :: 3.5'],
       keywords="Metric Model",
-      packages=['compass_metrics_model'],
+      packages=find_packages(),
       python_requires='>=3.4',
       setup_requires=['wheel'],
       zip_safe=False
