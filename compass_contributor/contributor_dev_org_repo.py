@@ -143,8 +143,8 @@ class ContributorDevOrgRepo:
         issue_pr_index_dict = {
             self.issue_index: "issue_creation_date_list",
             self.pr_index: "pr_creation_date_list",
-            self.issue_comments_index: "issue_comments_date_list"
-            # self.pr_comments_index: "pr_review_date_list"
+            self.issue_comments_index: "issue_comments_date_list",
+            self.pr_comments_index: "pr_review_date_list"
         }
         fork_star_dict = {
             "fork": "fork_date_list",
