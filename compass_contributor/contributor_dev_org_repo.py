@@ -411,7 +411,7 @@ class ContributorDevOrgRepo:
             for old_data in old_data_list_dict.values():
                 if old_data["uuid"] in merge_id_set:
                     for identity in item["id_identity_list"]:
-                        if identity in result_identity_uuid_dict.keys():
+                        if identity in result_identity_uuid_dict.keys() and result_identity_uuid_dict[identity] in result_item_dict.keys():
                             old_data = result_item_dict.pop(result_identity_uuid_dict[identity])
                             break
                 else:
