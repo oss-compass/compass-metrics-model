@@ -254,16 +254,12 @@ class ContributorDevOrgRepo:
                     get_email_prefix_domain(source.get("user_email"))[0] if source.get("user_email") else None
                 ]
                 id_identity_list = set(
-                    [exclude_special_str(x.lower()) for x in id_identity_list if str_is_not_empty(x) and x not in exclude_field_list and str_is_not_empty(exclude_special_str(x)) ])
+                    [exclude_special_str(x.lower()) for x in id_identity_list if str_is_not_empty(x) and x.lower() not in exclude_field_list and str_is_not_empty(exclude_special_str(x)) ])
                 org_change_date_list = []
                 if source.get("user_email") is not None:
                     domain = get_email_prefix_domain(source.get("user_email"))[1]
                     if domain is not None:
-                        org_name = self.identities_dict[source.get("user_email")] if self.identities_dict.get(source.get("user_email")) else self.organizations_dict.get(domain)    
-                        if domain in "facebook.com":
-                            org_name = "Facebook"
-                        if domain in ["noreply.github.com","noreply.github.com"] and self.company is not None:
-                            org_name = self.company
+                        org_name = self.get_org_name_by_email(source.get("user_email"))
                         org_date = {
                             "domain": domain,
                             "org_name": org_name,
@@ -318,16 +314,12 @@ class ContributorDevOrgRepo:
                     get_email_prefix_domain(source.get("author_email"))[0] if source.get("author_email") else None
                 ]
                 id_identity_list = set(
-                    [exclude_special_str(x.lower()) for x in id_identity_list if str_is_not_empty(x) and x not in exclude_field_list and str_is_not_empty(exclude_special_str(x)) ])
+                    [exclude_special_str(x.lower()) for x in id_identity_list if str_is_not_empty(x) and x.lower() not in exclude_field_list and str_is_not_empty(exclude_special_str(x)) ])
                 org_change_date_list = []
                 if source.get("author_email") is not None:
                     domain = get_email_prefix_domain(source.get("author_email"))[1]
                     if domain is not None:
-                        org_name = self.identities_dict[source.get("author_email")] if self.identities_dict.get(source.get("author_email")) else self.organizations_dict.get(domain)
-                        if domain in "facebook.com":
-                            org_name = "Facebook"
-                        if domain in ["noreply.github.com","noreply.github.com"] and self.company is not None:
-                            org_name = self.company
+                        org_name = self.get_org_name_by_email(source.get("author_email"))
                         org_date = {
                             "domain": domain,
                             "org_name": org_name,
@@ -728,4 +720,15 @@ class ContributorDevOrgRepo:
                 result_list = result_list + [contributor["_source"] for contributor in contributors_list]
         return dict(zip([item["uuid"] for item in result_list], result_list))
 
+
+    def get_org_name_by_email(self, email):
+        domain = get_email_prefix_domain(email)[1]
+        if domain is None:
+            return None
+        org_name = self.identities_dict[email] if self.identities_dict.get(email) else self.organizations_dict.get(domain)
+        if "facebook.com" in domain:
+            org_name = "Facebook"
+        if ("noreply.gitee.com" in domain or "noreply.github.com" in domain) and self.company is not None:
+            org_name = self.company
+        return org_name
 
