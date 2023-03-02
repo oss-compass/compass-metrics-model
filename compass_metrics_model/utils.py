@@ -129,7 +129,7 @@ MAX_ACTIVITY_SCORE = 1.23786
 MIN_COMMUNITY_SCORE = -2.0319
 MAX_COMMUNITY_SCORE = 3.03189
 
-DECAY_COEFFICIENT = 0.001
+DECAY_COEFFICIENT = 0.0027
 
 def get_uuid(*args):
     args_list = []
@@ -326,44 +326,44 @@ def activity_decay(item, last_data, level="repo"):
     if last_data == None:
         return item
     decay_item = item.copy()
-    increment_decay_dict = {}
+    decrease_decay_dict = {}
     if level == "community" or level == "project":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "comment_frequency": COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY,
             "code_review_count": CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY
         }
     if level == "repo":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "comment_frequency":COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
             "code_review_count":CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
             }
-    for key, value in increment_decay_dict.items():
+    for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
-            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
 def code_quality_decay(item, last_data, level="repo"):
     if last_data == None:
         return item
     decay_item = item.copy()
-    increment_decay_dict = {}
+    decrease_decay_dict = {}
     if level == "community" or level == "project":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "code_merge_ratio": CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE,
             "code_review_ratio": CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE,
             "pr_issue_linked_ratio": PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE,
             "git_pr_linked_ratio": COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE
         }
     if level == "repo":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "code_merge_ratio": CODE_MERGE_RATIO_THRESHOLD_CODE,
             "code_review_ratio":CODE_REVIEW_RATIO_THRESHOLD_CODE,
             "pr_issue_linked_ratio":PR_ISSUE_LINKED_THRESHOLD_CODE,
             "git_pr_linked_ratio":COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE
             }
-    for key, value in increment_decay_dict.items():
+    for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
-            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
