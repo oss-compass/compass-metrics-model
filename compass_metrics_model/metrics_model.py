@@ -973,7 +973,7 @@ class ActivityMetricsModel(MetricsModel):
                 'active_C1_issue_comments_contributor': self.active_C1_issue_comments_contributor(date, repos_list),
                 'commit_frequency': commit_frequency_message,
                 'org_count': org_count,
-                'created_since': round(self.created_since(date, repos_list), 4),
+                # 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count is not None else None,
                 'updated_since': float(round(self.updated_since(date, repos_list), 4)),
