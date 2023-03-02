@@ -87,6 +87,12 @@ def newest_message(repo_url):
 def check_times_has_overlap(dyna_start_time, dyna_end_time, fixed_start_time, fixed_end_time):
     return not (dyna_end_time < fixed_start_time or dyna_start_time > fixed_end_time)
 
+def get_oldest_date(date1, date2):
+    return date2 if date1 >= date2 else date1
+
+def get_latest_date(date1, date2):
+    return date1 if date1 >= date2 else date2
+
 def add_release_message(es_client, out_index, repo_url, releases,):
     item_datas = []
     for item in releases:
@@ -1596,28 +1602,18 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         to_date = date.strftime("%Y-%m-%d")
 
         for contributor in contributor_list:
-            contributor_break_flag = False
             for org in contributor["org_change_date_list"]:
-                if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
-                    for identity in contributor["id_identity_list"]:
-                        if identity in contributor_identity:
-                            contributor_break_flag = True
-                            break
-                    if not contributor_break_flag:
-                        contributor_count += 1
-                        contributor_identity.update(contributor["id_identity_list"])
+                if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date) \
+                        and len(contributor_identity & set(contributor["id_identity_list"])) == 0:
+                    contributor_count += 1
+                    contributor_identity.update(contributor["id_identity_list"])
                     break
-            
-            org_contributor_break_flag = False
+
             for org in contributor["org_change_date_list"]:
                 if check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
                     org_contributor_identity = org_contributor_identity_dict.get(org_name, set())
-                    for identity in contributor["id_identity_list"]:
-                        if identity in org_contributor_identity:
-                            org_contributor_break_flag = True
-                            break
-                    if not org_contributor_break_flag:
+                    if len(org_contributor_identity & set(contributor["id_identity_list"])) == 0:
                         org_contributor_count_dict[org_name] = org_contributor_count_dict.get(org_name, 0) + 1
                         org_contributor_identity.update(contributor["id_identity_list"])
                         org_contributor_identity_dict[org_name] = org_contributor_identity
@@ -1642,16 +1638,15 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             for org in contributor["org_change_date_list"]:
                 if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     for commit_date in contributor["code_commit_date_list"]:
-                        if from_date <= commit_date and commit_date <= to_date:
+                        if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                             commit_count += 1
-                    break
             
             for org in contributor["org_change_date_list"]:
                 if check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
                     count = org_commit_count_dict.get(org_name, 0)
                     for commit_date in contributor["code_commit_date_list"]:
-                        if from_date <= commit_date and commit_date <= to_date:
+                        if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                             count += 1
                     org_commit_count_dict[org_name] = count
 
@@ -1683,7 +1678,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     for org in contributor["org_change_date_list"]:
                         if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                             for commit_date in contributor["code_commit_date_list"]:
-                                if from_date <= commit_date and commit_date <= to_date:
+                                if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                                     org_name_set.add(org.get("org_name"))
                                     break
                 contribution_last += len(org_name_set)
