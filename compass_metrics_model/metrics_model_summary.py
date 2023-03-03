@@ -13,7 +13,7 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection
 
 from .utils import (get_uuid, get_date_list)
 
-MAX_BULK_UPDATE_SIZE = 10
+MAX_BULK_UPDATE_SIZE = 5000
 
 logger = logging.getLogger(__name__)
 
