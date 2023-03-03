@@ -20,7 +20,7 @@ CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY = 0.18009
 COMMIT_FREQUENCY_WEIGHT_ACTIVITY = 0.18009
 UPDATED_SINCE_WEIGHT_ACTIVITY = -0.12742
 ORG_COUNT_WEIGHT_ACTIVITY = 0.11501
-CREATED_SINCE_WEIGHT_ACTIVITY = 0.07768
+# CREATED_SINCE_WEIGHT_ACTIVITY = 0.07768
 COMMENT_FREQUENCY_WEIGHT_ACTIVITY = 0.07768
 CODE_REVIEW_COUNT_WEIGHT_ACTIVITY = 0.04919
 UPDATED_ISSUES_WEIGHT_ACTIVITY = 0.04919
@@ -33,7 +33,7 @@ CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY = 2000
 COMMIT_FREQUENCY_THRESHOLD_ACTIVITY = 1000
 UPDATED_SINCE_THRESHOLD_ACTIVITY = 0.25
 ORG_COUNT_THRESHOLD_ACTIVITY = 10
-CREATED_SINCE_THRESHOLD_ACTIVITY = 120
+# CREATED_SINCE_THRESHOLD_ACTIVITY = 120
 COMMENT_FREQUENCY_THRESHOLD_ACTIVITY = 5
 CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY = 8
 UPDATED_ISSUES_THRESHOLD_ACTIVITY = 2500
@@ -46,7 +46,7 @@ CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 2200
 COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY = 1000
 UPDATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY = 0.25
 ORG_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 30
-CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY = 240
+# CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY = 240
 COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY = 5
 CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 8
 UPDATED_ISSUES_MULTIPLE_THRESHOLD_ACTIVITY = 2500
@@ -124,12 +124,14 @@ COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 1000
 ORG_COUNT_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 30
 CONTRIBUTION_LAST_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 400
 
-MIN_ACTIVITY_SCORE = -0.23786
-MAX_ACTIVITY_SCORE = 1.23786
+# MIN_ACTIVITY_SCORE = -0.23786
+# MAX_ACTIVITY_SCORE = 1.23786
+MIN_ACTIVITY_SCORE = -0.22934
+MAX_ACTIVITY_SCORE = 1.22934
 MIN_COMMUNITY_SCORE = -2.0319
 MAX_COMMUNITY_SCORE = 3.03189
 
-DECAY_COEFFICIENT = 0.001
+DECAY_COEFFICIENT = 0.0027
 
 def get_uuid(*args):
     args_list = []
@@ -178,7 +180,7 @@ def get_activity_score(item, level="repo"):
             "commit_frequency": [COMMIT_FREQUENCY_WEIGHT_ACTIVITY, COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY],
             "updated_since": [UPDATED_SINCE_WEIGHT_ACTIVITY, UPDATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY],
             "org_count": [ORG_COUNT_WEIGHT_ACTIVITY, ORG_COUNT_MULTIPLE_THRESHOLD_ACTIVITY],
-            "created_since": [CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY],
+            # "created_since": [CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY],
             "comment_frequency": [COMMENT_FREQUENCY_WEIGHT_ACTIVITY, COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY],
             "code_review_count": [CODE_REVIEW_COUNT_WEIGHT_ACTIVITY, CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY],
             "updated_issues_count": [UPDATED_ISSUES_WEIGHT_ACTIVITY, UPDATED_ISSUES_MULTIPLE_THRESHOLD_ACTIVITY],
@@ -190,7 +192,7 @@ def get_activity_score(item, level="repo"):
             "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_ACTIVITY, COMMIT_FREQUENCY_THRESHOLD_ACTIVITY],
             "updated_since":[UPDATED_SINCE_WEIGHT_ACTIVITY, UPDATED_SINCE_THRESHOLD_ACTIVITY],
             "org_count":[ORG_COUNT_WEIGHT_ACTIVITY, ORG_COUNT_THRESHOLD_ACTIVITY],
-            "created_since":[CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_THRESHOLD_ACTIVITY],
+            # "created_since":[CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_THRESHOLD_ACTIVITY],
             "comment_frequency":[COMMENT_FREQUENCY_WEIGHT_ACTIVITY, COMMENT_FREQUENCY_THRESHOLD_ACTIVITY],
             "code_review_count":[CODE_REVIEW_COUNT_WEIGHT_ACTIVITY, CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY],
             "updated_issues_count":[UPDATED_ISSUES_WEIGHT_ACTIVITY, UPDATED_ISSUES_THRESHOLD_ACTIVITY],
@@ -326,44 +328,44 @@ def activity_decay(item, last_data, level="repo"):
     if last_data == None:
         return item
     decay_item = item.copy()
-    increment_decay_dict = {}
+    decrease_decay_dict = {}
     if level == "community" or level == "project":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "comment_frequency": COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY,
             "code_review_count": CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY
         }
     if level == "repo":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "comment_frequency":COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
             "code_review_count":CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
             }
-    for key, value in increment_decay_dict.items():
+    for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
-            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
 def code_quality_decay(item, last_data, level="repo"):
     if last_data == None:
         return item
     decay_item = item.copy()
-    increment_decay_dict = {}
+    decrease_decay_dict = {}
     if level == "community" or level == "project":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "code_merge_ratio": CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE,
             "code_review_ratio": CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE,
             "pr_issue_linked_ratio": PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE,
             "git_pr_linked_ratio": COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE
         }
     if level == "repo":
-        increment_decay_dict = {
+        decrease_decay_dict = {
             "code_merge_ratio": CODE_MERGE_RATIO_THRESHOLD_CODE,
             "code_review_ratio":CODE_REVIEW_RATIO_THRESHOLD_CODE,
             "pr_issue_linked_ratio":PR_ISSUE_LINKED_THRESHOLD_CODE,
             "git_pr_linked_ratio":COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE
             }
-    for key, value in increment_decay_dict.items():
+    for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
-            decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)        
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
