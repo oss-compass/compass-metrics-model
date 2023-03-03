@@ -55,7 +55,7 @@ sys.path.append('../')
 
 logger = logging.getLogger(__name__)
 
-MAX_BULK_UPDATE_SIZE = 10
+MAX_BULK_UPDATE_SIZE = 5000
 
 # [Fixme] In fact, origin should not be distinguished by this form of string.
 # Maybe pass parameters through configuration file is better.
