@@ -4097,6 +4097,10 @@
             {
                 "domain": "huawei",
                 "is_top": true
+            },
+            {
+                "domain": "openeuler.sh",
+                "is_top": true
             }
         ],
         "HubSpot": [
@@ -5897,12 +5901,6 @@
                 "is_top": true
             }
         ],
-        "Nicolas Hug": [
-            {
-                "domain": "nicolas-hug.com",
-                "is_top": true
-            }
-        ],
         "NIISI RAS": [
             {
                 "domain": "niisi.ru",
@@ -7539,6 +7537,10 @@
             {
                 "domain": "weilnetz.de",
                 "is_top": true
+            },
+            {
+                "domain": "lists.fedoraproject.org",
+                "is_top": true
             }
         ],
         "Red Hat, Inc.": [],
@@ -8129,12 +8131,6 @@
         "Shawhin Tech": [
             {
                 "domain": "shawhintech.com",
-                "is_top": true
-            }
-        ],
-        "Shawn Zhong": [
-            {
-                "domain": "shawnzhong.com",
                 "is_top": true
             }
         ],
@@ -10411,12 +10407,6 @@
                 "is_top": true
             }
         ],
-        "Zafar Takhirov": [
-            {
-                "domain": "zafar.cc",
-                "is_top": true
-            }
-        ],
         "Zane Benefits, Inc.": [
             {
                 "domain": "zanebenefits.com",
@@ -11450,6 +11440,58 @@
         "NC State University": [
             {
                 "domain": "ncsu.edu",
+                "is_top": true
+            }
+        ],
+        "University of Houston": [
+            {
+                "domain": "math.uh.edu",
+                "is_top": true
+            }
+        ],
+        "KylinSoft": [
+            {
+                "domain": "kylinos.cn",
+                "is_top": true
+            }
+        ],
+        "Uniontech Testing Kit": [
+            {
+                "domain": "uniontech.com",
+                "is_top": true
+            }
+        ],
+        "loongson": [
+            {
+                "domain": "loongson.cn",
+                "is_top": true
+            }
+        ],
+        "UNIVERSITY of NEBRASKA–LINCOLN": [
+            {
+                "domain": "math.unl.edu",
+                "is_top": true
+            }
+        ],
+        "NorthWest Research Associates": [
+            {
+                "domain": "nwra.com",
+                "is_top": true
+            },
+            {
+                "domain": "cora.nwra.com",
+                "is_top": true
+            }
+        ],
+        "GNOME": [
+            {
+                "domain": "gnome.org",
+                "is_top": true
+            }
+        ],
+        "IBM": [
+            {
+                "domain": "linux.ibm.com",
                 "is_top": true
             }
         ]

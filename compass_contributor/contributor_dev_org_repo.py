@@ -15,6 +15,7 @@ from grimoirelab_toolkit.datetime import (datetime_utcnow,
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 page_size = 1000
+MAX_BULK_UPDATE_SIZE = 5000
 
 exclude_field_list = ["unknown", "-- undefined --"]
 
@@ -227,7 +228,7 @@ class ContributorDevOrgRepo:
                 }
             }
             all_bulk_data.append(contributor_data)
-            if len(all_bulk_data) > 100:
+            if len(all_bulk_data) > MAX_BULK_UPDATE_SIZE:
                 helpers.bulk(client=self.client, actions=all_bulk_data)
                 all_bulk_data = []
         helpers.bulk(client=self.client, actions=all_bulk_data)
