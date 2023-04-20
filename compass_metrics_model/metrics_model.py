@@ -418,27 +418,42 @@ class MetricsModel:
         query = {
             "size": size,
             "track_total_hits": "true",
-            "aggs": {"count_of_uuid":
-                     {option:
-                      {"field": field}
-                      }
-                     },
-            "query":
-            {"bool": {
-                "must": [
-                    {"bool":
-                     {"should":
-                      [{"simple_query_string":
-                        {"query": i + "*",
-                         "fields":
-                         ["tag"]}}for i in repos_list],
-                         "minimum_should_match": 1,
-                         "filter":
-                         {"range":
-                          {date_field:
-                           {"gte": from_date.strftime("%Y-%m-%d"), "lt": to_date.strftime("%Y-%m-%d")}}}
-                      }
-                     }]}}
+            "aggs": {
+                "count_of_uuid": {
+                    option: {
+                        "field": field
+                    }
+                }
+            },
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "bool": {
+                                "should": [
+                                    {
+                                        "simple_query_string": {
+                                            "query": i + "*",
+                                            "fields": ["tag"]
+                                        }
+                                    } for i in repos_list
+                                ],
+                                "minimum_should_match": 1,
+                                "filter": [
+                                    {
+                                        "range": {
+                                            date_field: {
+                                                "gte": from_date.strftime("%Y-%m-%d"),
+                                                "lt": to_date.strftime("%Y-%m-%d")
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
         }
         return query
 
