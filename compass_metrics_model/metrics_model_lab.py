@@ -14,21 +14,6 @@ from .utils_lab import (starter_project_health, starter_project_health_decay)
 
 logger = logging.getLogger(__name__)
 
-def is_bot_by_author_name(*author_name):
-    bot_name_list = {
-        "i-robot", "mindspore-ci-bot",
-        "pytorchbot", "Website Deployment Script", "chronos_secgrp_pytorch_oss_ci_oncall", "Pytorch Test Infra",
-        "A. Unique TensorFlower", "TensorFlower Gardener", "tfdocsbot",
-        "bot",
-        "Kubernetes Prow Robot", "Kubernetes Submit Queue", "k8s-merge-robot"
-    }
-    if len(author_name) == 0:
-        return False
-    if len(set(author_name) & bot_name_list) > 0:
-        return True
-    if len([name for name in set(author_name) if name.endswith("bot")]) > 0:
-        return True
-    return False
 
 class StarterProjectHealthMetricsModel(MetricsModel):
     def __init__(self, issue_index=None, pr_index=None, repo_index=None, json_file=None, git_index=None, out_index=None,
@@ -122,8 +107,6 @@ class StarterProjectHealthMetricsModel(MetricsModel):
         from_date = (date - timedelta(days=90)).strftime("%Y-%m-%d")
         to_date = date.strftime("%Y-%m-%d")
         for item in commit_contributor_list:
-            if is_bot_by_author_name(*item["id_git_author_name_list"]):
-                continue
             name = item["id_git_author_name_list"][0]
             count = author_name_dict.get(name, 0)
             for commit_date in item["code_commit_date_list"]:
@@ -177,7 +160,7 @@ class StarterProjectHealthMetricsModel(MetricsModel):
                 continue
             pr_time_to_first_response_avg, pr_time_to_first_response_mid = self.pr_first_response_time(date, repos_list)
             pr_time_to_close_avg, pr_time_to_close_mid = self.pr_open_time(date, repos_list)
-            commit_contributor_list = self.get_commit_contributor_list(date, repos_list)
+            commit_contributor_list = self.get_contributor_list(date - timedelta(days=90), date, repos_list, "code_commit_date_list")
             metrics_data = {
                 'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
                 'level': level,

@@ -57,18 +57,6 @@ logger = logging.getLogger(__name__)
 
 MAX_BULK_UPDATE_SIZE = 5000
 
-# [Fixme] In fact, origin should not be distinguished by this form of string.
-# Maybe pass parameters through configuration file is better.
-def get_all_repo(file, source):
-    '''Get all repo from json file'''
-    all_repo_json = json.load(open(file))
-    all_repo = []
-    origin = 'gitee' if 'gitee' in source else 'github'
-    for i in all_repo_json:
-        for j in all_repo_json[i][origin]:
-            all_repo.append(j)
-    return all_repo
-
 def newest_message(repo_url):
     query = {
         "query": {
@@ -221,14 +209,6 @@ def create_release_index(es_client, all_repo, repo_index, release_index):
         if len(query_hits) > 0 and query_hits[0]["_source"].get("releases"):
             items = query_hits[0]["_source"]["releases"]
             add_release_message(es_client, release_index, repo_url, items)
-
-def get_all_project(file):
-    '''Get all projects from json file'''
-    file_json = json.load(open(file))
-    all_project = []
-    for i in file_json:
-        all_project.append(i)
-    return all_project
 
 
 def get_time_diff_months(start, end):
@@ -457,48 +437,6 @@ class MetricsModel:
         }
         return query
 
-    def get_uuid_count_contribute_query(self, repos_list, company=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
-        query = {
-            "size": 0,
-            "aggs": {
-                "count_of_contributors": {
-                    "cardinality": {
-                        "field": "author_name"
-                    }
-                }
-            },
-            "query":
-            {"bool": {
-                "must": [
-                    {"bool":
-                     {"should":
-                      [{"simple_query_string":
-                        {"query": i + "*",
-                         "fields":
-                         ["tag"]}}for i in repos_list],
-                         "minimum_should_match": 1,
-                         "filter":
-                         {"range":
-                          {"grimoire_creation_date":
-                           {"gte": from_date.strftime("%Y-%m-%d"), "lt": to_date.strftime("%Y-%m-%d")}}}
-                      }
-                     }]}},
-        }
-
-        if company:
-            query["query"]["bool"]["must"] = [{"bool": {
-                "should": [
-                    {
-                        "simple_query_string": {
-                            "query": company + "*",
-                            "fields": [
-                                "author_domain"
-                            ]
-                        }
-                    }],
-                "minimum_should_match": 1}}]
-        return query
-
     def get_updated_since_query(self, repos_list, date_field="grimoire_creation_date", order="desc", to_date=datetime_utcnow()):
         query = {
             "query": {
@@ -652,158 +590,33 @@ class MetricsModel:
 
         return query
 
-    # name list of author_name in a index
-    def get_all_CX_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
-        query_CX_users = {
-            "aggs": {
-                "name": {
-                    "terms": {
-                        "field": "author_name",
-                        "size": 100000
-                    }, "aggs": {
-                        "date": {
-                            "top_hits": {
-                                "sort": [{
-                                    "grimoire_creation_date": {"order": "asc"}
-                                }],
-                                "size": 1
-                            }
-                        }
-                    }
-                }
-            },
-            "query": {
-                "bool": {
-                    "should": [
-                        {
-                            "simple_query_string": {
-                                "query": i+"(*) OR " + i+"*",
-                                "fields": [
-                                    "tag"
-                                ]
-                            }
-                        } for i in repos_list
-                    ],
-                    "minimum_should_match": 1,
-                    "filter": {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
-                            }
-                        }
-                    }
-                }
-            },
-            "size": 0,
-            "from": 0
-        }
-        if pr:
-            query_CX_users["query"]["bool"]["must"] = {
-                "match_phrase": {
-                    "pull_request": "true"
-                }
-            }
-        if issue:
-            query_CX_users["query"]["bool"]["must"] = {
-                "match_phrase": {
-                    "pull_request": "false"
-                }
-            }
-        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
-            "aggregations"]["name"]["buckets"]
-        return [i["date"]["hits"]["hits"][0]["_source"] for i in CX_contributors]
-
-    def get_all_CX_comments_contributors(self, repos_list, search_index, pr=False, issue=False, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
-        query_CX_users = {
-            "aggs": {
-                "name": {
-                    "terms": {
-                        "field": "author_name",
-                        "size": 100000
-                    }, "aggs": {
-                        "date": {
-                            "top_hits": {
-                                "sort": [{
-                                    "grimoire_creation_date": {"order": "asc"}
-                                }],
-                                "size": 1
-                            }
-                        }
-                    }
-                }
-            },
-            "query": {
-                "bool": {
-                    "should": [
-                        {
-                            "simple_query_string": {
-                                "query": i+"(*) OR " + i+"*",
-                                "fields": [
-                                    "tag"
-                                ]
-                            }
-                        } for i in repos_list
-                    ],
-                    "minimum_should_match": 1,
-                    "filter": {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "gte": from_date.strftime("%Y-%m-%d"), "lte": to_date.strftime("%Y-%m-%d")
-                            }
-                        }
-                    }
-                }
-            },
-            "size": 1,
-            "from": 0
-        }
-        if pr:
-            query_CX_users["query"]["bool"]["must"] = [
-                {
-                    "match_phrase": {
-                        "item_type": "comment"
-                    }
-                }]
-            # print(query_CX_users)
-        if issue:
-            query_CX_users["query"]["bool"]["must"] = [
-                {
-                    "match_phrase": {
-                        "item_type": "comment"
-                    }
-                }, {
-                    "match_phrase": {
-                        "issue_pull_request": "false"
-                    }
-                }]
-        CX_contributors = self.es_in.search(index=search_index, body=query_CX_users)[
-            "aggregations"]["name"]["buckets"]
-        all_contributors = [i["date"]["hits"]["hits"]
-                            [0]["_source"] for i in CX_contributors]
-        return all_contributors
-
-    def query_commit_contributor_list(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+    def query_contributor_list(self, index, repo, date_field, from_date, to_date, page_size=100, search_after=[]):
         query = {
             "size": page_size,
             "query": {
                 "bool": {
-                "must": [
-                    {
-                    "match_phrase": {
-                        "repo_name.keyword": repo
-                    }    
-                    }
-                ],
-                "filter": [
-                    {
-                    "range": {
-                        "code_commit_date_list": {
-                            "gte": from_date.strftime("%Y-%m-%d"),
-                            "lte": to_date.strftime("%Y-%m-%d")
+                    "must": [
+                        {
+                            "match_phrase": {
+                                "repo_name.keyword": repo
+                            }
+                        },
+                        {
+                            "match_phrase": {
+                                "is_bot": "false"
+                            }
                         }
-                    }
-                    }
-                ]
+                    ],
+                    "filter": [
+                        {
+                            "range": {
+                                date_field: {
+                                    "gte": from_date.strftime("%Y-%m-%d"),
+                                    "lte": to_date.strftime("%Y-%m-%d")
+                                }
+                            }
+                        }
+                    ]
                 }
             },
             "sort": [
@@ -812,29 +625,56 @@ class MetricsModel:
                         "order": "asc"
                     }
                 }
-            ]  
+            ]
         }
         if len(search_after) > 0:
             query['search_after'] = search_after
         results = self.es_in.search(index=index, body=query)["hits"]["hits"]
         return results
-    
-    def get_commit_contributor_list(self, date, repos_list):
+
+    def get_contributor_list(self, from_date, to_date, repos_list, date_field):
         result_list = []
         for repo in repos_list:
             search_after = []
             while True:
-                contributor_list = self.query_commit_contributor_list(self.contributors_index, repo, date - timedelta(days=90), date, 500, search_after)
+                contributor_list = self.query_contributor_list(self.contributors_index, repo, date_field, from_date, to_date, 500, search_after)
                 if len(contributor_list) == 0:
                     break
                 search_after = contributor_list[len(contributor_list) - 1]["sort"]
                 result_list = result_list +[contributor["_source"] for contributor in contributor_list]
-        return result_list   
+        return result_list
 
-    def org_count(self, date, contributor_list):
+    def contributor_count(self, contributor_list):
+        contributor_set = set()
+        for contributor in contributor_list:
+            if contributor.get("id_platform_login_name_list") and len(contributor.get("id_platform_login_name_list")) > 0:
+                contributor_set.add(contributor["id_platform_login_name_list"][0])
+            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                contributor_set.add(contributor["id_git_author_name_list"][0])
+        return len(contributor_set)
+
+    def commit_frequency(self, from_date, to_date, contributor_list, company=None):
+        from_date = from_date.strftime("%Y-%m-%d")
+        to_date = to_date.strftime("%Y-%m-%d")
+        commit_count = 0
+        for contributor in contributor_list:
+            if company is None:
+                for commit_date in contributor["code_commit_date_list"]:
+                    if from_date <= commit_date and commit_date <= to_date:
+                        commit_count += 1
+            else:
+                for org in contributor["org_change_date_list"]:
+                    if org.get("org_name") is not None and org.get("org_name") == company and \
+                            check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
+                        for commit_date in contributor["code_commit_date_list"]:
+                            if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
+                                commit_count += 1
+        return commit_count/12.85
+
+    def org_count(self, from_date, to_date, contributor_list):
         org_name_set = set()
-        from_date = (date - timedelta(days=90)).strftime("%Y-%m-%d")
-        to_date = date.strftime("%Y-%m-%d")
+        from_date = from_date.strftime("%Y-%m-%d")
+        to_date = to_date.strftime("%Y-%m-%d")
 
         for contributor in contributor_list:
             for org in contributor["org_change_date_list"]:
@@ -856,20 +696,6 @@ class ActivityMetricsModel(MetricsModel):
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
         self.model_name = 'Activity'
-
-    def contributor_count(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(
-            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.issue_index, self.pr_index, self.issue_comments_index,self.pr_comments_index), body=query_author_uuid_data)[
-            'aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
-
-    def commit_frequency(self, date, repos_list):
-        query_commit_frequency = self.get_uuid_count_query(
-            "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
-        commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
-            'aggregations']["count_of_uuid"]['value']
-        return commit_frequency/12.85
 
     def updated_since(self, date, repos_list):
         updated_since_list = []
@@ -933,31 +759,6 @@ class ActivityMetricsModel(MetricsModel):
         except NotFoundError:
             return 0
 
-    def active_C1_pr_create_contributor(self, date, repos_list):
-        C1_pr_contributors = self.get_all_CX_contributors(
-            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_pr_contributors)
-
-    def active_C1_pr_comments_contributor(self, date, repos_list):
-        C1_pr_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_pr_comments_contributors)
-
-    def active_C1_issue_create_contributor(self, date, repos_list):
-        C1_issue_contributors = self.get_all_CX_contributors(
-            repos_list, (self.issue_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_issue_contributors)
-
-    def active_C1_issue_comments_contributor(self, date, repos_list):
-        C1_issue_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.issue_comments_index), issue=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_issue_comments_contributors)
-
-    def active_C2_contributor_count(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(
-            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
-            'aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
-
     def metrics_model_enrich(self, repos_list, label, type=None, level=None, date_list=None):
         level = level if level is not None else self.level
         date_list = date_list if date_list is not None else self.date_list
@@ -969,25 +770,30 @@ class ActivityMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
+            from_date = date - timedelta(days=90)
+            to_date = date
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            issue_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_creation_date_list")
+            issue_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_comments_date_list")
+            pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
-            commit_frequency_message = self.commit_frequency(date, repos_list)
-            contributor_list = self.get_commit_contributor_list(date, repos_list)
-            org_count = self.org_count(date, contributor_list)
             metrics_data = {
                 'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
                 'level': level,
                 'type': type,
                 'label': label,
                 'model_name': self.model_name,
-                'contributor_count': int(self.contributor_count(date, repos_list)),
-                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
-                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
-                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
-                'active_C1_issue_create_contributor': self.active_C1_issue_create_contributor(date, repos_list),
-                'active_C1_issue_comments_contributor': self.active_C1_issue_comments_contributor(date, repos_list),
-                'commit_frequency': commit_frequency_message,
-                'org_count': org_count,
+                'contributor_count': self.contributor_count(commit_contributor_list + issue_contributor_list + pr_contributor_list + issue_comment_contributor_list + pr_comment_contributor_list),
+                'active_C2_contributor_count': self.contributor_count(commit_contributor_list),
+                'active_C1_pr_create_contributor': self.contributor_count(pr_contributor_list),
+                'active_C1_pr_comments_contributor': self.contributor_count(pr_comment_contributor_list),
+                'active_C1_issue_create_contributor': self.contributor_count(issue_contributor_list),
+                'active_C1_issue_comments_contributor': self.contributor_count(issue_comment_contributor_list),
+                'commit_frequency': self.commit_frequency(from_date, to_date, commit_contributor_list),
+                'org_count': self.org_count(from_date, to_date, commit_contributor_list),
                 # 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count is not None else None,
@@ -1238,7 +1044,9 @@ class CommunitySupportMetricsModel(MetricsModel):
 
 
 class CodeQualityGuaranteeMetricsModel(MetricsModel):
-    def __init__(self, issue_index=None, pr_index=None, repo_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, company=None, pr_comments_index=None):
+    def __init__(self, issue_index=None, pr_index=None, repo_index=None, json_file=None, git_index=None,
+                 out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None,
+                 company=None, pr_comments_index=None, contributors_index=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level)
         self.issue_index = issue_index
         self.repo_index = repo_index
@@ -1248,6 +1056,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.pr_index = pr_index
         self.company = None if company == None or company == 'None' else company
         self.pr_comments_index = pr_comments_index
+        self.contributors_index = contributors_index
         self.commit_message_dict = {}
 
     def get_pr_message_count(self, repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
@@ -1365,26 +1174,6 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         }
         return query
 
-
-    def contributor_count(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(
-            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index, self.pr_comments_index), body=query_author_uuid_data)[
-            'aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
-
-    def commit_frequency(self, date, repos_list):
-        query_commit_frequency = self.get_uuid_count_query(
-            "cardinality", repos_list, "hash", "grimoire_creation_date", size=0, from_date=date - timedelta(days=90), to_date=date)
-        commit_frequency = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
-            'aggregations']["count_of_uuid"]['value']
-        query_commit_frequency_commpany = 0
-        if self.company:
-            query_commit_frequency["query"]["bool"]["must"].append({ "match": { "author_org_name": self.company } })
-            query_commit_frequency_commpany = self.es_in.search(index=self.git_index, body=query_commit_frequency)[
-                'aggregations']["count_of_uuid"]['value']
-        return commit_frequency/12.85, query_commit_frequency_commpany/12.85
-
     def is_maintained(self, date, repos_list, level):
         is_maintained_list = []
         if level == "repo":
@@ -1473,7 +1262,6 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         else:
             return 0, None, None
 
-
     def code_merge_ratio(self, date, repos_list):
         query_pr_body = self.get_uuid_count_query( "cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
         query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
@@ -1509,21 +1297,6 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             return pr_linked_issue/pr_count
         except ZeroDivisionError:
             return None
-    def active_C1_pr_create_contributor(self, date, repos_list):
-        C1_pr_contributors = self.get_all_CX_contributors(
-            repos_list, (self.pr_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_pr_contributors)
-
-    def active_C1_pr_comments_contributor(self, date, repos_list):
-        C1_pr_comments_contributors = self.get_all_CX_comments_contributors(repos_list, (self.pr_comments_index), pr=True, from_date=date-timedelta(days=90), to_date=date)
-        return len(C1_pr_comments_contributors)
-
-    def active_C2_contributor_count(self, date, repos_list):
-        query_author_uuid_data = self.get_uuid_count_contribute_query(
-            repos_list, company=None, from_date=(date - timedelta(days=90)), to_date=date)
-        author_uuid_count = self.es_in.search(index=(self.git_index), body=query_author_uuid_data)[
-            'aggregations']["count_of_contributors"]['value']
-        return author_uuid_count
 
     def metrics_model_enrich(self, repos_list, label, type=None, level=None, date_list=None):
         level = level if level != None else self.level
@@ -1536,10 +1309,14 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            commit_frequency_message = self.commit_frequency(date, repos_list)
-            LOC_frequency = self.LOC_frequency(date, repos_list)
-            lines_added_frequency = self.LOC_frequency(date, repos_list, 'lines_added')
-            lines_removed_frequency = self.LOC_frequency(date, repos_list, 'lines_removed')
+            from_date = date - timedelta(days=90)
+            to_date = date
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+
+            commit_frequency = self.commit_frequency(from_date, to_date, commit_contributor_list)
+            commit_frequency_inside = self.commit_frequency(from_date, to_date, commit_contributor_list, self.company) if self.company else 0
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
             code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
             code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
@@ -1549,16 +1326,16 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'type': type,
                 'label': label,
                 'model_name': self.model_name,
-                'contributor_count': self.contributor_count(date, repos_list),
-                'active_C2_contributor_count': self.active_C2_contributor_count(date, repos_list),
-                'active_C1_pr_create_contributor': self.active_C1_pr_create_contributor(date, repos_list),
-                'active_C1_pr_comments_contributor': self.active_C1_pr_comments_contributor(date, repos_list),
-                'commit_frequency': commit_frequency_message[0],
-                'commit_frequency_inside': commit_frequency_message[1],
+                'contributor_count': self.contributor_count(commit_contributor_list + pr_contributor_list + pr_comment_contributor_list),
+                'active_C2_contributor_count': self.contributor_count(commit_contributor_list),
+                'active_C1_pr_create_contributor': self.contributor_count(pr_contributor_list),
+                'active_C1_pr_comments_contributor': self.contributor_count(pr_comment_contributor_list),
+                'commit_frequency': commit_frequency,
+                'commit_frequency_inside': commit_frequency_inside,
                 'is_maintained': round(self.is_maintained(date, repos_list, level), 4),
-                'LOC_frequency': LOC_frequency,
-                'lines_added_frequency': lines_added_frequency,
-                'lines_removed_frequency': lines_removed_frequency,
+                'LOC_frequency': self.LOC_frequency(date, repos_list),
+                'lines_added_frequency': self.LOC_frequency(date, repos_list, 'lines_added'),
+                'lines_removed_frequency': self.LOC_frequency(date, repos_list, 'lines_removed'),
                 'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
                 'code_review_ratio': code_review_ratio,
                 'code_merge_ratio': code_merge_ratio,
@@ -1607,43 +1384,38 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 is_org = True if org.get("org_name") else False
                 self.org_name_dict[org_name] = is_org
            
-    def contributor_count(self, date, contributor_list):
-        contributor_count = 0
-        contributor_identity = set()
+    def org_contributor_count(self, from_date, to_date, contributor_list):
+        contributor_set = set()
         org_contributor_count_dict = {}  # {"Huawei": 10}
-        org_contributor_identity_dict = {} # {"Huawei": {author_name1,author_name2}}
+        org_contributor_author_dict = {} # {"Huawei": {author_name1,author_name2}}
 
-        from_date = (date - timedelta(days=90)).strftime("%Y-%m-%d")
-        to_date = date.strftime("%Y-%m-%d")
+        from_date = from_date.strftime("%Y-%m-%d")
+        to_date = to_date.strftime("%Y-%m-%d")
 
         for contributor in contributor_list:
             for org in contributor["org_change_date_list"]:
-                if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date) \
-                        and len(contributor_identity & set(contributor["id_identity_list"])) == 0:
-                    contributor_count += 1
-                    contributor_identity.update(contributor["id_identity_list"])
+                if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
+                    contributor_set.add(contributor["id_git_author_name_list"][0])
                     break
 
             for org in contributor["org_change_date_list"]:
                 if check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
-                    org_contributor_identity = org_contributor_identity_dict.get(org_name, set())
-                    if len(org_contributor_identity & set(contributor["id_identity_list"])) == 0:
-                        org_contributor_count_dict[org_name] = org_contributor_count_dict.get(org_name, 0) + 1
-                        org_contributor_identity.update(contributor["id_identity_list"])
-                        org_contributor_identity_dict[org_name] = org_contributor_identity
-                    continue
+                    org_contributor_author = org_contributor_author_dict.get(org_name, set())
+                    org_contributor_author.add(contributor["id_git_author_name_list"][0])
+                    org_contributor_author_dict[org_name] = org_contributor_author
+                    org_contributor_count_dict[org_name] = len(org_contributor_author)
+
+        return len(contributor_set), org_contributor_count_dict
             
-        return contributor_count, org_contributor_count_dict
-            
-    def commit_frequency(self, date, contributor_list):
+    def org_commit_frequency(self, from_date, to_date, contributor_list):
         total_count = 0
         commit_count = 0
         org_commit_count_dict = {}  # {"Huawei": 10}
         org_commit_percentage_dict = {}  # {"Huawei": [10, 0.3, 0.5]}
 
-        from_date = (date - timedelta(days=90)).strftime("%Y-%m-%d")
-        to_date = date.strftime("%Y-%m-%d")
+        from_date = from_date.strftime("%Y-%m-%d")
+        to_date = to_date.strftime("%Y-%m-%d")
 
         for contributor in contributor_list:
             for commit_date in contributor["code_commit_date_list"]:
@@ -1674,26 +1446,25 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 org_commit_percentage_dict[org_name] = [count, count/total_count, 0 if (total_count - commit_count) == 0 else count/(total_count - commit_count)]
         return commit_count/12.85, org_commit_percentage_dict
 
-    def contribution_last(self, date, contributor_list):
+    def contribution_last(self, from_date, to_date, contributor_list):
         contribution_last = 0
-        contributor_dict = {} #{"repo_name":[contributor1,contributor2]}
+        contributor_dict = {}  # {"repo_name":[contributor1,contributor2]}
         for contributor in contributor_list:
             repo_contributor_list = contributor_dict.get(contributor["repo_name"], [])
             repo_contributor_list.append(contributor)
             contributor_dict[contributor["repo_name"]] = repo_contributor_list
-        
-        date_list = get_date_list(begin_date=str(
-                date-timedelta(days=90)), end_date=str(date), freq='7D')
-        for repo, repo_contributor_list in contributor_dict.items():  
+
+        date_list = get_date_list(begin_date=str(from_date), end_date=str(to_date), freq='7D')
+        for repo, repo_contributor_list in contributor_dict.items():
             for day in date_list:
                 org_name_set = set()
-                from_date = (day - timedelta(days=7)).strftime("%Y-%m-%d")
-                to_date = day.strftime("%Y-%m-%d")
+                from_day = (day - timedelta(days=7)).strftime("%Y-%m-%d")
+                to_day = day.strftime("%Y-%m-%d")
                 for contributor in repo_contributor_list:
                     for org in contributor["org_change_date_list"]:
-                        if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
+                        if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_day, to_day):
                             for commit_date in contributor["code_commit_date_list"]:
-                                if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
+                                if from_day <= commit_date and commit_date <= to_day:
                                     org_name_set.add(org.get("org_name"))
                                     break
                 contribution_last += len(org_name_set)
@@ -1709,14 +1480,16 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            contributor_list = self.get_commit_contributor_list(date, repos_list)
+            from_date = date - timedelta(days=90)
+            to_date = date
+            contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
             if len(contributor_list) == 0:
                 continue
             self.add_org_name(contributor_list)
-            contributor_count, org_contributor_count_dict = self.contributor_count(date, contributor_list)
-            commit_frequency, org_commit_percentage_dict = self.commit_frequency(date, contributor_list)
-            org_count = self.org_count(date, contributor_list)
-            contribution_last = self.contribution_last(date, contributor_list)
+            contributor_count, org_contributor_count_dict = self.org_contributor_count(from_date, to_date, contributor_list)
+            commit_frequency, org_commit_percentage_dict = self.org_commit_frequency(from_date, to_date, contributor_list)
+            org_count = self.org_count(from_date, to_date, contributor_list)
+            contribution_last = self.contribution_last(from_date, to_date, contributor_list)
             for org_name in self.org_name_dict.keys():
                 if org_name not in org_commit_percentage_dict.keys():
                     continue

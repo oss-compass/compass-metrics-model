@@ -1,0 +1,42 @@
+{
+	"common": {
+		"pattern": [
+			"*bot"
+		]
+	},
+	"community": {
+		"https://gitee.com/mindspore": {
+			"author_name": [
+				"i-robot",
+				"mindspore-ci-bot"
+			]
+		},
+		"https://github.com/pytorch": {
+			"author_name": [
+				"pytorchbot",
+				"Website Deployment Script",
+				"chronos_secgrp_pytorch_oss_ci_oncall",
+				"Pytorch Test Infra"
+			]
+		},
+		"https://github.com/tensorflow": {
+			"author_name": [
+				"A. Unique TensorFlower",
+				"TensorFlower Gardener",
+				"tfdocsbot"
+			]
+		},
+		"https://github.com/kubernetes": {
+			"author_name": [],
+			"repo": {
+				"https://github.com/kubernetes/kubernetes": {
+					"author_name": [
+						"Kubernetes Prow Robot",
+						"Kubernetes Submit Queue",
+						"k8s-merge-robot"
+					]
+				}
+			}
+		}
+	}
+}

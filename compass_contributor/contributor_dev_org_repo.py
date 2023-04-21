@@ -62,6 +62,47 @@ def get_identities_info(file_path):
                 identities_dict[email] = enrollments[0]["organization"]
     return identities_dict
 
+def get_bots_info(file_path):
+    bots_config = json.load(open(file_path))
+    common = []
+    community_dict = {}
+    repo_dict = {}
+    if bots_config.get("common") and bots_config["common"].get("pattern") and len(bots_config["common"].get("pattern")):
+        common = bots_config["common"]["pattern"]
+    for community, community_values in bots_config["community"].items():
+        if community_values.get("author_name") and len(community_values.get("author_name")) > 0:
+            community_dict[community] = community_values["author_name"]
+        if community_values.get("repo"):
+            for repo, repo_values in community_values["repo"].items():
+                if repo_values.get("author_name") and len(repo_values.get("author_name")) > 0:
+                    repo_dict[repo] = repo_values["author_name"]
+        
+    bots_dict = {
+        "common": common,
+        "community": community_dict,
+        "repo": repo_dict
+    }
+    return bots_dict
+
+def is_bot_by_author_name(bots_dict, repo, author_name_list):
+    for author_name in author_name_list:
+        common_list = bots_dict["common"]
+        if len(common_list) > 0:
+            for common in common_list:
+                pattern = f"^{common.replace('*', '.*')}$"
+                regex = re.compile(pattern)
+                if regex.match(author_name):
+                    return True
+        community_dict = bots_dict["community"]
+        if len(community_dict) > 0:
+            for community, community_values in community_dict.items():
+                if community in repo and author_name in community_values:
+                    return True
+        repo_dict = bots_dict["repo"]
+        if len(repo_dict) > 0:
+            if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+                return True
+    return False
 
 def get_all_repo(json_file, origin):
     all_repo = []
@@ -104,8 +145,9 @@ def get_latest_date(date1, date2):
 
 
 class ContributorDevOrgRepo:
-    def __init__(self, json_file, identities_config_file, organizations_config_file, issue_index, pr_index,
-                 issue_comments_index, pr_comments_index, git_index, contributors_index, from_date, end_date, C0_index=None, company=None):
+    def __init__(self, json_file, identities_config_file, organizations_config_file, bots_config_file, issue_index,
+                 pr_index, issue_comments_index, pr_comments_index, git_index, contributors_index, from_date, end_date,
+                 C0_index=None, company=None):
         self.issue_index = issue_index
         self.pr_index = pr_index
         self.issue_comments_index = issue_comments_index
@@ -117,7 +159,8 @@ class ContributorDevOrgRepo:
         self.end_date = end_date
         self.organizations_dict = get_organizations_info(organizations_config_file)
         self.identities_dict = get_identities_info(identities_config_file)
-        self.company = None if company == None or company == 'None' else company
+        self.bots_dict = get_bots_info(bots_config_file)
+        self.company = None if company or company == 'None' else company
         self.client = None
         self.all_repo = get_all_repo(json_file, 'gitee' if 'gitee' in issue_index else 'github')
         self.platform_item_id_dict = {}
@@ -191,6 +234,9 @@ class ContributorDevOrgRepo:
             star_date_list.sort()
             if len(org_change_date_list) > 0:
                 sorted(org_change_date_list, key=lambda x: x["first_date"])
+            is_bot = self.is_bot_by_author_name(repo, list(item.get("id_git_author_name_list", []))
+                                                + list(item.get("id_platform_login_name_list", []))
+                                                + list(item.get("id_platform_author_name_list", [])))
 
             contributor_data = {
                 "_index": self.contributors_index,
@@ -224,6 +270,7 @@ class ContributorDevOrgRepo:
                     "org_name": org_change_date_list[len(org_change_date_list)-1]["org_name"] if len(org_change_date_list) > 0 else None,
                     "community": community,
                     "repo_name": repo,
+                    "is_bot": is_bot,
                     "update_at_date": datetime_utcnow().isoformat()        
                 }
             }
@@ -732,4 +779,24 @@ class ContributorDevOrgRepo:
         if ("noreply.gitee.com" in domain or "noreply.github.com" in domain) and self.company is not None:
             org_name = self.company
         return org_name
+    
+    def is_bot_by_author_name(self, repo, author_name_list):
+        for author_name in author_name_list:
+            common_list = self.bots_dict["common"]
+            if len(common_list) > 0:
+                for common in common_list:
+                    pattern = f"^{common.replace('*', '.*')}$"
+                    regex = re.compile(pattern)
+                    if regex.match(author_name):
+                        return True
+            community_dict = self.bots_dict["community"]
+            if len(community_dict) > 0:
+                for community, community_values in community_dict.items():
+                    if community in repo and author_name in community_values:
+                        return True
+            repo_dict = self.bots_dict["repo"]
+            if len(repo_dict) > 0:
+                if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+                    return True
+        return False
 
