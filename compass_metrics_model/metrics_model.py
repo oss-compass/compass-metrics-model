@@ -1457,7 +1457,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     org_commit_count_dict[org_name] = count
 
         if total_count == 0:
-            return 0 ,{}
+            return 0, 0, 0, {}
         for org_name, count in org_commit_count_dict.items():
             if self.org_name_dict[org_name]:
                 org_commit_percentage_dict[org_name] = [count, count/total_count, 0 if commit_count == 0 else count/commit_count]
