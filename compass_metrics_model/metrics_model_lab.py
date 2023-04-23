@@ -107,6 +107,8 @@ class StarterProjectHealthMetricsModel(MetricsModel):
         from_date = (date - timedelta(days=90)).strftime("%Y-%m-%d")
         to_date = date.strftime("%Y-%m-%d")
         for item in commit_contributor_list:
+            if item["is_bot"]:
+                continue
             name = item["id_git_author_name_list"][0]
             count = author_name_dict.get(name, 0)
             for commit_date in item["code_commit_date_list"]:

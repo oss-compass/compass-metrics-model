@@ -1,5 +1,7 @@
 from compass_metrics_model.metrics_model_lab import (StarterProjectHealthMetricsModel)
 import yaml
+import os
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 if __name__ == '__main__':
    cofig_url = "./conf.yaml"

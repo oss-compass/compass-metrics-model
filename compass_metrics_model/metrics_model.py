@@ -600,11 +600,6 @@ class MetricsModel:
                             "match_phrase": {
                                 "repo_name.keyword": repo
                             }
-                        },
-                        {
-                            "match_phrase": {
-                                "is_bot": "false"
-                            }
                         }
                     ],
                     "filter": [
@@ -644,31 +639,33 @@ class MetricsModel:
                 result_list = result_list +[contributor["_source"] for contributor in contributor_list]
         return result_list
 
-    def contributor_count(self, contributor_list):
+    def contributor_count(self, contributor_list, is_bot=None):
         contributor_set = set()
         for contributor in contributor_list:
-            if contributor.get("id_platform_login_name_list") and len(contributor.get("id_platform_login_name_list")) > 0:
-                contributor_set.add(contributor["id_platform_login_name_list"][0])
-            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
-                contributor_set.add(contributor["id_git_author_name_list"][0])
+            if is_bot is None or contributor["is_bot"] == is_bot:
+                if contributor.get("id_platform_login_name_list") and len(contributor.get("id_platform_login_name_list")) > 0:
+                    contributor_set.add(contributor["id_platform_login_name_list"][0])
+                elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                    contributor_set.add(contributor["id_git_author_name_list"][0])
         return len(contributor_set)
 
-    def commit_frequency(self, from_date, to_date, contributor_list, company=None):
+    def commit_frequency(self, from_date, to_date, contributor_list, company=None, is_bot=None):
         from_date = from_date.strftime("%Y-%m-%d")
         to_date = to_date.strftime("%Y-%m-%d")
         commit_count = 0
         for contributor in contributor_list:
-            if company is None:
-                for commit_date in contributor["code_commit_date_list"]:
-                    if from_date <= commit_date and commit_date <= to_date:
-                        commit_count += 1
-            else:
-                for org in contributor["org_change_date_list"]:
-                    if org.get("org_name") is not None and org.get("org_name") == company and \
-                            check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
-                        for commit_date in contributor["code_commit_date_list"]:
-                            if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
-                                commit_count += 1
+            if is_bot is None or contributor["is_bot"] == is_bot:
+                if company is None:
+                    for commit_date in contributor["code_commit_date_list"]:
+                        if from_date <= commit_date and commit_date <= to_date:
+                            commit_count += 1
+                else:
+                    for org in contributor["org_change_date_list"]:
+                        if org.get("org_name") is not None and org.get("org_name") == company and \
+                                check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
+                            for commit_date in contributor["code_commit_date_list"]:
+                                if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
+                                    commit_count += 1
         return commit_count/12.85
 
     def org_count(self, from_date, to_date, contributor_list):
@@ -777,6 +774,7 @@ class ActivityMetricsModel(MetricsModel):
             issue_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_comments_date_list")
             pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
             pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+            D1_contributor_list = commit_contributor_list + issue_contributor_list + pr_contributor_list + issue_comment_contributor_list + pr_comment_contributor_list
 
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
@@ -786,13 +784,17 @@ class ActivityMetricsModel(MetricsModel):
                 'type': type,
                 'label': label,
                 'model_name': self.model_name,
-                'contributor_count': self.contributor_count(commit_contributor_list + issue_contributor_list + pr_contributor_list + issue_comment_contributor_list + pr_comment_contributor_list),
+                'contributor_count': self.contributor_count(D1_contributor_list),
+                'contributor_count_bot': self.contributor_count(D1_contributor_list, is_bot=True),
+                'contributor_count_without_bot': self.contributor_count(D1_contributor_list, is_bot=False),
                 'active_C2_contributor_count': self.contributor_count(commit_contributor_list),
                 'active_C1_pr_create_contributor': self.contributor_count(pr_contributor_list),
                 'active_C1_pr_comments_contributor': self.contributor_count(pr_comment_contributor_list),
                 'active_C1_issue_create_contributor': self.contributor_count(issue_contributor_list),
                 'active_C1_issue_comments_contributor': self.contributor_count(issue_comment_contributor_list),
                 'commit_frequency': self.commit_frequency(from_date, to_date, commit_contributor_list),
+                'commit_frequency_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=True),
+                'commit_frequency_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=False),
                 'org_count': self.org_count(from_date, to_date, commit_contributor_list),
                 # 'created_since': round(self.created_since(date, repos_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
@@ -1314,9 +1316,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
             pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
             pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+            D2_C1_pr_contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
 
-            commit_frequency = self.commit_frequency(from_date, to_date, commit_contributor_list)
-            commit_frequency_inside = self.commit_frequency(from_date, to_date, commit_contributor_list, self.company) if self.company else 0
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
             code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
             code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
@@ -1326,12 +1327,18 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'type': type,
                 'label': label,
                 'model_name': self.model_name,
-                'contributor_count': self.contributor_count(commit_contributor_list + pr_contributor_list + pr_comment_contributor_list),
+                'contributor_count': self.contributor_count(D2_C1_pr_contributor_list),
+                'contributor_count_bot': self.contributor_count(D2_C1_pr_contributor_list, is_bot=True),
+                'contributor_count_without_bot': self.contributor_count(D2_C1_pr_contributor_list, is_bot=False),
                 'active_C2_contributor_count': self.contributor_count(commit_contributor_list),
                 'active_C1_pr_create_contributor': self.contributor_count(pr_contributor_list),
                 'active_C1_pr_comments_contributor': self.contributor_count(pr_comment_contributor_list),
-                'commit_frequency': commit_frequency,
-                'commit_frequency_inside': commit_frequency_inside,
+                'commit_frequency': self.commit_frequency(from_date, to_date, commit_contributor_list),
+                'commit_frequency_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=True),
+                'commit_frequency_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=False),
+                'commit_frequency_inside': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company) if self.company else 0,
+                'commit_frequency_inside_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=True) if self.company else 0,
+                'commit_frequency_inside_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=False) if self.company else 0,
                 'is_maintained': round(self.is_maintained(date, repos_list, level), 4),
                 'LOC_frequency': self.LOC_frequency(date, repos_list),
                 'lines_added_frequency': self.LOC_frequency(date, repos_list, 'lines_added'),
@@ -1386,6 +1393,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
            
     def org_contributor_count(self, from_date, to_date, contributor_list):
         contributor_set = set()
+        contributor_bot_set = set()
+        contributor_without_bot_set = set()
         org_contributor_count_dict = {}  # {"Huawei": 10}
         org_contributor_author_dict = {} # {"Huawei": {author_name1,author_name2}}
 
@@ -1396,6 +1405,10 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             for org in contributor["org_change_date_list"]:
                 if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     contributor_set.add(contributor["id_git_author_name_list"][0])
+                    if contributor["is_bot"]:
+                        contributor_bot_set.add(contributor["id_git_author_name_list"][0])
+                    else:
+                        contributor_without_bot_set.add(contributor["id_git_author_name_list"][0])
                     break
 
             for org in contributor["org_change_date_list"]:
@@ -1406,11 +1419,13 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     org_contributor_author_dict[org_name] = org_contributor_author
                     org_contributor_count_dict[org_name] = len(org_contributor_author)
 
-        return len(contributor_set), org_contributor_count_dict
+        return len(contributor_set), len(contributor_bot_set), len(contributor_without_bot_set), org_contributor_count_dict
             
     def org_commit_frequency(self, from_date, to_date, contributor_list):
         total_count = 0
         commit_count = 0
+        commit_bot_count = 0
+        commit_without_bot_count = 0
         org_commit_count_dict = {}  # {"Huawei": 10}
         org_commit_percentage_dict = {}  # {"Huawei": [10, 0.3, 0.5]}
 
@@ -1427,6 +1442,10 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     for commit_date in contributor["code_commit_date_list"]:
                         if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                             commit_count += 1
+                            if contributor["is_bot"]:
+                                commit_bot_count += 1
+                            else:
+                                commit_without_bot_count += 1
             
             for org in contributor["org_change_date_list"]:
                 if check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
@@ -1444,7 +1463,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 org_commit_percentage_dict[org_name] = [count, count/total_count, 0 if commit_count == 0 else count/commit_count]
             else:
                 org_commit_percentage_dict[org_name] = [count, count/total_count, 0 if (total_count - commit_count) == 0 else count/(total_count - commit_count)]
-        return commit_count/12.85, org_commit_percentage_dict
+        return commit_count/12.85, commit_bot_count/12.85, commit_without_bot_count/12.85, org_commit_percentage_dict
 
     def contribution_last(self, from_date, to_date, contributor_list):
         contribution_last = 0
@@ -1486,8 +1505,10 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             if len(contributor_list) == 0:
                 continue
             self.add_org_name(contributor_list)
-            contributor_count, org_contributor_count_dict = self.org_contributor_count(from_date, to_date, contributor_list)
-            commit_frequency, org_commit_percentage_dict = self.org_commit_frequency(from_date, to_date, contributor_list)
+            contributor_count, contributor_count_bot, contributor_count_without_bot, org_contributor_count_dict = \
+                self.org_contributor_count(from_date, to_date, contributor_list)
+            commit_frequency, commit_frequency_bot, commit_frequency_without_bot, org_commit_percentage_dict = \
+                self.org_commit_frequency(from_date, to_date, contributor_list)
             org_count = self.org_count(from_date, to_date, contributor_list)
             contribution_last = self.contribution_last(from_date, to_date, contributor_list)
             for org_name in self.org_name_dict.keys():
@@ -1502,8 +1523,12 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'org_name': org_name,
                     'is_org': self.org_name_dict[org_name],
                     'contributor_count': contributor_count,
+                    'contributor_count_bot': contributor_count_bot,
+                    'contributor_count_without_bot': contributor_count_without_bot,
                     'contributor_org_count': org_contributor_count_dict.get(org_name),
                     'commit_frequency': round(commit_frequency, 4),
+                    'commit_frequency_bot': round(commit_frequency_bot, 4),
+                    'commit_frequency_without_bot': round(commit_frequency_without_bot, 4),
                     'commit_frequency_org': round(org_commit_percentage_dict[org_name][0], 4),
                     'commit_frequency_org_percentage': round(org_commit_percentage_dict[org_name][1], 4),
                     'commit_frequency_percentage': round(org_commit_percentage_dict[org_name][2], 4),

@@ -13,6 +13,8 @@ from compass_metrics_model.metrics_model_summary import (
 from compass_contributor.contributor_dev_org_repo import ContributorDevOrgRepo
 
 import yaml
+import os
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 if __name__ == '__main__':
    cofig_url = "./conf.yaml"
