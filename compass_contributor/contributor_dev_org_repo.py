@@ -184,21 +184,19 @@ class ContributorDevOrgRepo:
         self.git_item_id_dict = {}
         self.git_item_identity_dict = {}
 
-        issue_pr_index_dict = {
-            self.issue_index: "issue_creation_date_list",
-            self.pr_index: "pr_creation_date_list",
-            self.issue_comments_index: "issue_comments_date_list",
-            self.pr_comments_index: "pr_review_date_list"
+        platform_index_type_dict = {
+            "issue": [self.issue_index, "issue_creation_date_list"],
+            "pr": [self.pr_index, "pr_creation_date_list"],
+            "issue_comments": [self.issue_comments_index, "issue_comments_date_list"],
+            "pr_comments": [self.pr_comments_index, "pr_review_date_list"],
+            # "fork": [self.C0_index, "fork_date_list"],
+            # "star": [self.C0_index, "star_date_list"]
         }
-        fork_star_dict = {
-            "fork": "fork_date_list",
-            "star": "star_date_list"
-        }
-        for issue_pr_index in issue_pr_index_dict.keys():
-           self.processing_platform_data(issue_pr_index, repo, self.from_date, self.end_date, issue_pr_index_dict[issue_pr_index])
-        # for fork_star in fork_star_dict.keys():
-            # self.processing_platform_data(self.C0_index, repo, self.from_date, self.end_date, fork_star_dict[fork_star], fork_star)
-        self.processing_commit_data(self.git_index, repo, self.from_date, self.end_date)
+        for index_key, index_values in platform_index_type_dict.items():
+            if index_values[0] is not None:
+                self.processing_platform_data(index_values[0], repo, self.from_date, self.end_date, index_values[1], type=index_key)
+        if self.git_index is not None:
+            self.processing_commit_data(self.git_index, repo, self.from_date, self.end_date)
         if len(self.platform_item_id_dict) == 0 and len(self.git_item_id_dict) == 0:
             logger.info(repo + " finish count:" + str(0) + " " + str(datetime.now() - start_time))
             return
@@ -281,13 +279,26 @@ class ContributorDevOrgRepo:
         helpers.bulk(client=self.client, actions=all_bulk_data)
         logger.info(repo + " finish count:" + str(len(all_items_dict)) + " " + str(datetime.now() - start_time))
 
-    def processing_platform_data(self, index, repo, from_date, to_date, date_field, fork_star=None):
+    def processing_platform_data(self, index, repo, from_date, to_date, date_field, type="issue"):
         logger.info(repo + " " + index + " processing...")
         search_after = []
         count = 0
         start_time = datetime.now()
         while True:
-            results = self.get_enrich_data(index, repo, from_date, to_date, fork_star, page_size, search_after)
+            results = []
+            if type == "issue":
+                results = self.get_issue_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "pr":
+                results = self.get_pr_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "issue_comments":
+                results = self.get_issue_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "pr_comments":
+                results = self.get_pr_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "fork":
+                results = self.get_fork_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "star":
+                results = self.get_star_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+
             count = count + len(results)
             if len(results) == 0:
                 break
@@ -346,7 +357,7 @@ class ContributorDevOrgRepo:
         count = 0
         start_time = datetime.now()
         while True:
-            results = self.get_enrich_data(index, repo + ".git", from_date, to_date, page_size=page_size, search_after=search_after)
+            results = self.get_commit_enrich_data(index, repo, from_date, to_date, page_size, search_after)
             count = count + len(results)
             if len(results) == 0:
                 break
@@ -509,7 +520,7 @@ class ContributorDevOrgRepo:
                 result_identity_uuid_dict[identity_list] = item["uuid"]
         return result_item_dict, merge_id_set
 
-    def get_enrich_data(self, index, repo, from_date, to_date, fork_star_type=None, page_size=100, search_after=[]):
+    def get_enrich_dsl(self, repo_field, repo, from_date, to_date, page_size=100, search_after=[]):
         query = {
             "size": page_size,
             "query": {
@@ -517,7 +528,7 @@ class ContributorDevOrgRepo:
                     "must": [
                         {
                             "match_phrase": {
-                                "tag": repo
+                                repo_field: repo
                             }
                         }
                     ],
@@ -546,11 +557,50 @@ class ContributorDevOrgRepo:
                 }
             ]
         }
-        if fork_star_type is not None:
-            query["query"]["bool"]["must"].append({"match_phrase": {"type": fork_star_type}})
         if len(search_after) > 0:
             query['search_after'] = search_after
-        results = self.client.search(index=index, body=query)["hits"]["hits"]
+        return query
+
+    def get_issue_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_pr_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_issue_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"issue_pull_request": "false"}})
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_pr_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_fork_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"type": "fork"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_star_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"type": "star"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_commit_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo + ".git", from_date, to_date, page_size, search_after)
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
         return results
 
     def get_contributor_index_mapping(self):
