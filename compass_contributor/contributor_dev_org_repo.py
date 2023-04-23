@@ -62,6 +62,47 @@ def get_identities_info(file_path):
                 identities_dict[email] = enrollments[0]["organization"]
     return identities_dict
 
+def get_bots_info(file_path):
+    bots_config = json.load(open(file_path))
+    common = []
+    community_dict = {}
+    repo_dict = {}
+    if bots_config.get("common") and bots_config["common"].get("pattern") and len(bots_config["common"].get("pattern")):
+        common = bots_config["common"]["pattern"]
+    for community, community_values in bots_config["community"].items():
+        if community_values.get("author_name") and len(community_values.get("author_name")) > 0:
+            community_dict[community] = community_values["author_name"]
+        if community_values.get("repo"):
+            for repo, repo_values in community_values["repo"].items():
+                if repo_values.get("author_name") and len(repo_values.get("author_name")) > 0:
+                    repo_dict[repo] = repo_values["author_name"]
+        
+    bots_dict = {
+        "common": common,
+        "community": community_dict,
+        "repo": repo_dict
+    }
+    return bots_dict
+
+def is_bot_by_author_name(bots_dict, repo, author_name_list):
+    for author_name in author_name_list:
+        common_list = bots_dict["common"]
+        if len(common_list) > 0:
+            for common in common_list:
+                pattern = f"^{common.replace('*', '.*')}$"
+                regex = re.compile(pattern)
+                if regex.match(author_name):
+                    return True
+        community_dict = bots_dict["community"]
+        if len(community_dict) > 0:
+            for community, community_values in community_dict.items():
+                if community in repo and author_name in community_values:
+                    return True
+        repo_dict = bots_dict["repo"]
+        if len(repo_dict) > 0:
+            if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+                return True
+    return False
 
 def get_all_repo(json_file, origin):
     all_repo = []
@@ -104,8 +145,9 @@ def get_latest_date(date1, date2):
 
 
 class ContributorDevOrgRepo:
-    def __init__(self, json_file, identities_config_file, organizations_config_file, issue_index, pr_index,
-                 issue_comments_index, pr_comments_index, git_index, contributors_index, from_date, end_date, C0_index=None, company=None):
+    def __init__(self, json_file, identities_config_file, organizations_config_file, bots_config_file, issue_index,
+                 pr_index, issue_comments_index, pr_comments_index, git_index, contributors_index, from_date, end_date,
+                 C0_index=None, company=None):
         self.issue_index = issue_index
         self.pr_index = pr_index
         self.issue_comments_index = issue_comments_index
@@ -117,7 +159,8 @@ class ContributorDevOrgRepo:
         self.end_date = end_date
         self.organizations_dict = get_organizations_info(organizations_config_file)
         self.identities_dict = get_identities_info(identities_config_file)
-        self.company = None if company == None or company == 'None' else company
+        self.bots_dict = get_bots_info(bots_config_file)
+        self.company = None if company or company == 'None' else company
         self.client = None
         self.all_repo = get_all_repo(json_file, 'gitee' if 'gitee' in issue_index else 'github')
         self.platform_item_id_dict = {}
@@ -141,21 +184,19 @@ class ContributorDevOrgRepo:
         self.git_item_id_dict = {}
         self.git_item_identity_dict = {}
 
-        issue_pr_index_dict = {
-            self.issue_index: "issue_creation_date_list",
-            self.pr_index: "pr_creation_date_list",
-            self.issue_comments_index: "issue_comments_date_list",
-            self.pr_comments_index: "pr_review_date_list"
+        platform_index_type_dict = {
+            "issue": [self.issue_index, "issue_creation_date_list"],
+            "pr": [self.pr_index, "pr_creation_date_list"],
+            "issue_comments": [self.issue_comments_index, "issue_comments_date_list"],
+            "pr_comments": [self.pr_comments_index, "pr_review_date_list"],
+            # "fork": [self.C0_index, "fork_date_list"],
+            # "star": [self.C0_index, "star_date_list"]
         }
-        fork_star_dict = {
-            "fork": "fork_date_list",
-            "star": "star_date_list"
-        }
-        for issue_pr_index in issue_pr_index_dict.keys():
-           self.processing_platform_data(issue_pr_index, repo, self.from_date, self.end_date, issue_pr_index_dict[issue_pr_index])
-        # for fork_star in fork_star_dict.keys():
-            # self.processing_platform_data(self.C0_index, repo, self.from_date, self.end_date, fork_star_dict[fork_star], fork_star)
-        self.processing_commit_data(self.git_index, repo, self.from_date, self.end_date)
+        for index_key, index_values in platform_index_type_dict.items():
+            if index_values[0] is not None:
+                self.processing_platform_data(index_values[0], repo, self.from_date, self.end_date, index_values[1], type=index_key)
+        if self.git_index is not None:
+            self.processing_commit_data(self.git_index, repo, self.from_date, self.end_date)
         if len(self.platform_item_id_dict) == 0 and len(self.git_item_id_dict) == 0:
             logger.info(repo + " finish count:" + str(0) + " " + str(datetime.now() - start_time))
             return
@@ -191,6 +232,9 @@ class ContributorDevOrgRepo:
             star_date_list.sort()
             if len(org_change_date_list) > 0:
                 sorted(org_change_date_list, key=lambda x: x["first_date"])
+            is_bot = self.is_bot_by_author_name(repo, list(item.get("id_git_author_name_list", []))
+                                                + list(item.get("id_platform_login_name_list", []))
+                                                + list(item.get("id_platform_author_name_list", [])))
 
             contributor_data = {
                 "_index": self.contributors_index,
@@ -224,6 +268,7 @@ class ContributorDevOrgRepo:
                     "org_name": org_change_date_list[len(org_change_date_list)-1]["org_name"] if len(org_change_date_list) > 0 else None,
                     "community": community,
                     "repo_name": repo,
+                    "is_bot": is_bot,
                     "update_at_date": datetime_utcnow().isoformat()        
                 }
             }
@@ -234,13 +279,26 @@ class ContributorDevOrgRepo:
         helpers.bulk(client=self.client, actions=all_bulk_data)
         logger.info(repo + " finish count:" + str(len(all_items_dict)) + " " + str(datetime.now() - start_time))
 
-    def processing_platform_data(self, index, repo, from_date, to_date, date_field, fork_star=None):
+    def processing_platform_data(self, index, repo, from_date, to_date, date_field, type="issue"):
         logger.info(repo + " " + index + " processing...")
         search_after = []
         count = 0
         start_time = datetime.now()
         while True:
-            results = self.get_enrich_data(index, repo, from_date, to_date, fork_star, page_size, search_after)
+            results = []
+            if type == "issue":
+                results = self.get_issue_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "pr":
+                results = self.get_pr_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "issue_comments":
+                results = self.get_issue_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "pr_comments":
+                results = self.get_pr_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "fork":
+                results = self.get_fork_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+            elif type == "star":
+                results = self.get_star_enrich_data(index, repo, from_date, to_date, page_size, search_after)
+
             count = count + len(results)
             if len(results) == 0:
                 break
@@ -299,7 +357,7 @@ class ContributorDevOrgRepo:
         count = 0
         start_time = datetime.now()
         while True:
-            results = self.get_enrich_data(index, repo + ".git", from_date, to_date, page_size=page_size, search_after=search_after)
+            results = self.get_commit_enrich_data(index, repo, from_date, to_date, page_size, search_after)
             count = count + len(results)
             if len(results) == 0:
                 break
@@ -462,7 +520,7 @@ class ContributorDevOrgRepo:
                 result_identity_uuid_dict[identity_list] = item["uuid"]
         return result_item_dict, merge_id_set
 
-    def get_enrich_data(self, index, repo, from_date, to_date, fork_star_type=None, page_size=100, search_after=[]):
+    def get_enrich_dsl(self, repo_field, repo, from_date, to_date, page_size=100, search_after=[]):
         query = {
             "size": page_size,
             "query": {
@@ -470,7 +528,7 @@ class ContributorDevOrgRepo:
                     "must": [
                         {
                             "match_phrase": {
-                                "tag": repo
+                                repo_field: repo
                             }
                         }
                     ],
@@ -499,11 +557,50 @@ class ContributorDevOrgRepo:
                 }
             ]
         }
-        if fork_star_type is not None:
-            query["query"]["bool"]["must"].append({"match_phrase": {"type": fork_star_type}})
         if len(search_after) > 0:
             query['search_after'] = search_after
-        results = self.client.search(index=index, body=query)["hits"]["hits"]
+        return query
+
+    def get_issue_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_pr_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_issue_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"issue_pull_request": "false"}})
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_pr_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_fork_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"type": "fork"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_star_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
+        query_dsl["query"]["bool"]["must"].append({"match_phrase": {"type": "star"}})
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
+        return results
+
+    def get_commit_enrich_data(self, index, repo, from_date, to_date, page_size=100, search_after=[]):
+        query_dsl = self.get_enrich_dsl("tag", repo + ".git", from_date, to_date, page_size, search_after)
+        results = self.client.search(index=index, body=query_dsl)["hits"]["hits"]
         return results
 
     def get_contributor_index_mapping(self):
@@ -732,4 +829,24 @@ class ContributorDevOrgRepo:
         if ("noreply.gitee.com" in domain or "noreply.github.com" in domain) and self.company is not None:
             org_name = self.company
         return org_name
+    
+    def is_bot_by_author_name(self, repo, author_name_list):
+        for author_name in author_name_list:
+            common_list = self.bots_dict["common"]
+            if len(common_list) > 0:
+                for common in common_list:
+                    pattern = f"^{common.replace('*', '.*')}$"
+                    regex = re.compile(pattern)
+                    if regex.match(author_name):
+                        return True
+            community_dict = self.bots_dict["community"]
+            if len(community_dict) > 0:
+                for community, community_values in community_dict.items():
+                    if community in repo and author_name in community_values:
+                        return True
+            repo_dict = self.bots_dict["repo"]
+            if len(repo_dict) > 0:
+                if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+                    return True
+        return False
 

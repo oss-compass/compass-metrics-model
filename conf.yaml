@@ -5,7 +5,7 @@ params:
   {
       'issue_index': 'gitee_issues-enriched',
       'pr_index':'gitee-prs_enriched', 
-      'json_file': '/root/tmp/metrics_model/projects-gitee-yehui-pure-mindspore.json',
+      'json_file': './projects-gitee-yehui-pure-mindspore.json',
       'git_index': 'git_demo_enriched',
       'git_branch': None,
       'from_date': '2020-03-30',
@@ -18,6 +18,7 @@ params:
       'repo_index':'gitee_repo-enriched',
       'release_index': 'repo_release_enriched',
       'contributors_index':'gitee_contributors_org_repo',
-      'identities_config_file': '/root/lsb_metric_model/compass-metrics-model/identities.yml',
-      'organizations_config_file': '/root/lsb_metric_model/compass-metrics-model/organizations.json'
+      'identities_config_file': './compass_contributor/conf_utils/identities.yml',
+      'organizations_config_file': './compass_contributor/conf_utils/organizations.json',
+      'bots_config_file': './compass_contributor/conf_utils/bots.json',
   }
