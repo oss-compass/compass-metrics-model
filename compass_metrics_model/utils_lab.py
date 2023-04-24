@@ -35,7 +35,7 @@ def starter_project_health(item, level="repo"):
             "change_request_closure_ratio_all_period": [
                 CHANGE_REQUEST_CLOSURE_RATIO_WEIGHT_STARTER_PROJECT * 0.5,
                 CHANGE_REQUEST_CLOSURE_RATIO_MULTIPLE_THRESHOLD_STARTER_PROJECT],
-            "change_request_closure_ratio_same_period": [
+            "change_request_closure_ratio_recently": [
                 CHANGE_REQUEST_CLOSURE_RATIO_WEIGHT_STARTER_PROJECT * 0.5,
                 CHANGE_REQUEST_CLOSURE_RATIO_MULTIPLE_THRESHOLD_STARTER_PROJECT],
             "pr_time_to_close_avg": [PR_TIME_TO_CLOSE_WEIGHT_STARTER_PROJECT * 0.5,
@@ -55,7 +55,7 @@ def starter_project_health(item, level="repo"):
             "change_request_closure_ratio_all_period": [
                 CHANGE_REQUEST_CLOSURE_RATIO_WEIGHT_STARTER_PROJECT * 0.5,
                 CHANGE_REQUEST_CLOSURE_RATIO_THRESHOLD_STARTER_PROJECT],
-            "change_request_closure_ratio_same_period": [CHANGE_REQUEST_CLOSURE_RATIO_WEIGHT_STARTER_PROJECT * 0.5,
+            "change_request_closure_ratio_recently": [CHANGE_REQUEST_CLOSURE_RATIO_WEIGHT_STARTER_PROJECT * 0.5,
                                              CHANGE_REQUEST_CLOSURE_RATIO_THRESHOLD_STARTER_PROJECT],
             "pr_time_to_close_avg": [PR_TIME_TO_CLOSE_WEIGHT_STARTER_PROJECT * 0.5,
                                      PR_TIME_TO_CLOSE_THRESHOLD_STARTER_PROJECT],
@@ -83,7 +83,7 @@ def starter_project_health_decay(item, last_data, level="repo"):
         }
         decrease_decay_dict = {
             "change_request_closure_ratio_all_period": CHANGE_REQUEST_CLOSURE_RATIO_MULTIPLE_THRESHOLD_STARTER_PROJECT,
-            "change_request_closure_ratio_same_period": CHANGE_REQUEST_CLOSURE_RATIO_MULTIPLE_THRESHOLD_STARTER_PROJECT
+            "change_request_closure_ratio_recently": CHANGE_REQUEST_CLOSURE_RATIO_MULTIPLE_THRESHOLD_STARTER_PROJECT
         }
     if level == "repo":
         increment_decay_dict = {
@@ -94,7 +94,7 @@ def starter_project_health_decay(item, last_data, level="repo"):
         }
         decrease_decay_dict = {
             "change_request_closure_ratio_all_period": CHANGE_REQUEST_CLOSURE_RATIO_THRESHOLD_STARTER_PROJECT,
-            "change_request_closure_ratio_same_period": CHANGE_REQUEST_CLOSURE_RATIO_THRESHOLD_STARTER_PROJECT
+            "change_request_closure_ratio_recently": CHANGE_REQUEST_CLOSURE_RATIO_THRESHOLD_STARTER_PROJECT
         }
     for key, value in increment_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:

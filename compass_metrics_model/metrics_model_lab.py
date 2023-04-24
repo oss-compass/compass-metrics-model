@@ -66,9 +66,9 @@ class StarterProjectHealthMetricsModel(MetricsModel):
         pr_closed_count = self.es_in.search(index=self.pr_index, body=pr_closed_dsl)[
             'aggregations']["count_of_uuid"]['value']
         try:
-            return round(pr_closed_count / pr_total_count, 4)
+            return round(pr_closed_count / pr_total_count, 4), pr_closed_count, pr_total_count
         except ZeroDivisionError:
-            return None
+            return None, 0, 0
 
     def pr_open_time(self, date, repos_list):
         query_pr_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
@@ -142,7 +142,7 @@ class StarterProjectHealthMetricsModel(MetricsModel):
         for i in ["pr_time_to_first_response_avg",
                   "pr_time_to_first_response_mid",
                   "change_request_closure_ratio_all_period",
-                  "change_request_closure_ratio_same_period",
+                  "change_request_closure_ratio_recently",
                   "pr_time_to_close_avg",
                   "pr_time_to_close_mid"]:
             if item[i] is not None:
@@ -161,6 +161,10 @@ class StarterProjectHealthMetricsModel(MetricsModel):
             if created_since is None:
                 continue
             pr_time_to_first_response_avg, pr_time_to_first_response_mid = self.pr_first_response_time(date, repos_list)
+            change_request_closure_ratio_all_period, change_request_closed_count_all_period, change_request_created_count_all_period = \
+                self.change_request_closure_ratio(str_to_datetime("1970-01-01"), date, repos_list)
+            change_request_closure_ratio_recently, change_request_closed_count_recently, change_request_created_count_recently = \
+                self.change_request_closure_ratio(date - timedelta(days=90), date, repos_list)
             pr_time_to_close_avg, pr_time_to_close_mid = self.pr_open_time(date, repos_list)
             commit_contributor_list = self.get_contributor_list(date - timedelta(days=90), date, repos_list, "code_commit_date_list")
             metrics_data = {
@@ -171,8 +175,12 @@ class StarterProjectHealthMetricsModel(MetricsModel):
                 'model_name': self.model_name,
                 'pr_time_to_first_response_avg': pr_time_to_first_response_avg,
                 'pr_time_to_first_response_mid': pr_time_to_first_response_mid,
-                'change_request_closure_ratio_all_period': self.change_request_closure_ratio(str_to_datetime("1970-01-01"), date, repos_list),
-                'change_request_closure_ratio_same_period': self.change_request_closure_ratio(date - timedelta(days=90), date, repos_list),
+                'change_request_closure_ratio_all_period': change_request_closure_ratio_all_period,
+                'change_request_closed_count_all_period': change_request_closed_count_all_period,
+                'change_request_created_count_all_period': change_request_created_count_all_period,
+                'change_request_closure_ratio_recently': change_request_closure_ratio_recently,
+                'change_request_closed_count_recently': change_request_closed_count_recently,
+                'change_request_created_count_recently': change_request_created_count_recently,
                 'pr_time_to_close_avg': pr_time_to_close_avg,
                 'pr_time_to_close_mid': pr_time_to_close_mid,
                 'bus_factor': self.bus_factor(date, commit_contributor_list),
