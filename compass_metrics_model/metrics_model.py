@@ -1139,7 +1139,13 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                         },
                         {
                             "script": {
-                                "script": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf('"+repo+"/issue') != -1){return true}"
+                                "script": {
+                                    "source": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf(params.issue) != -1){return true}",
+                                    "lang": "painless",
+                                    "params": {
+                                        "issue": repo +'/issue'
+                                    }
+                                }
                             }
                         }
                     ],
