@@ -27,6 +27,7 @@ import json
 import yaml
 import pandas as pd
 import logging
+import pkg_resources
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime)
@@ -242,12 +243,13 @@ def get_medium(L):
 
 
 class MetricsModel:
-    def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None):
+    def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None, weights=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param json_file: the path of json file containing repository message.
         :param out_index: target index for Metrics Model.
         :param community: used to mark the repo belongs to which community.
         :param level: str representation of the metrics, choose from repo, project, community.
+        :param weights: dict representation of the weights of metrics.
         """
         self.json_file = json_file
         self.out_index = out_index
@@ -256,6 +258,12 @@ class MetricsModel:
         self.from_date = from_date
         self.end_date = end_date
         self.date_list = get_date_list(from_date, end_date)
+
+        if weights:
+            self.weights = weights
+        else:
+            weights_data = pkg_resources.resource_string('compass_metrics_model', 'resources/weights.yaml')
+            self.weights = yaml.load(weights_data, Loader=yaml.FullLoader)
 
     def metrics_model_metrics(self, elastic_url):
         is_https = urlparse(elastic_url).scheme == 'https'
@@ -807,7 +815,7 @@ class ActivityMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = get_activity_score(activity_decay(metrics_data, last_metrics_data, level), level)
+            score = get_activity_score(activity_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
             metrics_data["activity_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1026,7 +1034,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = community_support(community_decay(metrics_data, last_metrics_data, level), level)
+            score = community_support(community_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
             metrics_data["community_support_score"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1361,7 +1369,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'metadata__enriched_on': datetime_utcnow().isoformat()
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
-            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data, level), level)
+            score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
             metrics_data["code_quality_guarantee"] = score
             item_datas.append(metrics_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
@@ -1543,7 +1551,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'grimoire_creation_date': date.isoformat(),
                     'metadata__enriched_on': datetime_utcnow().isoformat()
                 }
-                score = organizations_activity(metrics_data, level)
+                score = organizations_activity(metrics_data, level, self.weights)
                 metrics_data["organizations_activity"] = score
                 item_datas.append(metrics_data)
                 if len(item_datas) > MAX_BULK_UPDATE_SIZE:
