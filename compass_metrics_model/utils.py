@@ -14,123 +14,6 @@ STATUS_FORCE_LIST = [408, 409, 429, 502, 503, 504]
 METADATA_FILTER_RAW = 'metadata__filter_raw'
 REPO_LABELS = 'repository_labels'
 
-######################### ACTIVITY #############################################
-
-CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY = 0.18009
-COMMIT_FREQUENCY_WEIGHT_ACTIVITY = 0.18009
-UPDATED_SINCE_WEIGHT_ACTIVITY = -0.12742
-ORG_COUNT_WEIGHT_ACTIVITY = 0.11501
-# CREATED_SINCE_WEIGHT_ACTIVITY = 0.07768
-COMMENT_FREQUENCY_WEIGHT_ACTIVITY = 0.07768
-CODE_REVIEW_COUNT_WEIGHT_ACTIVITY = 0.04919
-UPDATED_ISSUES_WEIGHT_ACTIVITY = 0.04919
-RECENT_RELEASES_WEIGHT_ACTIVITY = 0.03177
-MAINTAINER_COUT_WEIGHT_ACTIVITY = 0.2090
-MEETING_WEIGHT_ACTIVITY = 0.02090
-MEETING_ATTENDEE_COUNT_WEIGHT_ACTIVITY = 0.02090
-
-CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY = 2000
-COMMIT_FREQUENCY_THRESHOLD_ACTIVITY = 1000
-UPDATED_SINCE_THRESHOLD_ACTIVITY = 0.25
-ORG_COUNT_THRESHOLD_ACTIVITY = 10
-# CREATED_SINCE_THRESHOLD_ACTIVITY = 120
-COMMENT_FREQUENCY_THRESHOLD_ACTIVITY = 5
-CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY = 8
-UPDATED_ISSUES_THRESHOLD_ACTIVITY = 2500
-RECENT_RELEASES_THRESHOLD_ACTIVITY = 12
-MAINTAINER_COUT_THRESHOLD_ACTIVITY = 100
-MEETING_THRESHOLD_ACTIVITY = 100
-MEETING_ATTENDEE_COUNT_THRESHOLD_ACTIVITY = 10
-
-CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 2200
-COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY = 1000
-UPDATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY = 0.25
-ORG_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 30
-# CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY = 240
-COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY = 5
-CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY = 8
-UPDATED_ISSUES_MULTIPLE_THRESHOLD_ACTIVITY = 2500
-RECENT_RELEASES_MULTIPLE_THRESHOLD_ACTIVITY = 12
-
-########################## COMMUNITY ########################################
-
-ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY = -0.1437
-BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
-COMMENT_FREQUENCY_WEIGHT_COMMUNITY = 0.1022
-UPDATED_ISSUES_WEIGHT_COMMUNITY = 0.1972
-PR_OPEN_TIME_WEIGHT_COMMUNITY = -0.1288
-CODE_REVIEW_WEIGHT_COMMUNITY = 0.1022
-CLOSED_PRS_WEIGHT_COMMUNITY = 0.1972
-
-ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY = 15
-BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY = 60
-COMMENT_FREQUENCY_THRESHOLD_COMMUNITY = 5
-UPDATED_ISSUES_THRESHOLD_COMMUNITY = 2500
-PR_OPEN_TIME_THRESHOLD_COMMUNITY = 30
-CODE_REVIEW_THRESHOLD_COMMUNITY = 8
-CLOSED_PRS_THRESHOLD_COMMUNITY = 4500
-
-ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY = 15
-BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY = 60
-COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY = 5
-UPDATED_ISSUES_MULTIPLE_THRESHOLD_COMMUNITY = 2500
-PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY = 30
-CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY = 8
-CLOSED_PRS_MULTIPLE_THRESHOLD_COMMUNITY = 60000
-
-########################## CODE ########################################
-
-CONTRIBUTOR_COUNT_WEIGHT_CODE = 0.1999
-COMMIT_FREQUENCY_WEIGHT_CODE = 0.1636
-IS_MAINTAINED_WEIGHT_CODE = 0.1385
-COMMIT_PR_LINKED_RATIO_WEIGHT_CODE = 0.1261
-PR_ISSUE_LINKED_WEIGHT_CODE = 0.1132
-CODE_REVIEW_RATIO_WEIGHT_CODE = 0.1011
-CODE_MERGE_RATIO_WEIGHT_CODE = 0.1011
-LOC_FREQUENCY_WEIGHT_CODE = 0.0564
-
-CONTRIBUTOR_COUNT_THRESHOLD_CODE = 1000
-COMMIT_FREQUENCY_THRESHOLD_CODE = 1000
-IS_MAINTAINED_THRESHOLD_CODE = 1
-COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE = 1
-PR_ISSUE_LINKED_THRESHOLD_CODE = 0.2
-CODE_REVIEW_RATIO_THRESHOLD_CODE = 1
-CODE_MERGE_RATIO_THRESHOLD_CODE = 1
-LOC_FREQUENCY_THRESHOLD_CODE = 300000
-
-CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_CODE = 1000
-COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_CODE = 1000
-IS_MAINTAINED_MULTIPLE_THRESHOLD_CODE = 1
-COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE = 1
-PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE = 0.2
-CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE = 1
-CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE = 1
-LOC_FREQUENCY_MULTIPLE_THRESHOLD_CODE = 300000
-
-########################## ORG_ACTIVITY ########################################
-
-CONTRIBUTOR_COUNT_WEIGHT_ORG_ACTIVITY = 0.2581
-COMMIT_FREQUENCY_WEIGHT_ORG_ACTIVITY = 0.2581
-ORG_COUNT_WEIGHT_ORG_ACTIVITY = 0.3226
-CONTRIBUTION_LAST_WEIGHT_ORG_ACTIVITY = 0.1613
-
-CONTRIBUTOR_COUNT_THRESHOLD_ORG_ACTIVITY = 300
-COMMIT_FREQUENCY_THRESHOLD_ORG_ACTIVITY = 800
-ORG_COUNT_THRESHOLD_ORG_ACTIVITY = 30
-CONTRIBUTION_LAST_THRESHOLD_ORG_ACTIVITY = 160
-
-CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 350
-COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 1000
-ORG_COUNT_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 30
-CONTRIBUTION_LAST_MULTIPLE_THRESHOLD_ORG_ACTIVITY = 400
-
-# MIN_ACTIVITY_SCORE = -0.23786
-# MAX_ACTIVITY_SCORE = 1.23786
-MIN_ACTIVITY_SCORE = -0.22934
-MAX_ACTIVITY_SCORE = 1.22934
-MIN_COMMUNITY_SCORE = -2.0319
-MAX_COMMUNITY_SCORE = 3.03189
-
 DECAY_COEFFICIENT = 0.0027
 
 def get_uuid(*args):
@@ -163,116 +46,116 @@ def get_score_ahp(item, param_dict):
         param = 0
         if item[key] is None:
             if value[0] < 0:
-                param = value[1]    
+                param = value[1]
         else:
-           param = item[key] 
+           param = item[key]
         total_param_score += get_param_score(param,value[1] ,value[0])
     try:
         return round(total_param_score / total_weight, 5)
     except ZeroDivisionError:
         return 0.0
 
-def get_activity_score(item, level="repo"):
+def get_activity_score(item, level="repo", w={}):
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
-            "contributor_count": [CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY, CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ACTIVITY],
-            "commit_frequency": [COMMIT_FREQUENCY_WEIGHT_ACTIVITY, COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY],
-            "updated_since": [UPDATED_SINCE_WEIGHT_ACTIVITY, UPDATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY],
-            "org_count": [ORG_COUNT_WEIGHT_ACTIVITY, ORG_COUNT_MULTIPLE_THRESHOLD_ACTIVITY],
-            # "created_since": [CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY],
-            "comment_frequency": [COMMENT_FREQUENCY_WEIGHT_ACTIVITY, COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY],
-            "code_review_count": [CODE_REVIEW_COUNT_WEIGHT_ACTIVITY, CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY],
-            "updated_issues_count": [UPDATED_ISSUES_WEIGHT_ACTIVITY, UPDATED_ISSUES_MULTIPLE_THRESHOLD_ACTIVITY],
-            "recent_releases_count": [RECENT_RELEASES_WEIGHT_ACTIVITY, RECENT_RELEASES_MULTIPLE_THRESHOLD_ACTIVITY]
+            "contributor_count": [w['CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY'], w['CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "commit_frequency": [w['COMMIT_FREQUENCY_WEIGHT_ACTIVITY'], w['COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "updated_since": [w['UPDATED_SINCE_WEIGHT_ACTIVITY'], w['UPDATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "org_count": [w['ORG_COUNT_WEIGHT_ACTIVITY'], w['ORG_COUNT_MULTIPLE_THRESHOLD_ACTIVITY']],
+            # "created_since": [w['CREATED_SINCE_WEIGHT_ACTIVITY'], w['CREATED_SINCE_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "comment_frequency": [w['COMMENT_FREQUENCY_WEIGHT_ACTIVITY'], w['COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "code_review_count": [w['CODE_REVIEW_COUNT_WEIGHT_ACTIVITY'], w['CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "updated_issues_count": [w['UPDATED_ISSUES_WEIGHT_ACTIVITY'], w['UPDATED_ISSUES_MULTIPLE_THRESHOLD_ACTIVITY']],
+            "recent_releases_count": [w['RECENT_RELEASES_WEIGHT_ACTIVITY'], w['RECENT_RELEASES_MULTIPLE_THRESHOLD_ACTIVITY']]
         }
     if level == "repo":
         param_dict = {
-            "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY, CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY],
-            "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_ACTIVITY, COMMIT_FREQUENCY_THRESHOLD_ACTIVITY],
-            "updated_since":[UPDATED_SINCE_WEIGHT_ACTIVITY, UPDATED_SINCE_THRESHOLD_ACTIVITY],
-            "org_count":[ORG_COUNT_WEIGHT_ACTIVITY, ORG_COUNT_THRESHOLD_ACTIVITY],
-            # "created_since":[CREATED_SINCE_WEIGHT_ACTIVITY, CREATED_SINCE_THRESHOLD_ACTIVITY],
-            "comment_frequency":[COMMENT_FREQUENCY_WEIGHT_ACTIVITY, COMMENT_FREQUENCY_THRESHOLD_ACTIVITY],
-            "code_review_count":[CODE_REVIEW_COUNT_WEIGHT_ACTIVITY, CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY],
-            "updated_issues_count":[UPDATED_ISSUES_WEIGHT_ACTIVITY, UPDATED_ISSUES_THRESHOLD_ACTIVITY],
-            "recent_releases_count":[RECENT_RELEASES_WEIGHT_ACTIVITY, RECENT_RELEASES_THRESHOLD_ACTIVITY]
+            "contributor_count":[w['CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY'], w['CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY']],
+            "commit_frequency":[w['COMMIT_FREQUENCY_WEIGHT_ACTIVITY'], w['COMMIT_FREQUENCY_THRESHOLD_ACTIVITY']],
+            "updated_since":[w['UPDATED_SINCE_WEIGHT_ACTIVITY'], w['UPDATED_SINCE_THRESHOLD_ACTIVITY']],
+            "org_count":[w['ORG_COUNT_WEIGHT_ACTIVITY'], w['ORG_COUNT_THRESHOLD_ACTIVITY']],
+            # "created_since":[w['CREATED_SINCE_WEIGHT_ACTIVITY'], w['CREATED_SINCE_THRESHOLD_ACTIVITY']],
+            "comment_frequency":[w['COMMENT_FREQUENCY_WEIGHT_ACTIVITY'], w['COMMENT_FREQUENCY_THRESHOLD_ACTIVITY']],
+            "code_review_count":[w['CODE_REVIEW_COUNT_WEIGHT_ACTIVITY'], w['CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY']],
+            "updated_issues_count":[w['UPDATED_ISSUES_WEIGHT_ACTIVITY'], w['UPDATED_ISSUES_THRESHOLD_ACTIVITY']],
+            "recent_releases_count":[w['RECENT_RELEASES_WEIGHT_ACTIVITY'], w['RECENT_RELEASES_THRESHOLD_ACTIVITY']]
         }
     score = get_score_ahp(item, param_dict)
-    return normalize(score, MIN_ACTIVITY_SCORE, MAX_ACTIVITY_SCORE)
+    return normalize(score, w['MIN_ACTIVITY_SCORE'], w['MAX_ACTIVITY_SCORE'])
 
-def community_support(item, level="repo"):
+def community_support(item, level="repo", w={}):
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
-            "issue_first_reponse_avg": [ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY * 0.5, ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY],
-            "issue_first_reponse_mid": [ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY * 0.5, ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY],
-            "bug_issue_open_time_avg": [BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY * 0.5, BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY],
-            "bug_issue_open_time_mid": [BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY * 0.5, BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY],
-            "comment_frequency": [COMMENT_FREQUENCY_WEIGHT_COMMUNITY, COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY],
-            "updated_issues_count": [UPDATED_ISSUES_WEIGHT_COMMUNITY, UPDATED_ISSUES_MULTIPLE_THRESHOLD_COMMUNITY],
-            "pr_open_time_avg": [PR_OPEN_TIME_WEIGHT_COMMUNITY * 0.5, PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY],
-            "pr_open_time_mid": [PR_OPEN_TIME_WEIGHT_COMMUNITY * 0.5, PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY],
-            "code_review_count": [CODE_REVIEW_WEIGHT_COMMUNITY, CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY],
-            "closed_prs_count": [CLOSED_PRS_WEIGHT_COMMUNITY, CLOSED_PRS_MULTIPLE_THRESHOLD_COMMUNITY]
+            "issue_first_reponse_avg": [w['ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY'] * 0.5, w['ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "issue_first_reponse_mid": [w['ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY'] * 0.5, w['ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "bug_issue_open_time_avg": [w['BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY'] * 0.5, w['BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "bug_issue_open_time_mid": [w['BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY'] * 0.5, w['BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "comment_frequency": [w['COMMENT_FREQUENCY_WEIGHT_COMMUNITY'], w['COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "updated_issues_count": [w['UPDATED_ISSUES_WEIGHT_COMMUNITY'], w['UPDATED_ISSUES_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "pr_open_time_avg": [w['PR_OPEN_TIME_WEIGHT_COMMUNITY'] * 0.5, w['PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "pr_open_time_mid": [w['PR_OPEN_TIME_WEIGHT_COMMUNITY'] * 0.5, w['PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "code_review_count": [w['CODE_REVIEW_WEIGHT_COMMUNITY'], w['CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY']],
+            "closed_prs_count": [w['CLOSED_PRS_WEIGHT_COMMUNITY'], w['CLOSED_PRS_MULTIPLE_THRESHOLD_COMMUNITY']]
         }
     if level == "repo":
         param_dict = {
-            "issue_first_reponse_avg":[ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5, ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY],
-            "issue_first_reponse_mid":[ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY*0.5, ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY],
-            "bug_issue_open_time_avg":[BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5, BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY],
-            "bug_issue_open_time_mid":[BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY*0.5, BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY],
-            "comment_frequency":[COMMENT_FREQUENCY_WEIGHT_COMMUNITY, COMMENT_FREQUENCY_THRESHOLD_COMMUNITY],
-            "updated_issues_count":[UPDATED_ISSUES_WEIGHT_COMMUNITY, UPDATED_ISSUES_THRESHOLD_COMMUNITY],
-            "pr_open_time_avg":[PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5, PR_OPEN_TIME_THRESHOLD_COMMUNITY],
-            "pr_open_time_mid":[PR_OPEN_TIME_WEIGHT_COMMUNITY*0.5, PR_OPEN_TIME_THRESHOLD_COMMUNITY],
-            "code_review_count":[CODE_REVIEW_WEIGHT_COMMUNITY, CODE_REVIEW_THRESHOLD_COMMUNITY],
-            "closed_prs_count":[CLOSED_PRS_WEIGHT_COMMUNITY, CLOSED_PRS_THRESHOLD_COMMUNITY]
+            "issue_first_reponse_avg":[w['ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY']*0.5, w['ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY']],
+            "issue_first_reponse_mid":[w['ISSUE_FIRST_RESPONSE_WEIGHT_COMMUNITY']*0.5, w['ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY']],
+            "bug_issue_open_time_avg":[w['BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY']*0.5, w['BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY']],
+            "bug_issue_open_time_mid":[w['BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY']*0.5, w['BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY']],
+            "comment_frequency":[w['COMMENT_FREQUENCY_WEIGHT_COMMUNITY'], w['COMMENT_FREQUENCY_THRESHOLD_COMMUNITY']],
+            "updated_issues_count":[w['UPDATED_ISSUES_WEIGHT_COMMUNITY'], w['UPDATED_ISSUES_THRESHOLD_COMMUNITY']],
+            "pr_open_time_avg":[w['PR_OPEN_TIME_WEIGHT_COMMUNITY']*0.5, w['PR_OPEN_TIME_THRESHOLD_COMMUNITY']],
+            "pr_open_time_mid":[w['PR_OPEN_TIME_WEIGHT_COMMUNITY']*0.5, w['PR_OPEN_TIME_THRESHOLD_COMMUNITY']],
+            "code_review_count":[w['CODE_REVIEW_WEIGHT_COMMUNITY'], w['CODE_REVIEW_THRESHOLD_COMMUNITY']],
+            "closed_prs_count":[w['CLOSED_PRS_WEIGHT_COMMUNITY'], w['CLOSED_PRS_THRESHOLD_COMMUNITY']]
         }
     score = get_score_ahp(item, param_dict)
-    return normalize(score, MIN_COMMUNITY_SCORE, MAX_COMMUNITY_SCORE)
+    return normalize(score, w['MIN_COMMUNITY_SCORE'], w['MAX_COMMUNITY_SCORE'])
 
-def code_quality_guarantee(item, level="repo"):
+def code_quality_guarantee(item, level="repo", w={}):
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
-            "contributor_count": [CONTRIBUTOR_COUNT_WEIGHT_CODE, CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_CODE],
-            "commit_frequency": [COMMIT_FREQUENCY_WEIGHT_CODE, COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_CODE],
-            "is_maintained": [IS_MAINTAINED_WEIGHT_CODE, IS_MAINTAINED_MULTIPLE_THRESHOLD_CODE],
-            "git_pr_linked_ratio": [COMMIT_PR_LINKED_RATIO_WEIGHT_CODE, COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE],
-            "pr_issue_linked_ratio": [PR_ISSUE_LINKED_WEIGHT_CODE, PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE],
-            "code_review_ratio": [CODE_REVIEW_RATIO_WEIGHT_CODE, CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE],
-            "code_merge_ratio": [CODE_MERGE_RATIO_WEIGHT_CODE, CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE],
-            "LOC_frequency": [LOC_FREQUENCY_WEIGHT_CODE, LOC_FREQUENCY_MULTIPLE_THRESHOLD_CODE],
+            "contributor_count": [w['CONTRIBUTOR_COUNT_WEIGHT_CODE'], w['CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_CODE']],
+            "commit_frequency": [w['COMMIT_FREQUENCY_WEIGHT_CODE'], w['COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_CODE']],
+            "is_maintained": [w['IS_MAINTAINED_WEIGHT_CODE'], w['IS_MAINTAINED_MULTIPLE_THRESHOLD_CODE']],
+            "git_pr_linked_ratio": [w['COMMIT_PR_LINKED_RATIO_WEIGHT_CODE'], w['COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE']],
+            "pr_issue_linked_ratio": [w['PR_ISSUE_LINKED_WEIGHT_CODE'], w['PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE']],
+            "code_review_ratio": [w['CODE_REVIEW_RATIO_WEIGHT_CODE'], w['CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE']],
+            "code_merge_ratio": [w['CODE_MERGE_RATIO_WEIGHT_CODE'], w['CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE']],
+            "w['LOC_']frequency": [w['LOC_FREQUENCY_WEIGHT_CODE'], w['LOC_FREQUENCY_MULTIPLE_THRESHOLD_CODE']],
         }
     if level == "repo":
         param_dict = {
-            "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_CODE, CONTRIBUTOR_COUNT_THRESHOLD_CODE],
-            "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_CODE, COMMIT_FREQUENCY_THRESHOLD_CODE],
-            "is_maintained":[IS_MAINTAINED_WEIGHT_CODE, IS_MAINTAINED_THRESHOLD_CODE],
-            "git_pr_linked_ratio":[COMMIT_PR_LINKED_RATIO_WEIGHT_CODE, COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE],
-            "pr_issue_linked_ratio":[PR_ISSUE_LINKED_WEIGHT_CODE, PR_ISSUE_LINKED_THRESHOLD_CODE],
-            "code_review_ratio":[CODE_REVIEW_RATIO_WEIGHT_CODE, CODE_REVIEW_RATIO_THRESHOLD_CODE],
-            "code_merge_ratio":[CODE_MERGE_RATIO_WEIGHT_CODE, CODE_MERGE_RATIO_THRESHOLD_CODE],
-            "LOC_frequency":[LOC_FREQUENCY_WEIGHT_CODE, LOC_FREQUENCY_THRESHOLD_CODE],
+            "contributor_count":[w['CONTRIBUTOR_COUNT_WEIGHT_CODE'], w['CONTRIBUTOR_COUNT_THRESHOLD_CODE']],
+            "commit_frequency":[w['COMMIT_FREQUENCY_WEIGHT_CODE'], w['COMMIT_FREQUENCY_THRESHOLD_CODE']],
+            "is_maintained":[w['IS_MAINTAINED_WEIGHT_CODE'], w['IS_MAINTAINED_THRESHOLD_CODE']],
+            "git_pr_linked_ratio":[w['COMMIT_PR_LINKED_RATIO_WEIGHT_CODE'], w['COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE']],
+            "pr_issue_linked_ratio":[w['PR_ISSUE_LINKED_WEIGHT_CODE'], w['PR_ISSUE_LINKED_THRESHOLD_CODE']],
+            "code_review_ratio":[w['CODE_REVIEW_RATIO_WEIGHT_CODE'], w['CODE_REVIEW_RATIO_THRESHOLD_CODE']],
+            "code_merge_ratio":[w['CODE_MERGE_RATIO_WEIGHT_CODE'], w['CODE_MERGE_RATIO_THRESHOLD_CODE']],
+            "LOC_frequency":[w['LOC_FREQUENCY_WEIGHT_CODE'], w['LOC_FREQUENCY_THRESHOLD_CODE']],
         }
     return get_score_ahp(item, param_dict)
 
-def organizations_activity(item, level="repo"):
+def organizations_activity(item, level="repo", w={}):
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
-            "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_ORG_ACTIVITY, CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ORG_ACTIVITY],
-            "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_ORG_ACTIVITY, COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ORG_ACTIVITY],
-            "org_count":[ORG_COUNT_WEIGHT_ORG_ACTIVITY, ORG_COUNT_THRESHOLD_ORG_ACTIVITY],
-            "contribution_last":[CONTRIBUTION_LAST_WEIGHT_ORG_ACTIVITY, CONTRIBUTION_LAST_MULTIPLE_THRESHOLD_ORG_ACTIVITY],
+            "contributor_count":[w['CONTRIBUTOR_COUNT_WEIGHT_ORG_ACTIVITY'], w['CONTRIBUTOR_COUNT_MULTIPLE_THRESHOLD_ORG_ACTIVITY']],
+            "commit_frequency":[w['COMMIT_FREQUENCY_WEIGHT_ORG_ACTIVITY'], w['COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ORG_ACTIVITY']],
+            "org_count":[w['ORG_COUNT_WEIGHT_ORG_ACTIVITY'], w['ORG_COUNT_THRESHOLD_ORG_ACTIVITY']],
+            "contribution_last":[w['CONTRIBUTION_LAST_WEIGHT_ORG_ACTIVITY'], w['CONTRIBUTION_LAST_MULTIPLE_THRESHOLD_ORG_ACTIVITY']],
         }
     if level == "repo":
         param_dict = {
-            "contributor_count":[CONTRIBUTOR_COUNT_WEIGHT_ORG_ACTIVITY, CONTRIBUTOR_COUNT_THRESHOLD_ORG_ACTIVITY],
-            "commit_frequency":[COMMIT_FREQUENCY_WEIGHT_ORG_ACTIVITY, COMMIT_FREQUENCY_THRESHOLD_ORG_ACTIVITY],
-            "org_count":[ORG_COUNT_WEIGHT_ORG_ACTIVITY, ORG_COUNT_THRESHOLD_ORG_ACTIVITY],
-            "contribution_last":[CONTRIBUTION_LAST_WEIGHT_ORG_ACTIVITY, CONTRIBUTION_LAST_THRESHOLD_ORG_ACTIVITY],
+            "contributor_count":[w['CONTRIBUTOR_COUNT_WEIGHT_ORG_ACTIVITY'], w['CONTRIBUTOR_COUNT_THRESHOLD_ORG_ACTIVITY']],
+            "commit_frequency":[w['COMMIT_FREQUENCY_WEIGHT_ORG_ACTIVITY'], w['COMMIT_FREQUENCY_THRESHOLD_ORG_ACTIVITY']],
+            "org_count":[w['ORG_COUNT_WEIGHT_ORG_ACTIVITY'], w['ORG_COUNT_THRESHOLD_ORG_ACTIVITY']],
+            "contribution_last":[w['CONTRIBUTION_LAST_WEIGHT_ORG_ACTIVITY'], w['CONTRIBUTION_LAST_THRESHOLD_ORG_ACTIVITY']],
         }
     return get_score_ahp(item, param_dict)
 
@@ -282,7 +165,7 @@ def increment_decay(last_data, threshold, days):
 def decrease_decay(last_data, threshold, days):
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
-def community_decay(item, last_data, level="repo"):
+def community_decay(item, last_data, level="repo", w={}):
     if last_data == None:
         return item
     decay_item = item.copy()
@@ -290,30 +173,30 @@ def community_decay(item, last_data, level="repo"):
     decrease_decay_dict = {}
     if level == "community" or level == "project":
         increment_decay_dict = {
-            "issue_first_reponse_avg": ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY,
-            "issue_first_reponse_mid": ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY,
-            "bug_issue_open_time_avg": BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY,
-            "bug_issue_open_time_mid": BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY,
-            "pr_open_time_avg": PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY,
-            "pr_open_time_mid": PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY
+            "issue_first_reponse_avg": w['ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "issue_first_reponse_mid": w['ISSUE_FIRST_RESPONSE_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "bug_issue_open_time_avg": w['BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "bug_issue_open_time_mid": w['BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "pr_open_time_avg": w['PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "pr_open_time_mid": w['PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY']
         }
         decrease_decay_dict = {
-            "comment_frequency": COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY,
-            "code_review_count": CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY
+            "comment_frequency": w['COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY'],
+            "code_review_count": w['CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY']
         }
     if level == "repo":
         increment_decay_dict = {
-            "issue_first_reponse_avg":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
-            "issue_first_reponse_mid":ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY,
-            "bug_issue_open_time_avg":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-            "bug_issue_open_time_mid":BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY,
-            "pr_open_time_avg":PR_OPEN_TIME_THRESHOLD_COMMUNITY,
-            "pr_open_time_mid":PR_OPEN_TIME_THRESHOLD_COMMUNITY
-            }
+            "issue_first_reponse_avg": w['ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY'],
+            "issue_first_reponse_mid": w['ISSUE_FIRST_RESPONSE_THRESHOLD_COMMUNITY'],
+            "bug_issue_open_time_avg": w['BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY'],
+            "bug_issue_open_time_mid": w['BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY'],
+            "pr_open_time_avg": w['PR_OPEN_TIME_THRESHOLD_COMMUNITY'],
+            "pr_open_time_mid": w['PR_OPEN_TIME_THRESHOLD_COMMUNITY']
+        }
         decrease_decay_dict = {
-            "comment_frequency":COMMENT_FREQUENCY_THRESHOLD_COMMUNITY,
-            "code_review_count":CODE_REVIEW_THRESHOLD_COMMUNITY
-            }
+            "comment_frequency": w['COMMENT_FREQUENCY_THRESHOLD_COMMUNITY'],
+            "code_review_count": w['CODE_REVIEW_THRESHOLD_COMMUNITY']
+        }
     for key, value in increment_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
@@ -321,49 +204,49 @@ def community_decay(item, last_data, level="repo"):
     for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
-            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)          
+            decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
-def activity_decay(item, last_data, level="repo"):
+def activity_decay(item, last_data, level="repo", w={}):
     if last_data == None:
         return item
     decay_item = item.copy()
     decrease_decay_dict = {}
     if level == "community" or level == "project":
         decrease_decay_dict = {
-            "comment_frequency": COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY,
-            "code_review_count": CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY
+            "comment_frequency": w['COMMIT_FREQUENCY_MULTIPLE_THRESHOLD_ACTIVITY'],
+            "code_review_count": w['CODE_REVIEW_COUNT_MULTIPLE_THRESHOLD_ACTIVITY']
         }
     if level == "repo":
         decrease_decay_dict = {
-            "comment_frequency":COMMIT_FREQUENCY_THRESHOLD_ACTIVITY,
-            "code_review_count":CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
-            }
+            "comment_frequency": w['COMMIT_FREQUENCY_THRESHOLD_ACTIVITY'],
+            "code_review_count": w['CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY']
+        }
     for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
-def code_quality_decay(item, last_data, level="repo"):
+def code_quality_decay(item, last_data, level="repo", w={}):
     if last_data == None:
         return item
     decay_item = item.copy()
     decrease_decay_dict = {}
     if level == "community" or level == "project":
         decrease_decay_dict = {
-            "code_merge_ratio": CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE,
-            "code_review_ratio": CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE,
-            "pr_issue_linked_ratio": PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE,
-            "git_pr_linked_ratio": COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE
+            "code_merge_ratio": w['CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE'],
+            "code_review_ratio": w['CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE'],
+            "pr_issue_linked_ratio": w['PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE'],
+            "git_pr_linked_ratio": w['COMMIT_PR_LINKED_RATIO_MULTIPLE_THRESHOLD_CODE']
         }
     if level == "repo":
         decrease_decay_dict = {
-            "code_merge_ratio": CODE_MERGE_RATIO_THRESHOLD_CODE,
-            "code_review_ratio":CODE_REVIEW_RATIO_THRESHOLD_CODE,
-            "pr_issue_linked_ratio":PR_ISSUE_LINKED_THRESHOLD_CODE,
-            "git_pr_linked_ratio":COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE
-            }
+            "code_merge_ratio": w['CODE_MERGE_RATIO_THRESHOLD_CODE'],
+            "code_review_ratio": w['CODE_REVIEW_RATIO_THRESHOLD_CODE'],
+            "pr_issue_linked_ratio": w['PR_ISSUE_LINKED_THRESHOLD_CODE'],
+            "git_pr_linked_ratio": w['COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE']
+        }
     for key, value in decrease_decay_dict.items():
         if item[key] == None and last_data.get(key) != None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days

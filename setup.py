@@ -23,6 +23,7 @@ setup(name="compass_metrics_model",
           'Programming Language :: Python :: 3.5'],
       keywords="Metric Model",
       packages=find_packages(),
+      package_data={'compass_metrics_model': ['resources/*']},\
       python_requires='>=3.4',
       setup_requires=['wheel'],
       zip_safe=False
