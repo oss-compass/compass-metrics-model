@@ -38,6 +38,7 @@ from grimoire_elk.elastic import ElasticSearch
 
 from .utils import (get_uuid,
                     get_date_list,
+                    get_dict_hash,
                     get_activity_score,
                     community_support,
                     code_quality_guarantee,
@@ -243,7 +244,7 @@ def get_medium(L):
 
 
 class MetricsModel:
-    def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None, weights=None):
+    def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None, weights=None, custom_fields=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param json_file: the path of json file containing repository message.
         :param out_index: target index for Metrics Model.
@@ -261,9 +262,18 @@ class MetricsModel:
 
         if weights:
             self.weights = weights
+            self.weights_hash = get_dict_hash(weights)
         else:
             weights_data = pkg_resources.resource_string('compass_metrics_model', 'resources/weights.yaml')
             self.weights = yaml.load(weights_data, Loader=yaml.FullLoader)
+            self.weights_hash = None
+
+        if type(custom_fields) == dict:
+            self.custom_fields = custom_fields
+            self.custom_fields_hash = get_dict_hash(custom_fields)
+        else:
+            self.custom_fields = {}
+            self.custom_fields_hash = None
 
     def metrics_model_metrics(self, elastic_url):
         is_https = urlparse(elastic_url).scheme == 'https'
@@ -689,8 +699,8 @@ class MetricsModel:
 
 
 class ActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, release_index=None, opensearch_config_file=None,issue_comments_index=None, pr_comments_index=None,contributors_index=None):
-        super().__init__(json_file, from_date, end_date, out_index, community, level)
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, weights=None, custom_fields=None, release_index=None, opensearch_config_file=None,issue_comments_index=None, pr_comments_index=None, contributors_index=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level, weights, custom_fields)
         self.issue_index = issue_index
         self.repo_index = repo_index
         self.git_index = git_index
@@ -786,8 +796,13 @@ class ActivityMetricsModel(MetricsModel):
 
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
+            basic_args = [str(date), self.community, level, label, self.model_name, type]
+            if self.weights_hash:
+                basic_args.append(self.weights_hash)
+            if self.custom_fields_hash:
+                basic_args.append(self.custom_fields_hash)
             metrics_data = {
-                'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
+                'uuid': get_uuid(*basic_args),
                 'level': level,
                 'type': type,
                 'label': label,
@@ -812,7 +827,8 @@ class ActivityMetricsModel(MetricsModel):
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
                 'recent_releases_count': self.recent_releases_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
-                'metadata__enriched_on': datetime_utcnow().isoformat()
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
             score = get_activity_score(activity_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
@@ -831,8 +847,8 @@ class ActivityMetricsModel(MetricsModel):
 
 
 class CommunitySupportMetricsModel(MetricsModel):
-    def __init__(self, issue_index=None, pr_index=None, git_index=None,  json_file=None, out_index=None, from_date=None, end_date=None, community=None, level=None):
-        super().__init__(json_file, from_date, end_date, out_index, community, level)
+    def __init__(self, issue_index=None, pr_index=None, git_index=None,  json_file=None, out_index=None, from_date=None, end_date=None, community=None, level=None, weights=None, custom_fields=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level, weights, custom_fields)
         self.issue_index = issue_index
         self.model_name = 'Community Support and Service'
         self.pr_index = pr_index
@@ -1010,8 +1026,13 @@ class CommunitySupportMetricsModel(MetricsModel):
             pr_first_response_time = self.pr_first_response_time(date, repos_list)
             comment_frequency = self.comment_frequency(date, repos_list)
             code_review_count = self.code_review_count(date, repos_list)
+            basic_args = [str(date), self.community, level, label, self.model_name, type]
+            if self.weights_hash:
+                basic_args.append(self.weights_hash)
+            if self.custom_fields_hash:
+                basic_args.append(self.custom_fields_hash)
             metrics_data = {
-                'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
+                'uuid': get_uuid(*basic_args),
                 'level': level,
                 'type': type,
                 'label': label,
@@ -1031,7 +1052,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'updated_issues_count': self.updated_issue_count(date, repos_list),
                 'closed_prs_count': self.closed_pr_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
-                'metadata__enriched_on': datetime_utcnow().isoformat()
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
             score = community_support(community_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
@@ -1056,8 +1078,8 @@ class CommunitySupportMetricsModel(MetricsModel):
 class CodeQualityGuaranteeMetricsModel(MetricsModel):
     def __init__(self, issue_index=None, pr_index=None, repo_index=None, json_file=None, git_index=None,
                  out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None,
-                 company=None, pr_comments_index=None, contributors_index=None):
-        super().__init__(json_file, from_date, end_date, out_index, community, level)
+                 weights=None, custom_fields=None, company=None, pr_comments_index=None, contributors_index=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level, weights, custom_fields)
         self.issue_index = issue_index
         self.repo_index = repo_index
         self.git_index = git_index
@@ -1335,8 +1357,13 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
             code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
             code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
+            basic_args = [str(date), self.community, level, label, self.model_name, type]
+            if self.weights_hash:
+                basic_args.append(self.weights_hash)
+            if self.custom_fields_hash:
+                basic_args.append(self.custom_fields_hash)
             metrics_data = {
-                'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
+                'uuid': get_uuid(*basic_args),
                 'level': level,
                 'type': type,
                 'label': label,
@@ -1366,7 +1393,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'pr_commit_linked_count': git_pr_linked_ratio[1],
                 'git_pr_linked_ratio': git_pr_linked_ratio[2],
                 'grimoire_creation_date': date.isoformat(),
-                'metadata__enriched_on': datetime_utcnow().isoformat()
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
             }
             self.cache_last_metrics_data(metrics_data, last_metrics_data)
             score = code_quality_guarantee(code_quality_decay(metrics_data, last_metrics_data, level, self.weights), level, self.weights)
@@ -1384,8 +1412,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 last_metrics_data[i] = data
 
 class OrganizationsActivityMetricsModel(MetricsModel):
-    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, company=None, issue_comments_index=None, pr_comments_index=None, contributors_index=None):
-        super().__init__(json_file, from_date, end_date, out_index, community, level)
+    def __init__(self, issue_index, repo_index=None, pr_index=None, json_file=None, git_index=None, out_index=None, git_branch=None, from_date=None, end_date=None, community=None, level=None, weights=None, custom_fields=None, company=None, issue_comments_index=None, pr_comments_index=None, contributors_index=None):
+        super().__init__(json_file, from_date, end_date, out_index, community, level, weights, custom_fields)
         self.issue_index = issue_index
         self.repo_index = repo_index
         self.git_index = git_index
@@ -1528,8 +1556,13 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             for org_name in self.org_name_dict.keys():
                 if org_name not in org_commit_percentage_dict.keys():
                     continue
+                basic_args = [str(date), org_name, self.community, level, label, self.model_name, type]
+                if self.weights_hash:
+                    basic_args.append(self.weights_hash)
+                if self.custom_fields_hash:
+                    basic_args.append(self.custom_fields_hash)
                 metrics_data = {
-                    'uuid': get_uuid(str(date), org_name, self.community, level, label, self.model_name, type),
+                    'uuid': get_uuid(*basic_args),
                     'level': level,
                     'type': type,
                     'label': label,
@@ -1549,7 +1582,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'org_count': org_count,
                     'contribution_last': contribution_last,
                     'grimoire_creation_date': date.isoformat(),
-                    'metadata__enriched_on': datetime_utcnow().isoformat()
+                    'metadata__enriched_on': datetime_utcnow().isoformat(),
+                    **self.custom_fields
                 }
                 score = organizations_activity(metrics_data, level, self.weights)
                 metrics_data["organizations_activity"] = score

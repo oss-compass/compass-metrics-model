@@ -1,7 +1,10 @@
 import math
 import pendulum
 import pandas as pd
+import hashlib
+import json
 
+from typing import Dict, Any
 from perceval.backend import uuid
 from grimoirelab_toolkit.datetime import (datetime_to_utc,str_to_datetime)
 
@@ -23,6 +26,13 @@ def get_uuid(*args):
             continue
         args_list.append(arg)
     return uuid(*args_list)
+
+def get_dict_hash(dictionary: Dict[str, Any]) -> str:
+    """MD5 hash of a dictionary."""
+    dhash = hashlib.md5()
+    encoded = json.dumps(dictionary, sort_keys=True).encode()
+    dhash.update(encoded)
+    return dhash.hexdigest()
 
 def get_date_list(begin_date, end_date, freq='W-MON'):
     '''Get date list from begin_date to end_date every Monday'''
