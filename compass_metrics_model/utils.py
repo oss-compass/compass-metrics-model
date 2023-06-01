@@ -136,7 +136,7 @@ def code_quality_guarantee(item, level="repo", w={}):
             "pr_issue_linked_ratio": [w['PR_ISSUE_LINKED_WEIGHT_CODE'], w['PR_ISSUE_LINKED_MULTIPLE_THRESHOLD_CODE']],
             "code_review_ratio": [w['CODE_REVIEW_RATIO_WEIGHT_CODE'], w['CODE_REVIEW_RATIO_MULTIPLE_THRESHOLD_CODE']],
             "code_merge_ratio": [w['CODE_MERGE_RATIO_WEIGHT_CODE'], w['CODE_MERGE_RATIO_MULTIPLE_THRESHOLD_CODE']],
-            "w['LOC_']frequency": [w['LOC_FREQUENCY_WEIGHT_CODE'], w['LOC_FREQUENCY_MULTIPLE_THRESHOLD_CODE']],
+            "LOC_frequency": [w['LOC_FREQUENCY_WEIGHT_CODE'], w['LOC_FREQUENCY_MULTIPLE_THRESHOLD_CODE']],
         }
     if level == "repo":
         param_dict = {
