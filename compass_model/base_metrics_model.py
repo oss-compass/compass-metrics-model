@@ -12,8 +12,14 @@ from compass_common.datetime import (get_date_list,
                                      datetime_utcnow)
 from compass_common.uuid_utils import get_uuid
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
-from compass_metrics.git_metrics import created_since, updated_since
+from compass_metrics.git_metrics import (created_since,
+                                         updated_since,
+                                         commit_frequency,
+                                         org_count)
 from compass_metrics.repo_metrics import recent_releases_count
+from compass_metrics.contributor_metrics import contributor_count
+from compass_metrics.issue_metrics import comment_frequency, closed_issues_count, updated_issues_count
+from compass_metrics.pr_metrics import code_review_count
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -283,6 +289,20 @@ class BaseMetricsModel:
                 metrics.update(updated_since(self.client, self.git_index, date, repo_list))
             elif metric_field == "recent_releases_count":
                 metrics.update(recent_releases_count(self.client, self.release_index, date, repo_list))
+            elif metric_field == "contributor_count":
+                metrics.update(contributor_count(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "commit_frequency":
+                metrics.update(commit_frequency(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "org_count":
+                metrics.update(org_count(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "comment_frequency":
+                metrics.update(comment_frequency(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "code_review_count":
+                metrics.update(code_review_count(self.client, self.pr_index, date, repo_list))
+            elif metric_field == "closed_issues_count":
+                metrics.update(closed_issues_count(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "updated_issues_count":
+                metrics.update(updated_issues_count(self.client, self.issue_index, date, repo_list))
         return metrics
 
     def get_metrics_score(self, metrics_data):

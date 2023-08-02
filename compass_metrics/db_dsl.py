@@ -174,3 +174,87 @@ def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01
         }
     }
     return query
+
+
+def get_contributor_query(repo, date_field, from_date, to_date, page_size=100, search_after=[]):
+    """ Query statement to get the contributors who have contributed in the from_date,to_date time period. """
+    query = {
+        "size": page_size,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "match_phrase": {
+                            "repo_name.keyword": repo
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range": {
+                            date_field: {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lte": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "sort": [
+            {
+                "_id": {
+                    "order": "asc"
+                }
+            }
+        ]
+    }
+    if len(search_after) > 0:
+        query['search_after'] = search_after
+    return query
+
+
+def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation_date", size=0,
+                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    """ Counting the number of records according to conditions """
+    query = {
+        "size": size,
+        "track_total_hits": "true",
+        "aggs": {
+            "count_of_uuid": {
+                option: {
+                    "field": field
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "simple_query_string": {
+                                        "query": i + "*",
+                                        "fields": ["tag"]
+                                    }
+                                } for i in repo_list
+                            ],
+                            "minimum_should_match": 1,
+                            "filter": [
+                                {
+                                    "range": {
+                                        date_field: {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query
