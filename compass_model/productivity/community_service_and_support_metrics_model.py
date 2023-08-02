@@ -42,18 +42,18 @@ class CommunityServiceAndSupportMetricsModel(BaseMetricsModel):
                     "weight": BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY,
                     "threshold": BUG_ISSUE_OPEN_TIME_THRESHOLD_COMMUNITY
                 },
-                # "comment_frequency": {
-                #     "weight": COMMENT_FREQUENCY_WEIGHT_COMMUNITY,
-                #     "threshold": COMMENT_FREQUENCY_THRESHOLD_COMMUNITY
-                # },                
-                # "updated_issue_count": {
-                #     "weight": UPDATED_ISSUES_WEIGHT_COMMUNITY,
-                #     "threshold": UPDATED_ISSUES_THRESHOLD_COMMUNITY
-                # },
-                # "pr_open_time": {
-                #     "weight": PR_OPEN_TIME_WEIGHT_COMMUNITY,
-                #     "threshold": PR_OPEN_TIME_THRESHOLD_COMMUNITY
-                # },
+                "comment_frequency": {
+                    "weight": COMMENT_FREQUENCY_WEIGHT_COMMUNITY,
+                    "threshold": COMMENT_FREQUENCY_THRESHOLD_COMMUNITY
+                },                
+                "updated_issue_count": {
+                    "weight": UPDATED_ISSUES_WEIGHT_COMMUNITY,
+                    "threshold": UPDATED_ISSUES_THRESHOLD_COMMUNITY
+                },
+                "pr_open_time": {
+                    "weight": PR_OPEN_TIME_WEIGHT_COMMUNITY,
+                    "threshold": PR_OPEN_TIME_THRESHOLD_COMMUNITY
+                },
                 "code_review_count": {
                     "weight": CODE_REVIEW_WEIGHT_COMMUNITY,
                     "threshold": CODE_REVIEW_THRESHOLD_COMMUNITY
@@ -74,18 +74,18 @@ class CommunityServiceAndSupportMetricsModel(BaseMetricsModel):
                     "weight": BUG_ISSUE_OPEN_TIME_WEIGHT_COMMUNITY,
                     "threshold": BUG_ISSUE_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY
                 },
-                # "comment_frequency": {
-                #     "weight": COMMENT_FREQUENCY_WEIGHT_COMMUNITY,
-                #     "threshold": COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY
-                # },                
-                # "updated_issue_count": {
-                #     "weight": UPDATED_ISSUES_WEIGHT_COMMUNITY,
-                #     "threshold": UPDATED_ISSUES_MULTIPLE_THRESHOLD_COMMUNITY
-                # },
-                # "pr_open_time": {
-                #     "weight": PR_OPEN_TIME_WEIGHT_COMMUNITY,
-                #     "threshold": PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY
-                # },
+                "comment_frequency": {
+                    "weight": COMMENT_FREQUENCY_WEIGHT_COMMUNITY,
+                    "threshold": COMMENT_FREQUENCY_MULTIPLE_THRESHOLD_COMMUNITY
+                },                
+                "updated_issue_count": {
+                    "weight": UPDATED_ISSUES_WEIGHT_COMMUNITY,
+                    "threshold": UPDATED_ISSUES_MULTIPLE_THRESHOLD_COMMUNITY
+                },
+                "pr_open_time": {
+                    "weight": PR_OPEN_TIME_WEIGHT_COMMUNITY,
+                    "threshold": PR_OPEN_TIME_MULTIPLE_THRESHOLD_COMMUNITY
+                },
                 "code_review_count": {
                     "weight": CODE_REVIEW_WEIGHT_COMMUNITY,
                     "threshold": CODE_REVIEW_MULTIPLE_THRESHOLD_COMMUNITY
