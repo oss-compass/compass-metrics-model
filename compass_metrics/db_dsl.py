@@ -1,7 +1,10 @@
+""" Functions to handle some database statements """
+
 from compass_common.datetime import datetime_utcnow, str_to_datetime
 
 
 def get_updated_since_query(repo_list, date_field="grimoire_creation_date", order="desc", to_date=datetime_utcnow()):
+    """ Query statement to get the code commit data of the repository """
     query = {
         "query": {
             "bool": {
@@ -31,6 +34,7 @@ def get_updated_since_query(repo_list, date_field="grimoire_creation_date", orde
 
 
 def get_release_index_mapping():
+    """ Defining field mappings for release index """
     mapping = {
         "mappings": {
             "properties": {
@@ -122,6 +126,7 @@ def get_release_index_mapping():
 
 
 def get_repo_message_query(repo_url):
+    """ Query statement to get the latest message data of the repo """
     query = {
         "query": {
             "match": {
@@ -138,6 +143,7 @@ def get_repo_message_query(repo_url):
 
 
 def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    """ Query statement to get the count of releases in a certain time frame """
     query = {
         "size": 0,
         "aggs": {

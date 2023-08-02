@@ -4,6 +4,7 @@ import hashlib
 import math
 import pendulum
 import pandas as pd
+import urllib3
 
 from elasticsearch import helpers
 from compass_common.opensearch_client_utils import get_elasticsearch_client
@@ -16,6 +17,7 @@ from compass_metrics.repo_metrics import recent_releases_count
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
+urllib3.disable_warnings()
 
 MAX_BULK_UPDATE_SIZE = 5000
 
@@ -77,7 +79,8 @@ def get_community_repo_list(json_file, source):
     return software_artifact_repo, governance_repo
 
 
-def create_release_index(es_client, all_repo, repo_index, release_index):
+def add_release_message(es_client, all_repo, repo_index, release_index):
+    """ Save repository release information to the database """
     es_exist = es_client.indices.exists(index=release_index)
     if not es_exist:
         es_client.indices.create(index=release_index, body=get_release_index_mapping())
@@ -85,38 +88,35 @@ def create_release_index(es_client, all_repo, repo_index, release_index):
         query = get_repo_message_query(repo_url)
         query_hits = es_client.search(index=repo_index, body=query)["hits"]["hits"]
         if len(query_hits) > 0 and query_hits[0]["_source"].get("releases"):
-            items = query_hits[0]["_source"]["releases"]
-            add_release_message(es_client, release_index, repo_url, items)
-
-
-def add_release_message(es_client, release_index, repo_url, releases):
-    item_datas = []
-    for item in releases:
-        release_data = {
-            "_index": release_index,
-            "_id": get_uuid(str(item["id"])),
-            "_source": {
-                "uuid": get_uuid(str(item["id"])),
-                "id": item["id"],
-                "tag": repo_url,
-                "tag_name": item["tag_name"],
-                "target_commitish": item["target_commitish"],
-                "prerelease": item["prerelease"],
-                "name": item["name"],
-                "author_login": item["author"]["login"],
-                "author_name": item["author"]["name"],
-                "grimoire_creation_date": item["created_at"],
-                'metadata__enriched_on': datetime_utcnow().isoformat()
-            }
-        }
-        item_datas.append(release_data)
-        if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-            helpers.bulk(client=es_client, actions=item_datas)
+            releases = query_hits[0]["_source"]["releases"]
             item_datas = []
-    helpers.bulk(client=es_client, actions=item_datas)
+            for item in releases:
+                release_data = {
+                    "_index": release_index,
+                    "_id": get_uuid(str(item["id"])),
+                    "_source": {
+                        "uuid": get_uuid(str(item["id"])),
+                        "id": item["id"],
+                        "tag": repo_url,
+                        "tag_name": item["tag_name"],
+                        "target_commitish": item["target_commitish"],
+                        "prerelease": item["prerelease"],
+                        "name": item["name"],
+                        "author_login": item["author"]["login"],
+                        "author_name": item["author"]["name"],
+                        "grimoire_creation_date": item["created_at"],
+                        'metadata__enriched_on': datetime_utcnow().isoformat()
+                    }
+                }
+                item_datas.append(release_data)
+                if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                    helpers.bulk(client=es_client, actions=item_datas)
+                    item_datas = []
+            helpers.bulk(client=es_client, actions=item_datas)
 
 
 def cache_last_metrics_data(item, last_metrics_data):
+    """ Cache last non None metrics, used for decay function """
     cache_metrics = INCREMENT_DECAY_METRICS + DECREASE_DECAY_METRICS
     for metrics in cache_metrics:
         if metrics in item:
@@ -125,6 +125,7 @@ def cache_last_metrics_data(item, last_metrics_data):
 
 
 def get_score_ahp(metrics_data, metrics_weights_thresholds):
+    """ Calculation of model scores by AHP algorithm """
     total_weight = 0
     total_score = 0
     for metrics, weights_thresholds in metrics_weights_thresholds.items():
@@ -143,20 +144,22 @@ def get_score_ahp(metrics_data, metrics_weights_thresholds):
 
 
 def get_param_score(param, max_value, weight=1):
-    """Return paramater score given its current value, max value and
-    parameter weight."""
+    """Return paramater score given its current value, max value and parameter weight."""
     return (math.log(1 + param) / math.log(1 + max(param, max_value))) * weight
 
 
 def increment_decay(last_data, threshold, days):
+    """ Decay function with gradually increasing values"""
     return min(last_data + DECAY_COEFFICIENT * threshold * days, threshold)
 
 
 def decrease_decay(last_data, threshold, days):
+    """ Decay function with decreasing values  """
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
 
 def normalize(score, min_score, max_score):
+    """ score normalize """
     return (score - min_score) / (max_score - min_score)
 
 
@@ -218,6 +221,7 @@ class BaseMetricsModel:
             self.custom_fields_hash = None
 
     def metrics_model_metrics(self, elastic_url):
+        """ Execute model calculation tasks """
         self.client = get_elasticsearch_client(elastic_url)
         if self.level == "repo":
             repo_list = get_repo_list(self.json_file, self.source)
@@ -226,18 +230,15 @@ class BaseMetricsModel:
                     self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
             software_artifact_repo_list, governance_repo_list = get_community_repo_list(self.json_file, self.source)
-            repo_list = software_artifact_repo_list + governance_repo_list
-            if len(repo_list) > 0:
-                for repo in repo_list:
-                    self.metrics_model_enrich([repo], repo, "repo")
             if len(software_artifact_repo_list) > 0:
-                self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level, "software-artifact")
+                self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level, SOFTWARE_ARTIFACT)
             if len(governance_repo_list) > 0:
-                self.metrics_model_enrich(governance_repo_list, self.community, self.level, "governance")
+                self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
 
     def metrics_model_enrich(self, repo_list, label, level, type=None):
+        """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
         last_metrics_data = {}
-        create_release_index(self.client, repo_list, self.repo_index, self.release_index)
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
         date_list = get_date_list(self.from_date, self.end_date)
         item_datas = []
         for date in date_list:
@@ -273,6 +274,7 @@ class BaseMetricsModel:
         helpers.bulk(client=self.client, actions=item_datas)
 
     def get_metrics(self, date, repo_list):
+        """ Get the corresponding metrics data according to the metrics field """
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field == "created_since":
@@ -284,6 +286,7 @@ class BaseMetricsModel:
         return metrics
 
     def get_metrics_score(self, metrics_data):
+        """ get model scores based on metric values """
         new_metrics_weights_thresholds = {}
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
             if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time"]:
@@ -301,6 +304,7 @@ class BaseMetricsModel:
             raise Exception("Invalid algorithm param.")
 
     def metrics_decay(self, metrics_data, last_data):
+        """ When there is no issue or pr, the issue or pr related metrics deteriorate over time. """
         if last_data is None:
             return metrics_data
 

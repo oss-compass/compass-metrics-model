@@ -1,3 +1,5 @@
+""" Set of repo related metrics """
+
 from compass_metrics.db_dsl import get_recent_releases_uuid_count
 from datetime import timedelta
 

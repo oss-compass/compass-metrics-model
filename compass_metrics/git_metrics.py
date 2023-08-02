@@ -1,3 +1,5 @@
+""" Set of git related metrics """
+
 from compass_metrics.db_dsl import get_updated_since_query
 from compass_common.datetime import get_time_diff_months
 
