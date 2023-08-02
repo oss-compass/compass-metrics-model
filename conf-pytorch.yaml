@@ -1,5 +1,6 @@
 url:
-  "https://user:password@ip:port"
+  # "https://user:password@ip:port"
+  "https://localhost:9200/"
  
 params:
   {

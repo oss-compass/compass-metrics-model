@@ -168,3 +168,97 @@ def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01
         }
     }
     return query
+
+
+def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation_date", size=0,
+                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    """ Counting the number of records according to conditions """
+    query = {
+        "size": size,
+        "track_total_hits": "true",
+        "aggs": {
+            "count_of_uuid": {
+                option: {
+                    "field": field
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "simple_query_string": {
+                                        "query": i + "*",
+                                        "fields": ["tag"]
+                                    }
+                                } for i in repo_list
+                            ],
+                            "minimum_should_match": 1,
+                            "filter": [
+                                {
+                                    "range": {
+                                        date_field: {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query
+
+
+def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    query = {
+        "size": 0,
+        "track_total_hits": True,
+        "aggs": {
+            "count_of_uuid": {
+                option: {
+                    "field": field
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [{
+                    "bool": {
+                        "should": [{
+                            "simple_query_string": {
+                                "query": i,
+                                "fields": ["tag"]
+                            }}for i in repos_list],
+                        "minimum_should_match": 1
+                    }
+                },
+                    {
+                    "match_phrase": {
+                        "pull_request": "true"
+                    }
+                }
+                ],
+                "must_not": [
+                    {"term": {"state": "open"}},
+                    {"term": {"state": "progressing"}}
+                ],
+                "filter": {
+                    "range": {
+                        "closed_at": {
+                            "gte": from_date.strftime("%Y-%m-%d"),
+                            "lt": to_date.strftime("%Y-%m-%d")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return query
