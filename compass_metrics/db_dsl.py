@@ -168,3 +168,46 @@ def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01
         }
     }
     return query
+
+
+def get_uuid_count_query(option, repos_list, field, date_field="grimoire_creation_date", size=0, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    query = {
+        "size": size,
+        "aggs": {
+            "count_of_uuid": {
+                option: {
+                    "field": field
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "simple_query_string": {
+                                        "query": i + "*",
+                                        "fields": ["tag"]
+                                    }
+                                } for i in repos_list
+                            ],
+                            "minimum_should_match": 1,
+                            "filter": [
+                                {
+                                    "range": {
+                                        date_field: {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query
