@@ -44,4 +44,9 @@ def closed_pr_count(client, pr_index, date, repos_list):
         "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
     pr_closed = client.search(index=pr_index, body=query_pr_closed)[
         'aggregations']["count_of_uuid"]['value']
-    return pr_closed
+    
+    result = {
+        "pr_closed": pr_closed
+    }
+    
+    return result
