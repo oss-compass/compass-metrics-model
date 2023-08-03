@@ -11,6 +11,7 @@ from compass_common.opensearch_client_utils import get_elasticsearch_client
 from compass_common.datetime import (get_date_list,
                                      datetime_utcnow)
 from compass_common.uuid_utils import get_uuid
+from compass_common.model_score_algorithm_utils import get_score_by_criticality_score, normalize
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
 from compass_metrics.git_metrics import (created_since,
                                          updated_since,
@@ -130,29 +131,6 @@ def cache_last_metrics_data(item, last_metrics_data):
             last_metrics_data[metrics] = data
 
 
-def get_score_ahp(metrics_data, metrics_weights_thresholds):
-    """ Calculation of model scores by AHP algorithm """
-    total_weight = 0
-    total_score = 0
-    for metrics, weights_thresholds in metrics_weights_thresholds.items():
-        total_weight += weights_thresholds["weight"]
-        param_data = metrics_data[metrics]
-        if param_data is None:
-            if weights_thresholds["weight"] >= 0:
-                param_data = 0
-            else:
-                param_data = weights_thresholds["threshold"]
-        total_score += get_param_score(param_data, weights_thresholds["threshold"], weights_thresholds["weight"])
-    try:
-        return round(total_score / total_weight, 5)
-    except ZeroDivisionError:
-        return 0.0
-
-
-def get_param_score(param, max_value, weight=1):
-    """Return paramater score given its current value, max value and parameter weight."""
-    return (math.log(1 + param) / math.log(1 + max(param, max_value))) * weight
-
 
 def increment_decay(last_data, threshold, days):
     """ Decay function with gradually increasing values"""
@@ -164,15 +142,10 @@ def decrease_decay(last_data, threshold, days):
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
 
-def normalize(score, min_score, max_score):
-    """ score normalize """
-    return (score - min_score) / (max_score - min_score)
-
-
 class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                  contributors_index, release_index, out_index, from_date, end_date, level, community, source,
-                 json_file, model_name, metrics_weights_thresholds, algorithm="AHP", custom_fields=None):
+                 json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param repo_index: repo index
         :param git_index: git index
@@ -191,7 +164,7 @@ class BaseMetricsModel:
         :param json_file: the path of json file containing repository message.
         :param model_name: the model name
         :param metrics_weights_thresholds: dict representation of metrics, the dict values include weights and thresholds.
-        :param algorithm: The algorithm chosen by the model,include AHP.
+        :param algorithm: The algorithm chosen by the model,include criticality_score.
         :param custom_fields: custom_fields
         """
         self.repo_index = repo_index
@@ -315,10 +288,10 @@ class BaseMetricsModel:
                 new_metrics_weights_thresholds[metrics + "min"] = weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
-        if self.algorithm == "AHP":
-            score = get_score_ahp(metrics_data, new_metrics_weights_thresholds)
+        if self.algorithm == "criticality_score":
+            score = get_score_by_criticality_score(metrics_data, new_metrics_weights_thresholds)
             min_metrics_data = {key: None for key in new_metrics_weights_thresholds.keys()}
-            min_score = round(get_score_ahp(min_metrics_data, new_metrics_weights_thresholds), 5)
+            min_score = round(get_score_by_criticality_score(min_metrics_data, new_metrics_weights_thresholds), 5)
             return normalize(score, min_score, 1 - min_score)
         else:
             raise Exception("Invalid algorithm param.")
