@@ -1,3 +1,5 @@
+""" Set of pr related metrics """
+
 from compass_metrics.db_dsl import get_uuid_count_query
 from compass_metrics.db_dsl import get_pr_closed_uuid_count
 from datetime import timedelta
@@ -30,12 +32,12 @@ def pr_open_time(client, pr_index, date, repos_list):
         return None, None
     pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
     pr_open_time_repo_mid = get_medium(pr_open_time_repo)
-    
+
     result = {
         "pr_open_time_repo_avg": pr_open_time_repo_avg,
         "pr_open_time_repo_mid": pr_open_time_repo_mid
     }
-    
+
     return result
 
 
@@ -60,9 +62,9 @@ def closed_pr_count(client, pr_index, date, repos_list):
         "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
     pr_closed = client.search(index=pr_index, body=query_pr_closed)[
         'aggregations']["count_of_uuid"]['value']
-    
+
     result = {
         "pr_closed": pr_closed
     }
-    
+
     return result

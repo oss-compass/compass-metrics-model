@@ -1,3 +1,5 @@
+""" Set of issue related metrics """
+
 from compass_metrics.db_dsl import get_uuid_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
@@ -85,6 +87,23 @@ def comment_frequency(client, issue_index, date, repo_list):
         comment_count = None
     result = {
         'comment_frequency': float(round(comment_count, 4)) if comment_count is not None else None
+    }
+    return result
+
+
+def closed_issues_count(client, issue_index, date, repo_list):
+    """ Determine the number of issues closed in the last 90 days. """
+    query_issue_closed = get_uuid_count_query(
+        "cardinality", repo_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
+    query_issue_closed["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+    query_issue_closed["query"]["bool"]["must_not"] = [
+                        {"term": {"state": "open"}},
+                        {"term": {"state": "progressing"}}
+                    ]
+    issue_closed = client.search(index=issue_index, body=query_issue_closed)[
+        'aggregations']["count_of_uuid"]['value']
+    result = {
+        'closed_issues_count': issue_closed
     }
     return result
 

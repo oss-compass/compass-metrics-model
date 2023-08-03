@@ -181,3 +181,17 @@ def get_time_diff_months(start, end):
     diff_months = float('%.2f' % diff_months)
 
     return diff_months
+
+def check_times_has_overlap(start_time1, end_time1, start_time2, end_time2):
+    """ Check for overlap between the two time ranges """
+    return not (end_time1 < start_time2 or start_time1 > end_time2)
+
+
+def get_oldest_date(date1, date2):
+    """ Two times to get the oldest time """
+    return date2 if date1 >= date2 else date1
+
+
+def get_latest_date(date1, date2):
+    """ Two times to get the latest time """
+    return date1 if date1 >= date2 else date2

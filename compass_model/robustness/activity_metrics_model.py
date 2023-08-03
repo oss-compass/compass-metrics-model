@@ -45,38 +45,38 @@ class ActivityMetricsModel(BaseMetricsModel):
         metrics_weights_thresholds = {}
         if level == "repo":
             metrics_weights_thresholds = {
-                # "contributor_count": {
-                #     "weight": CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY,
-                #     "threshold": CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY
-                # },
-                # "commit_frequency": {
-                #     "weight": COMMIT_FREQUENCY_WEIGHT_ACTIVITY,
-                #     "threshold": COMMIT_FREQUENCY_THRESHOLD_ACTIVITY
-                # },
+                "contributor_count": {
+                    "weight": CONTRIBUTOR_COUNT_WEIGHT_ACTIVITY,
+                    "threshold": CONTRIBUTOR_COUNT_THRESHOLD_ACTIVITY
+                },
+                "commit_frequency": {
+                    "weight": COMMIT_FREQUENCY_WEIGHT_ACTIVITY,
+                    "threshold": COMMIT_FREQUENCY_THRESHOLD_ACTIVITY
+                },
                 "updated_since": {
                     "weight": UPDATED_SINCE_WEIGHT_ACTIVITY,
                     "threshold": UPDATED_SINCE_THRESHOLD_ACTIVITY
                 },
-                # "org_count": {
-                #     "weight": ORG_COUNT_WEIGHT_ACTIVITY,
-                #     "threshold": ORG_COUNT_THRESHOLD_ACTIVITY
-                # },
+                "org_count": {
+                    "weight": ORG_COUNT_WEIGHT_ACTIVITY,
+                    "threshold": ORG_COUNT_THRESHOLD_ACTIVITY
+                },
                 # "created_since": {
                 #     "weight": CREATED_SINCE_WEIGHT_ACTIVITY,
                 #     "threshold": REATED_SINCE_THRESHOLD_ACTIVITY
                 # },
-                # "comment_frequency": {
-                #     "weight": COMMENT_FREQUENCY_WEIGHT_ACTIVITY,
-                #     "threshold": COMMENT_FREQUENCY_THRESHOLD_ACTIVITY
-                # },
-                # "code_review_count": {
-                #     "weight": CODE_REVIEW_COUNT_WEIGHT_ACTIVITY,
-                #     "threshold": CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
-                # },
-                # "updated_issues_count": {
-                #     "weight": UPDATED_ISSUES_WEIGHT_ACTIVITY,
-                #     "threshold": UPDATED_ISSUES_THRESHOLD_ACTIVITY
-                # },
+                "comment_frequency": {
+                    "weight": COMMENT_FREQUENCY_WEIGHT_ACTIVITY,
+                    "threshold": COMMENT_FREQUENCY_THRESHOLD_ACTIVITY
+                },
+                "code_review_count": {
+                    "weight": CODE_REVIEW_COUNT_WEIGHT_ACTIVITY,
+                    "threshold": CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY
+                },
+                "updated_issues_count": {
+                    "weight": UPDATED_ISSUES_WEIGHT_ACTIVITY,
+                    "threshold": UPDATED_ISSUES_THRESHOLD_ACTIVITY
+                },
                 "recent_releases_count": {
                     "weight": RECENT_RELEASES_WEIGHT_ACTIVITY,
                     "threshold": RECENT_RELEASES_THRESHOLD_ACTIVITY
