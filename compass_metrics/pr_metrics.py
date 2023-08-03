@@ -1,8 +1,8 @@
 from compass_metrics.db_dsl import get_uuid_count_query
 from compass_metrics.db_dsl import get_pr_closed_uuid_count
 from datetime import timedelta
-from grimoire_elk.enriched.utils import get_time_diff_days
-from grimoirelab_toolkit.datetime import str_to_datetime
+from compass_common.datetime import get_time_diff_days
+from compass_common.datetime import str_to_datetime
 from compass_common.math_utils import get_medium
 
 
