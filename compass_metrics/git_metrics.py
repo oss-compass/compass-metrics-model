@@ -1,7 +1,7 @@
 """ Set of git related metrics """
 
 from compass_metrics.db_dsl import get_updated_since_query
-from compass_metrics.common import get_contributor_list
+from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
                                     get_oldest_date, 

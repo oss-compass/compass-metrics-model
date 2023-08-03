@@ -1,4 +1,4 @@
-from compass_metrics.common import get_contributor_list
+from compass_metrics.db_dsl import get_contributor_query
 from compass_common.datetime import get_time_diff_months
 from datetime import timedelta
 
@@ -43,3 +43,18 @@ def contributor_count(client, contributors_index, date, repo_list):
         "active_C1_issue_comments_contributor": get_contributor_count(issue_comment_contributor_list),
     }
     return result
+
+
+def get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field):
+    """ Get the contributors who have contributed in the from_date,to_date time period. """
+    result_list = []
+    for repo in repo_list:
+        search_after = []
+        while True:
+            query = get_contributor_query(repo, date_field, from_date, to_date, 500, search_after)
+            contributor_list = client.search(index=contributors_index, body=query)["hits"]["hits"]
+            if len(contributor_list) == 0:
+                break
+            search_after = contributor_list[len(contributor_list) - 1]["sort"]
+            result_list = result_list + [contributor["_source"] for contributor in contributor_list]
+    return result_list
