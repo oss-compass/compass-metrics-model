@@ -129,6 +129,52 @@ def is_maintained(client, git_index, date, repos_list, level):
     }
     return result
 
+def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
+    commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+    commits_without_merge_pr = {
+        "bool": {
+            "should": [{"script": {
+                "script": "if (doc.containsKey('message') && doc['message'].size()>0 &&doc['message'].value.indexOf('Merge pull request') == -1){return true}"
+            }
+            }],
+            "minimum_should_match": 1}
+    }
+    commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr)
+    commit_message = client.search(index=git_index, body=commit_frequency)
+    commit_message_dict = {}
+    commit_count = commit_message['aggregations']["count_of_uuid"]['value']
+    commit_pr_cout = 0
+    commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
+    
+    for commit_message_i in set(commit_all_message):
+        commit_hash = commit_message_i
+        if commit_hash in commit_message_dict:
+            commit_pr_cout += commit_message_dict[commit_hash]
+        else:
+            pr_message = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0)
+            commit_hash_query = { "bool": {"should": [ {"match_phrase": {"commits_data": commit_hash} }],
+                                    "minimum_should_match": 1
+                                }
+                            }
+            pr_message["query"]["bool"]["must"].append(commit_hash_query)
+            prs = client.search(index=pr_index, body=pr_message)
+            if prs['aggregations']["count_of_uuid"]['value']>0:
+                commit_message_dict[commit_hash] = 1
+                commit_pr_cout += 1
+            else:
+                commit_message_dict[commit_hash] = 0
+    if commit_count>0:
+        # return len(commit_all_message), commit_pr_cout, commit_pr_cout/len(commit_all_message)
+        git_pr_linked_ratio = commit_pr_cout/len(commit_all_message)
+    else:
+        # return 0, None, None
+        git_pr_linked_ratio = None
+       
+    result = {
+        'git_pr_linked_ratio': git_pr_linked_ratio
+    }
+    return result
+
 def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
     query_LOC_frequency = get_uuid_count_query(
         'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
