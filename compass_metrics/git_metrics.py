@@ -1,6 +1,7 @@
 """ Set of git related metrics """
 
-from compass_metrics.db_dsl import get_updated_since_query
+from compass_metrics.db_dsl import (get_updated_since_query,
+                                    get_uuid_count_query)
 from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
@@ -95,3 +96,12 @@ def org_count(client, contributors_index, date, repo_list):
     return result
 
 
+def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
+    query_LOC_frequency = get_uuid_count_query(
+        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+    LOC_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+        'aggregations']['count_of_uuid']['value']
+    result = {
+        'LOC_frequency': LOC_frequency/12.85
+    }
+    return result

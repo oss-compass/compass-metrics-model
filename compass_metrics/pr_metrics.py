@@ -68,3 +68,31 @@ def closed_pr_count(client, pr_index, date, repos_list):
     }
 
     return result
+
+
+def code_merge_ratio(client, pr_index, date, repos_list):
+    query_pr_body = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+    query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"merged": "true"}})
+    pr_merged_count = client.search(index=pr_index, body=query_pr_body)[
+        'aggregations']["count_of_uuid"]['value']
+    query_pr_body["query"]["bool"]["must"].append({
+                        "script": {
+                            "script": "if(doc['merged_by_data_name'].size() > 0 && doc['author_name'].size() > 0 && doc['merged_by_data_name'].value !=  doc['author_name'].value){return true}"
+                        }
+                    })
+    prs = client.search(index=pr_index, body=query_pr_body)[
+        'aggregations']["count_of_uuid"]['value']
+    
+    try:
+        result = {
+            "prs/pr_merged_count": prs/pr_merged_count, 
+            "pr_merged_count": pr_merged_count
+        }
+        return result
+    except ZeroDivisionError:
+        result = {
+            "prs/pr_merged_count": None, 
+            "pr_merged_count": 0
+        }
+        return result
