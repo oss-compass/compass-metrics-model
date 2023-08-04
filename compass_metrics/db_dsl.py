@@ -360,3 +360,70 @@ def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date",
         }
     }
     return query
+
+
+def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    query = {
+        "size": 0,
+        "track_total_hits": True,
+        "aggs": {
+            "count_of_uuid": {
+                "cardinality": {
+                    "script": "if(doc.containsKey('pull_id')) {return doc['pull_id']} else {return doc['id']}"
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "should": [
+                    {
+                        "range": {
+                            "linked_issues_count": {
+                                "gte": 1
+                            }
+                        }
+                    },
+                    {
+                        "script": {
+                            "script": {
+                                "source": "if (doc.containsKey('body') && doc['body'].size()>0 &&doc['body'].value.indexOf(params.issue) != -1){return true}",
+                                "lang": "painless",
+                                "params": {
+                                    "issue": repo +'/issue'
+                                }
+                            }
+                        }
+                    }
+                ],
+                "minimum_should_match": 1,
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "simple_query_string": {
+                                        "query": repo,
+                                        "fields": [
+                                            "tag"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range": {
+                            "grimoire_creation_date": {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query

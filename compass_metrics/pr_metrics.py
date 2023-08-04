@@ -2,7 +2,8 @@
 
 from compass_metrics.db_dsl import (get_uuid_count_query, 
                                     get_pr_closed_uuid_count, 
-                                    get_pr_message_count)
+                                    get_pr_message_count,
+                                    get_pr_linked_issue_count)
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
@@ -110,5 +111,30 @@ def code_merge_ratio(client, pr_index, date, repos_list):
         result = {
             "prs/pr_merged_count": None, 
             "pr_merged_count": 0
+        }
+        return result
+
+
+def pr_issue_linked(client, pr_index, pr_comments_index, date, repos_list):
+    pr_linked_issue = 0
+    for repo in repos_list:
+        query_pr_linked_issue = get_pr_linked_issue_count(
+            repo, from_date=date-timedelta(days=90), to_date=date)
+        pr_linked_issue += client.search(index=(pr_index, pr_comments_index), body=query_pr_linked_issue)[
+            'aggregations']["count_of_uuid"]['value']
+    query_pr_count = get_uuid_count_query(
+        "cardinality", repos_list, "uuid", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+    query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    pr_count = client.search(index=pr_index,
+                             body=query_pr_count)[
+        'aggregations']["count_of_uuid"]['value']
+    try:
+        result = {
+            "pr_issue_linked_ratio": pr_linked_issue/pr_count
+        }
+        return result
+    except ZeroDivisionError:
+        result = {
+            "pr_issue_linked_ratio": None
         }
         return result
