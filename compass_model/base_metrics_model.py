@@ -19,8 +19,14 @@ from compass_metrics.git_metrics import (created_since,
                                          org_count)
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import contributor_count
-from compass_metrics.issue_metrics import comment_frequency, closed_issues_count, updated_issues_count
-from compass_metrics.pr_metrics import code_review_count
+from compass_metrics.issue_metrics import (comment_frequency, 
+                                           closed_issues_count,
+                                           updated_issues_count,
+                                           issue_first_reponse,
+                                           bug_issue_open_time)
+from compass_metrics.pr_metrics import (code_review_count,
+                                        pr_open_time,
+                                        closed_pr_count)
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -276,6 +282,16 @@ class BaseMetricsModel:
                 metrics.update(closed_issues_count(self.client, self.issue_index, date, repo_list))
             elif metric_field == "updated_issues_count":
                 metrics.update(updated_issues_count(self.client, self.issue_index, date, repo_list))
+                                
+            elif metric_field == "issue_first_reponse":
+                metrics.update(issue_first_reponse(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "bug_issue_open_time":
+                metrics.update(bug_issue_open_time(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "pr_open_time":
+                metrics.update(pr_open_time(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "closed_prs_count":
+                metrics.update(closed_pr_count(self.client, self.issue_index, date, repo_list))
+
         return metrics
 
     def get_metrics_score(self, metrics_data):
