@@ -1,5 +1,6 @@
 import math
 
+
 def get_score_by_criticality_score(metrics_data, metrics_weights_thresholds):
     """ Calculation of model scores by criticality_score algorithm,
      Reference Links https://github.com/ossf/criticality_score """
@@ -27,3 +28,15 @@ def get_param_score(param, max_value, weight=1):
 def normalize(score, min_score, max_score):
     """ score normalize """
     return (score - min_score) / (max_score - min_score)
+
+
+def get_medium(L):
+    L.sort()
+    n = len(L)
+    m = int(n/2)
+    if n == 0:
+        return None
+    elif n % 2 == 0:
+        return (L[m]+L[m-1])/2.0
+    else:
+        return L[m]
