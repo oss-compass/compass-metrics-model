@@ -5,7 +5,7 @@ from compass_metrics.db_dsl import get_pr_closed_uuid_count
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
-from compass_common.math_utils import get_medium
+from compass_common.model_score_algorithm_utils import get_medium
 
 
 def pr_open_time(client, pr_index, date, repos_list):
