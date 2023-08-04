@@ -306,3 +306,57 @@ def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetim
     }
 
     return query
+
+
+def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    query = {
+        "size": size,
+        "track_total_hits": True,
+        "aggs": {
+            "count_of_uuid": {
+                "cardinality": {
+                    "field": field
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [{
+                                "simple_query_string": {
+                                    "query": i,
+                                    "fields": ["tag"]
+                                }}for i in repos_list],
+                            "minimum_should_match": 1
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "pull_request": "true"
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range":
+                        {
+                            filter_field: {
+                                "gte": 1
+                            }
+                        }},
+                    {
+                        "range":
+                        {
+                            date_field: {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query

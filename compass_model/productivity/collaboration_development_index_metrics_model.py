@@ -108,4 +108,3 @@ class CollaborationDevelopmentIndexMetricsModel(BaseMetricsModel):
         super().__init__(repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                          contributors_index, release_index, out_index, from_date, end_date, level, community, source,
                          json_file, model_name, metrics_weights_thresholds)
-
