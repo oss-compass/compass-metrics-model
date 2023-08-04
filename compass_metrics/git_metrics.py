@@ -96,6 +96,7 @@ def org_count(client, contributors_index, date, repo_list):
     }
     return result
 
+
 def is_maintained(client, git_index, date, repos_list, level):
     is_maintained_list = []
     if level == "repo":
@@ -128,6 +129,7 @@ def is_maintained(client, git_index, date, repos_list, level):
         'is_maintained': round(is_maintained, 4)
     }
     return result
+
 
 def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
     commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
@@ -174,6 +176,7 @@ def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
         'git_pr_linked_ratio': git_pr_linked_ratio
     }
     return result
+
 
 def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
     query_LOC_frequency = get_uuid_count_query(

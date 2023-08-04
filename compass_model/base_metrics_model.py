@@ -17,6 +17,8 @@ from compass_metrics.git_metrics import (created_since,
                                          updated_since,
                                          commit_frequency,
                                          org_count,
+                                         is_maintained,
+                                         git_pr_linked_ratio,
                                          LOC_frequency)
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import contributor_count
@@ -277,6 +279,10 @@ class BaseMetricsModel:
                 metrics.update(org_count(self.client, self.contributors_index, date, repo_list))
             elif metric_field == "LOC_frequency":
                 metrics.update(LOC_frequency(self.client, self.git_index, date, repo_list))
+            elif metric_field == "is_maintained":
+                metrics.update(is_maintained(self.client, self.git_index, date, repo_list, self.level))
+            elif metric_field == "git_pr_linked_ratio":
+                metrics.update(git_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list))
                 
             # issue
             elif metric_field == "issue_first_reponse":
