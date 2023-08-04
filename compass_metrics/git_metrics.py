@@ -6,7 +6,8 @@ from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
                                     get_oldest_date, 
-                                    get_latest_date)
+                                    get_latest_date,
+                                    get_date_list)
 from datetime import timedelta
 
 
@@ -95,6 +96,38 @@ def org_count(client, contributors_index, date, repo_list):
     }
     return result
 
+def is_maintained(client, git_index, date, repos_list, level):
+    is_maintained_list = []
+    if level == "repo":
+        date_list_maintained = get_date_list(begin_date=str(
+            date-timedelta(days=90)), end_date=str(date), freq='7D')
+        for day in date_list_maintained:
+            query_git_commit_i = get_uuid_count_query(
+                "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
+            commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)[
+                'aggregations']["count_of_uuid"]['value']
+            if commit_frequency_i > 0:
+                is_maintained_list.append("True")
+            else:
+                is_maintained_list.append("False")
+
+    elif level in ["project", "community"]:
+        for repo in repos_list:
+            query_git_commit_i = get_uuid_count_query("cardinality",[repo+'.git'], "hash",from_date=date-timedelta(days=30), to_date=date)
+            commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
+            if commit_frequency_i > 0:
+                is_maintained_list.append("True")
+            else:
+                is_maintained_list.append("False")
+                
+    try:
+        is_maintained = is_maintained_list.count("True") / len(is_maintained_list)
+    except ZeroDivisionError:
+        is_maintained = 0                    
+    result = {
+        'is_maintained': round(is_maintained, 4)
+    }
+    return result
 
 def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
     query_LOC_frequency = get_uuid_count_query(
