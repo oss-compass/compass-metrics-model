@@ -11,7 +11,7 @@ from compass_common.opensearch_client_utils import get_elasticsearch_client
 from compass_common.datetime import (get_date_list,
                                      datetime_utcnow)
 from compass_common.uuid_utils import get_uuid
-from compass_common.model_score_algorithm_utils import get_score_by_criticality_score, normalize
+from compass_common.algorithm_utils import get_score_by_criticality_score, normalize
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
 from compass_metrics.git_metrics import (created_since,
                                          updated_since,

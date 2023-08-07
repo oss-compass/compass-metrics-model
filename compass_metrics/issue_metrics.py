@@ -4,7 +4,7 @@ from compass_metrics.db_dsl import get_uuid_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
-from compass_common.model_score_algorithm_utils import get_medium
+from compass_common.algorithm_utils import get_medium
 
 
 def issue_first_reponse(client, issue_index, date, repos_list):
