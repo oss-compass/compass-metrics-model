@@ -46,7 +46,7 @@ class CommunityServiceAndSupportMetricsModel(BaseMetricsModel):
                     "weight": COMMENT_FREQUENCY_WEIGHT_COMMUNITY,
                     "threshold": COMMENT_FREQUENCY_THRESHOLD_COMMUNITY
                 },                
-                "updated_issue_count": {
+                "updated_issues_count": {
                     "weight": UPDATED_ISSUES_WEIGHT_COMMUNITY,
                     "threshold": UPDATED_ISSUES_THRESHOLD_COMMUNITY
                 },

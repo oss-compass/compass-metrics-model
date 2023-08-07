@@ -195,3 +195,9 @@ def get_oldest_date(date1, date2):
 def get_latest_date(date1, date2):
     """ Two times to get the latest time """
     return date1 if date1 >= date2 else date2
+
+def get_date_list(begin_date, end_date, freq='W-MON'):
+    '''Get date list from begin_date to end_date every Monday'''
+    date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
+        str_to_datetime(begin_date)), end=datetime_to_utc(str_to_datetime(end_date))))]
+    return date_list
