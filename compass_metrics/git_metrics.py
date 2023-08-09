@@ -111,29 +111,28 @@ def org_commit_frequency(client, contributors_index, date, repo_list):
     org_commit_detail_dict = {}
 
     for contributor in commit_contributor_list:
-        for commit_date in contributor["code_commit_date_list"]:
-            if from_date_str <= commit_date <= to_date_str:
-                total_commit_count += 1
+        commit_date_list = [x for x in sorted(contributor["code_commit_date_list"]) if from_date_str <= x < to_date_str]
+        total_commit_count += len(commit_date_list)
+        for commit_date in commit_date_list:
+            for org in contributor["org_change_date_list"]:
+                if org["org_name"] is not None and org["first_date"] <= commit_date < org["last_date"]:
+                    org_commit_count += 1
+                    if contributor["is_bot"]:
+                        org_commit_bot_count += 1
+                    else:
+                        org_commit_without_bot_count += 1
+                    break
 
-        for org in contributor["org_change_date_list"]:
-            if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
-                if org.get("org_name") is not None:
-                    for commit_date in contributor["code_commit_date_list"]:
-                        if get_latest_date(from_date_str, org["first_date"]) <= commit_date <= \
-                                get_oldest_date(org["last_date"], to_date_str):
-                            org_commit_count += 1
-                            if contributor["is_bot"]:
-                                org_commit_bot_count += 1
-                            else:
-                                org_commit_without_bot_count += 1
-
+            org_name_set = set()
+            for org in contributor["org_change_date_list"]:
                 org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                if org_name in org_name_set:
+                    continue
+                org_name_set.add(org_name)
                 is_org = True if org.get("org_name") else False
                 count = org_commit_detail_dict.get(org_name, {}).get("org_commit", 0)
-                for commit_date in contributor["code_commit_date_list"]:
-                    if get_latest_date(from_date_str, org["first_date"]) <= commit_date <= \
-                            get_oldest_date(org["last_date"], to_date_str):
-                        count += 1
+                if org["first_date"] <= commit_date < org["last_date"]:
+                    count += 1
                 org_commit_detail_dict[org_name] = {
                     "org_name": org_name,
                     "is_org": is_org,
@@ -142,6 +141,8 @@ def org_commit_frequency(client, contributors_index, date, repo_list):
 
     org_commit_frequency_list = []
     for x in org_commit_detail_dict.values():
+        if x["org_commit"] == 0:
+            continue
         if x["is_org"]:
             org_commit_percentage_by_org = 0 if org_commit_count == 0 else x["org_commit"] / org_commit_count
         else:
