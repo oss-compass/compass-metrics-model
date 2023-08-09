@@ -5,7 +5,8 @@ from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
                                     get_oldest_date, 
-                                    get_latest_date)
+                                    get_latest_date,
+                                    get_date_list)
 from datetime import timedelta
 
 
@@ -91,6 +92,104 @@ def org_count(client, contributors_index, date, repo_list):
                 org_name_set.add(org.get("org_name"))
     result = {
         'org_count': len(org_name_set)
+    }
+    return result
+
+
+def org_commit_frequency(client, contributors_index, date, repo_list):
+    """ Determine the average number of commits with organization affiliation per week in the past 90 days. """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    total_commit_count = 0
+    org_commit_count = 0
+    org_commit_bot_count = 0
+    org_commit_without_bot_count = 0
+    org_commit_detail_dict = {}
+
+    for contributor in commit_contributor_list:
+        for commit_date in contributor["code_commit_date_list"]:
+            if from_date_str <= commit_date <= to_date_str:
+                total_commit_count += 1
+
+        for org in contributor["org_change_date_list"]:
+            if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                if org.get("org_name") is not None:
+                    for commit_date in contributor["code_commit_date_list"]:
+                        if get_latest_date(from_date_str, org["first_date"]) <= commit_date <= \
+                                get_oldest_date(org["last_date"], to_date_str):
+                            org_commit_count += 1
+                            if contributor["is_bot"]:
+                                org_commit_bot_count += 1
+                            else:
+                                org_commit_without_bot_count += 1
+
+                org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                is_org = True if org.get("org_name") else False
+                count = org_commit_detail_dict.get(org_name, {}).get("org_commit", 0)
+                for commit_date in contributor["code_commit_date_list"]:
+                    if get_latest_date(from_date_str, org["first_date"]) <= commit_date <= \
+                            get_oldest_date(org["last_date"], to_date_str):
+                        count += 1
+                org_commit_detail_dict[org_name] = {
+                    "org_name": org_name,
+                    "is_org": is_org,
+                    "org_commit": count
+                }
+
+    org_commit_frequency_list = []
+    for x in org_commit_detail_dict.values():
+        if x["is_org"]:
+            org_commit_percentage_by_org = 0 if org_commit_count == 0 else x["org_commit"] / org_commit_count
+        else:
+            org_commit_percentage_by_org = 0 if (total_commit_count - org_commit_count) == 0 else \
+                x["org_commit"] / (total_commit_count - org_commit_count)
+        x["org_commit_percentage_by_org"] = round(org_commit_percentage_by_org, 4)
+        x["org_commit_percentage_by_total"] = 0 if total_commit_count == 0 else round(x["org_commit"] / total_commit_count, 4)
+        org_commit_frequency_list.append(x)
+    org_commit_frequency_list = sorted(org_commit_frequency_list, key=lambda x: x["org_commit"], reverse=True)
+    result = {
+        'org_commit_frequency': round(org_commit_count/12.85, 4),
+        'org_commit_frequency_bot': round(org_commit_bot_count/12.85, 4),
+        'org_commit_frequency_without_bot': round(org_commit_without_bot_count/12.85, 4),
+        'org_commit_frequency_list': org_commit_frequency_list
+    }
+    return result
+
+
+def org_contribution_last(client, contributors_index, date, repo_list):
+    """ Total contribution time of all organizations to the community in the past 90 days (weeks). """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    contribution_last = 0
+    repo_contributor_group_dict = {}
+    for contributor in commit_contributor_list:
+        repo_contributor_list = repo_contributor_group_dict.get(contributor["repo_name"], [])
+        repo_contributor_list.append(contributor)
+        repo_contributor_group_dict[contributor["repo_name"]] = repo_contributor_list
+
+    date_list = get_date_list(begin_date_str=str(from_date), end_date_str=str(to_date), freq='7D')
+    for repo, repo_contributor_list in repo_contributor_group_dict.items():
+        for day in date_list:
+            org_name_set = set()
+            from_day = (day - timedelta(days=7)).strftime("%Y-%m-%d")
+            to_day = day.strftime("%Y-%m-%d")
+            for contributor in repo_contributor_list:
+                for org in contributor["org_change_date_list"]:
+                    if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"],
+                                                                                   from_day, to_day):
+                        for commit_date in contributor["code_commit_date_list"]:
+                            if from_day <= commit_date <= to_day:
+                                org_name_set.add(org.get("org_name"))
+                                break
+            contribution_last += len(org_name_set)
+    result = {
+        "org_contribution_last": contribution_last
     }
     return result
 
