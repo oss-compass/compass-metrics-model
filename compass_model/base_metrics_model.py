@@ -5,6 +5,8 @@ import math
 import pendulum
 import pandas as pd
 import urllib3
+import pkg_resources
+import yaml
 
 from elasticsearch import helpers
 from compass_common.opensearch_client_utils import get_elasticsearch_client
@@ -18,12 +20,13 @@ from compass_metrics.git_metrics import (created_since,
                                          commit_frequency,
                                          org_count,
                                          is_maintained,
-                                         git_pr_linked_ratio,
-                                         LOC_frequency)
+                                         commit_pr_linked_ratio,
+                                         lines_of_code_frequency,
                                          org_commit_frequency,
                                          org_contribution_last)
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import (contributor_count,
+                                                 code_contributor_count, 
                                                  org_contributor_count,
                                                  bus_factor)
 from compass_metrics.issue_metrics import (comment_frequency,
@@ -33,9 +36,10 @@ from compass_metrics.issue_metrics import (comment_frequency,
                                            bug_issue_open_time)
 from compass_metrics.pr_metrics import (code_review_count,
                                         pr_open_time,
-                                        closed_pr_count,
+                                        close_pr_count,
                                         code_review_ratio,
-                                        pr_issue_linked,
+                                        code_merge_ratio,
+                                        pr_issue_linked_ratio,
                                         pr_time_to_first_response,
                                         change_request_closure_ratio,
                                         change_request_closure_ratio_recently_period,
@@ -45,7 +49,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
-MAX_BULK_UPDATE_SIZE = 5000
+MAX_BULK_UPDATE_SIZE = 0
 
 SOFTWARE_ARTIFACT = "software-artifact"
 GOVERNANCE = "governance"
@@ -206,6 +210,10 @@ class BaseMetricsModel:
         self.client = None
 
         if type(metrics_weights_thresholds) == dict:
+            default_metrics_thresholds = self.get_default_metrics_thresholds()
+            for metrics, weights_thresholds in metrics_weights_thresholds.items():
+                if weights_thresholds["threshold"] is None:
+                    weights_thresholds["threshold"] = default_metrics_thresholds[metrics]
             self.metrics_weights_thresholds = metrics_weights_thresholds
             self.metrics_weights_thresholds_hash = get_dict_hash(metrics_weights_thresholds)
         else:
@@ -217,6 +225,20 @@ class BaseMetricsModel:
         else:
             self.custom_fields = {}
             self.custom_fields_hash = None
+    
+
+    def get_default_metrics_thresholds(self):
+        """ Get default thresholds for metrics """
+        thresholds_data = yaml.safe_load(open("compass_metrics/resources/thresholds.yaml"))["metrics_default_threshold"]
+        metrics_thresholds_data = {}
+        for thresholds_list in thresholds_data.values():
+            for thresholds in thresholds_list:
+                if self.level == "repo":
+                    metrics_thresholds_data[thresholds["metric"]] = thresholds["repo_threshold"]
+                elif self.level == "community":
+                    metrics_thresholds_data[thresholds["metric"]] = thresholds["multiple_threshold"]
+        return metrics_thresholds_data
+
 
     def metrics_model_metrics(self, elastic_url):
         """ Execute model calculation tasks """
@@ -266,9 +288,9 @@ class BaseMetricsModel:
                 "_source": metrics_data
             }
             item_datas.append(item_data)
-            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-                helpers.bulk(client=self.client, actions=item_datas)
-                item_datas = []
+            # if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+            helpers.bulk(client=self.client, actions=item_datas)
+            item_datas = []
         helpers.bulk(client=self.client, actions=item_datas)
 
     def get_metrics(self, date, repo_list):
@@ -285,12 +307,12 @@ class BaseMetricsModel:
                 metrics.update(updated_since(self.client, self.git_index, date, repo_list))
             elif metric_field == "org_count":
                 metrics.update(org_count(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "LOC_frequency":
-                metrics.update(LOC_frequency(self.client, self.git_index, date, repo_list))
+            elif metric_field == "lines_of_code_frequency":
+                metrics.update(lines_of_code_frequency(self.client, self.git_index, date, repo_list))
             elif metric_field == "is_maintained":
                 metrics.update(is_maintained(self.client, self.git_index, date, repo_list, self.level))
-            elif metric_field == "git_pr_linked_ratio":
-                metrics.update(git_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list))
+            elif metric_field == "commit_pr_linked_ratio":
+                metrics.update(commit_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list))
             elif metric_field == "org_commit_frequency":
                 metrics.update(org_commit_frequency(self.client, self.contributors_index, date, repo_list))
             elif metric_field == "org_contribution_last":
@@ -311,14 +333,16 @@ class BaseMetricsModel:
             # pr
             elif metric_field == "pr_open_time":
                 metrics.update(pr_open_time(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "closed_prs_count":
-                metrics.update(closed_pr_count(self.client, self.issue_index, date, repo_list))
+            elif metric_field == "close_pr_count":
+                metrics.update(close_pr_count(self.client, self.issue_index, date, repo_list))
             elif metric_field == "code_review_count":
                 metrics.update(code_review_count(self.client, self.pr_index, date, repo_list))
             elif metric_field == "code_review_ratio":
                 metrics.update(code_review_ratio(self.client, self.pr_index, date, repo_list))
+            elif metric_field == "code_merge_ratio":
+                metrics.update(code_merge_ratio(self.client, self.pr_index, date, repo_list))
             elif metric_field == "pr_issue_linked_ratio":
-                metrics.update(pr_issue_linked(self.client, self.pr_index, self.pr_comments_index, date, repo_list))
+                metrics.update(pr_issue_linked_ratio(self.client, self.pr_index, self.pr_comments_index, date, repo_list))
             elif metric_field == "pr_time_to_first_response":
                 metrics.update(pr_time_to_first_response(self.client, self.pr_index, date, repo_list))
             elif metric_field == "change_request_closure_ratio":
@@ -333,6 +357,8 @@ class BaseMetricsModel:
             # contributor
             elif metric_field == "contributor_count":
                 metrics.update(contributor_count(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "code_contributor_count":
+                metrics.update(code_contributor_count(self.client, self.contributors_index, date, repo_list))
             elif metric_field == "org_contributor_count":
                 metrics.update(org_contributor_count(self.client, self.contributors_index, date, repo_list))
             elif metric_field == "bus_factor":
@@ -345,9 +371,10 @@ class BaseMetricsModel:
         new_metrics_weights_thresholds = {}
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
             if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time", "pr_time_to_first_response"]:
-                weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
-                new_metrics_weights_thresholds[metrics + "_avg"] = weights_thresholds
-                new_metrics_weights_thresholds[metrics + "_mid"] = weights_thresholds
+                new_weights_thresholds = weights_thresholds.copy()
+                new_weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
+                new_metrics_weights_thresholds[metrics + "_avg"] = new_weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_mid"] = new_weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
         if self.algorithm == "criticality_score":
@@ -366,9 +393,10 @@ class BaseMetricsModel:
         new_metrics_weights_thresholds = {}
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
             if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time", "pr_time_to_first_response"]:
-                weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
-                new_metrics_weights_thresholds[metrics + "_avg"] = weights_thresholds
-                new_metrics_weights_thresholds[metrics + "_mid"] = weights_thresholds
+                new_weights_thresholds = weights_thresholds.copy()
+                new_weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
+                new_metrics_weights_thresholds[metrics + "_avg"] = new_weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_mid"] = new_weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
 

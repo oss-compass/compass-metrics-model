@@ -160,13 +160,6 @@ def unixtime_to_datetime(ut):
         raise InvalidDateError(date=str(ut))
 
 
-def get_date_list(begin_date_str, end_date_str, freq='W-MON'):
-    """Get date list from begin_date to end_date every Monday"""
-    date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
-        str_to_datetime(begin_date_str)), end=datetime_to_utc(str_to_datetime(end_date_str))))]
-    return date_list
-
-
 def get_time_diff_months(start, end):
     """ Number of months between two dates in UTC format  """
     return get_time_diff_date(start, end, "month")

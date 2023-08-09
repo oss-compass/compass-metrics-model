@@ -175,7 +175,7 @@ def org_contribution_last(client, contributors_index, date, repo_list):
         repo_contributor_list.append(contributor)
         repo_contributor_group_dict[contributor["repo_name"]] = repo_contributor_list
 
-    date_list = get_date_list(begin_date_str=str(from_date), end_date_str=str(to_date), freq='7D')
+    date_list = get_date_list(begin_date=str(from_date), end_date=str(to_date), freq='7D')
     for repo, repo_contributor_list in repo_contributor_group_dict.items():
         for day in date_list:
             org_name_set = set()
@@ -230,7 +230,7 @@ def is_maintained(client, git_index, date, repos_list, level):
     return result
 
 
-def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
+def commit_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
     commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
     commits_without_merge_pr = {
         "bool": {
@@ -264,25 +264,27 @@ def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
                 commit_pr_cout += 1
             else:
                 commit_message_dict[commit_hash] = 0
-    if commit_count>0:
-        # return len(commit_all_message), commit_pr_cout, commit_pr_cout/len(commit_all_message)
-        git_pr_linked_ratio = commit_pr_cout/len(commit_all_message)
-    else:
-        # return 0, None, None
-        git_pr_linked_ratio = None
 
     result = {
-        'git_pr_linked_ratio': git_pr_linked_ratio
+        'commit_pr_linked_ratio': commit_pr_cout/len(commit_all_message) if commit_count > 0 else None,
+        'commit_pr': len(commit_all_message),
+        'commit_pr_linked': commit_pr_cout if commit_count > 0 else None
     }
     return result
 
 
-def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
-    query_LOC_frequency = get_uuid_count_query(
-        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
-    LOC_frequency = client.search(index=git_index, body=query_LOC_frequency)[
-        'aggregations']['count_of_uuid']['value']
+def lines_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines added plus lines removed) per week in the past 90 """
+    def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
+        query_LOC_frequency = get_uuid_count_query(
+            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+        loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+            'aggregations']['count_of_uuid']['value']
+        return loc_frequency/12.85
+
     result = {
-        'LOC_frequency': LOC_frequency/12.85
+        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed'),
+        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added'),
+        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed'),
     }
     return result

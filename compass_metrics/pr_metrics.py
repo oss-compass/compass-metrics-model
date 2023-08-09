@@ -42,28 +42,27 @@ def pr_open_time(client, pr_index, date, repos_list):
 
 def code_review_count(client, pr_index, date, repo_list):
     query_pr_comments_count = get_uuid_count_query(
-        "sum", repo_list, "num_review_comments_without_bot", size=0, from_date=(date - timedelta(days=90)),
-        to_date=date)
-    query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+            "avg", repo_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+    query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
     prs = client.search(index=pr_index, body=query_pr_comments_count)
-    try:
-        comment_count = prs['aggregations']["count_of_uuid"]['value'] / prs["hits"]["total"]["value"]
-    except ZeroDivisionError:
+    if prs["hits"]["total"]["value"] == 0:
         comment_count = None
+    else:
+        comment_count = prs['aggregations']["count_of_uuid"]['value']
     result = {
         'code_review_count': round(comment_count, 4) if comment_count is not None else None
     }
     return result
 
 
-def closed_pr_count(client, pr_index, date, repos_list):
+def close_pr_count(client, pr_index, date, repos_list):
     query_pr_closed = get_pr_closed_uuid_count(
         "cardinality", repos_list, "uuid", from_date=(date-timedelta(days=90)), to_date=date)
     pr_closed = client.search(index=pr_index, body=query_pr_closed)[
         'aggregations']["count_of_uuid"]['value']
 
     result = {
-        "pr_closed": pr_closed
+        "close_pr_count": pr_closed
     }
     return result
 
@@ -155,10 +154,13 @@ def code_review_ratio(client, pr_index, date, repos_list):
                                          filter_field="num_review_comments_without_bot", from_date=(date-timedelta(days=90)), to_date=date)
     prs = client.search(index=pr_index, body=query_pr_body)[
         'aggregations']["count_of_uuid"]['value']
-    try:
-        return prs/pr_count, pr_count
-    except ZeroDivisionError:
-        return None, 0
+    result = {
+        "code_review_ratio": prs/pr_count if pr_count > 0 else None,
+        "total_pr": pr_count,
+        "code_review": prs
+    }
+    return result
+    
 
 
 def code_merge_ratio(client, pr_index, date, repos_list):
@@ -174,22 +176,16 @@ def code_merge_ratio(client, pr_index, date, repos_list):
                     })
     prs = client.search(index=pr_index, body=query_pr_body)[
         'aggregations']["count_of_uuid"]['value']
-
-    try:
-        result = {
-            "prs/pr_merged_count": prs/pr_merged_count,
-            "pr_merged_count": pr_merged_count
-        }
-        return result
-    except ZeroDivisionError:
-        result = {
-            "prs/pr_merged_count": None,
-            "pr_merged_count": 0
-        }
-        return result
+    
+    result = {
+        "code_merge_ratio": prs/pr_merged_count if pr_merged_count > 0 else None,
+        "code_merge": prs,
+        "code_merge_total": pr_merged_count
+    }
+    return result
 
 
-def pr_issue_linked(client, pr_index, pr_comments_index, date, repos_list):
+def pr_issue_linked_ratio(client, pr_index, pr_comments_index, date, repos_list):
     pr_linked_issue = 0
     for repo in repos_list:
         query_pr_linked_issue = get_pr_linked_issue_count(
@@ -202,13 +198,9 @@ def pr_issue_linked(client, pr_index, pr_comments_index, date, repos_list):
     pr_count = client.search(index=pr_index,
                              body=query_pr_count)[
         'aggregations']["count_of_uuid"]['value']
-    try:
-        result = {
-            "pr_issue_linked_ratio": pr_linked_issue/pr_count
-        }
-        return result
-    except ZeroDivisionError:
-        result = {
-            "pr_issue_linked_ratio": None
-        }
-        return result
+    result = {
+        "pr_issue_linked_ratio": pr_linked_issue/pr_count if pr_count > 0 else None,
+        "total_pr": pr_count,
+        "pr_issue_linked": pr_linked_issue,
+    }
+    return result
