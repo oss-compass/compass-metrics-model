@@ -96,6 +96,36 @@ def org_contributor_count(client, contributors_index, date, repo_list):
     return result
 
 
+def bus_factor(client, contributors_index, date, repo_list):
+    """Determine the smallest number of people that make 50% of contributions in the past 90 days."""
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    bus_factor_count = 0
+    author_name_dict = {}  # {"author_name:" commit_count}
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    for item in commit_contributor_list:
+        if item["is_bot"]:
+            continue
+        name = item["id_git_author_name_list"][0]
+        commit_date_list = [x for x in sorted(item["code_commit_date_list"]) if from_date_str <= x < to_date_str]
+        author_name_dict[name] = author_name_dict.get(name, 0) + len(commit_date_list)
+    commit_count_list = [commit_count for commit_count in author_name_dict.values()]
+    commit_count_list.sort(reverse=True)
+    commit_count_threshold = sum(commit_count_list) * 0.5
+    front_commit_count = 0
+    for index, commit_count in enumerate(commit_count_list):
+        front_commit_count += commit_count
+        if commit_count_threshold < front_commit_count:
+            bus_factor_count = index + 1
+            break
+    result = {
+        'bus_factor': bus_factor_count
+    }
+    return result
+
 
 def get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field):
     """ Get the contributors who have contributed in the from_date,to_date time period. """

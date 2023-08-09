@@ -20,9 +20,15 @@ from compass_metrics.git_metrics import (created_since,
                                          org_commit_frequency,
                                          org_contribution_last)
 from compass_metrics.repo_metrics import recent_releases_count
-from compass_metrics.contributor_metrics import contributor_count, org_contributor_count
+from compass_metrics.contributor_metrics import (contributor_count,
+                                                 org_contributor_count,
+                                                 bus_factor)
 from compass_metrics.issue_metrics import comment_frequency, closed_issues_count, updated_issues_count
-from compass_metrics.pr_metrics import code_review_count
+from compass_metrics.pr_metrics import (code_review_count,
+                                        pr_time_to_first_response,
+                                        change_request_closure_ratio,
+                                        change_request_closure_ratio_recently_period,
+                                        pr_open_time)
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -284,16 +290,26 @@ class BaseMetricsModel:
                 metrics.update(org_commit_frequency(self.client, self.contributors_index, date, repo_list))
             elif metric_field == "org_contribution_last":
                 metrics.update(org_contribution_last(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "pr_time_to_first_response":
+                metrics.update(pr_time_to_first_response(self.client, self.pr_index, date, repo_list))
+            elif metric_field == "change_request_closure_ratio":
+                metrics.update(change_request_closure_ratio(self.client, self.pr_index, date, repo_list))
+            elif metric_field == "change_request_closure_ratio_recently_period":
+                metrics.update(change_request_closure_ratio_recently_period(self.client, self.pr_index, date, repo_list))
+            elif metric_field == "bus_factor":
+                metrics.update(bus_factor(self.client, self.contributors_index, date, repo_list))
+            elif metric_field == "pr_open_time":
+                metrics.update(pr_open_time(self.client, self.pr_index, date, repo_list))
         return metrics
 
     def get_metrics_score(self, metrics_data):
         """ get model scores based on metric values """
         new_metrics_weights_thresholds = {}
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
-            if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time"]:
+            if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time", "pr_time_to_first_response"]:
                 weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
-                new_metrics_weights_thresholds[metrics + "avg"] = weights_thresholds
-                new_metrics_weights_thresholds[metrics + "min"] = weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_avg"] = weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_mid"] = weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
         if self.algorithm == "criticality_score":
@@ -311,10 +327,10 @@ class BaseMetricsModel:
 
         new_metrics_weights_thresholds = {}
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
-            if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time"]:
+            if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time", "pr_time_to_first_response"]:
                 weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
-                new_metrics_weights_thresholds[metrics + "avg"] = weights_thresholds
-                new_metrics_weights_thresholds[metrics + "min"] = weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_avg"] = weights_thresholds
+                new_metrics_weights_thresholds[metrics + "_mid"] = weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
 
