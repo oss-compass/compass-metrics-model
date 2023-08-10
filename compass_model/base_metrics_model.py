@@ -295,76 +295,48 @@ class BaseMetricsModel:
 
     def get_metrics(self, date, repo_list):
         """ Get the corresponding metrics data according to the metrics field """
+        metrics_switch = {
+            # git metadata
+            "commit_frequency": lambda: commit_frequency(self.client, self.contributors_index, date, repo_list),
+            "created_since": lambda: created_since(self.client, self.git_index, date, repo_list),
+            "updated_since": lambda: updated_since(self.client, self.git_index, date, repo_list),
+            "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
+            "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
+            "is_maintained": lambda: is_maintained(self.client, self.git_index, date, repo_list, self.level),
+            "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list),
+            "org_commit_frequency": lambda: org_commit_frequency(self.client, self.contributors_index, date, repo_list),
+            "org_contribution_last": lambda: org_contribution_last(self.client, self.contributors_index, date, repo_list),
+            # issue
+            "issue_first_reponse": lambda: issue_first_reponse(self.client, self.issue_index, date, repo_list),
+            "bug_issue_open_time": lambda: bug_issue_open_time(self.client, self.issue_index, date, repo_list),
+            "comment_frequency": lambda: comment_frequency(self.client, self.issue_index, date, repo_list),
+            "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
+            "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_index, date, repo_list),
+            # pr
+            "pr_open_time": lambda: pr_open_time(self.client, self.issue_index, date, repo_list),
+            "close_pr_count": lambda: close_pr_count(self.client, self.issue_index, date, repo_list),
+            "code_review_count": lambda: code_review_count(self.client, self.pr_index, date, repo_list),
+            "code_review_ratio": lambda: code_review_ratio(self.client, self.pr_index, date, repo_list),
+            "code_merge_ratio": lambda: code_merge_ratio(self.client, self.pr_index, date, repo_list),
+            "pr_issue_linked_ratio": lambda: pr_issue_linked_ratio(self.client, self.pr_index, self.pr_comments_index, date, repo_list),
+            "pr_time_to_first_response": lambda: pr_time_to_first_response(self.client, self.pr_index, date, repo_list),
+            "change_request_closure_ratio": lambda: change_request_closure_ratio(self.client, self.pr_index, date, repo_list),
+            "change_request_closure_ratio_recently_period": lambda: change_request_closure_ratio_recently_period(self.client, self.pr_index, date, repo_list),
+            # repo
+            "recent_releases_count": lambda: recent_releases_count(self.client, self.release_index, date, repo_list),
+            # contributor
+            "contributor_count": lambda: contributor_count(self.client, self.contributors_index, date, repo_list),
+            "code_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list)
+        }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
-
-            # git metadata
-            if metric_field == "commit_frequency":
-                metrics.update(commit_frequency(self.client, self.contributors_index, date, repo_list))
-            if metric_field == "created_since":
-                metrics.update(created_since(self.client, self.git_index, date, repo_list))
-            elif metric_field == "updated_since":
-                metrics.update(updated_since(self.client, self.git_index, date, repo_list))
-            elif metric_field == "org_count":
-                metrics.update(org_count(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "lines_of_code_frequency":
-                metrics.update(lines_of_code_frequency(self.client, self.git_index, date, repo_list))
-            elif metric_field == "is_maintained":
-                metrics.update(is_maintained(self.client, self.git_index, date, repo_list, self.level))
-            elif metric_field == "commit_pr_linked_ratio":
-                metrics.update(commit_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list))
-            elif metric_field == "org_commit_frequency":
-                metrics.update(org_commit_frequency(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "org_contribution_last":
-                metrics.update(org_contribution_last(self.client, self.contributors_index, date, repo_list))
-
-            # issue
-            elif metric_field == "issue_first_reponse":
-                metrics.update(issue_first_reponse(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "bug_issue_open_time":
-                metrics.update(bug_issue_open_time(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "comment_frequency":
-                metrics.update(comment_frequency(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "closed_issues_count":
-                metrics.update(closed_issues_count(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "updated_issues_count":
-                metrics.update(updated_issues_count(self.client, self.issue_index, date, repo_list))
-
-            # pr
-            elif metric_field == "pr_open_time":
-                metrics.update(pr_open_time(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "close_pr_count":
-                metrics.update(close_pr_count(self.client, self.issue_index, date, repo_list))
-            elif metric_field == "code_review_count":
-                metrics.update(code_review_count(self.client, self.pr_index, date, repo_list))
-            elif metric_field == "code_review_ratio":
-                metrics.update(code_review_ratio(self.client, self.pr_index, date, repo_list))
-            elif metric_field == "code_merge_ratio":
-                metrics.update(code_merge_ratio(self.client, self.pr_index, date, repo_list))
-            elif metric_field == "pr_issue_linked_ratio":
-                metrics.update(pr_issue_linked_ratio(self.client, self.pr_index, self.pr_comments_index, date, repo_list))
-            elif metric_field == "pr_time_to_first_response":
-                metrics.update(pr_time_to_first_response(self.client, self.pr_index, date, repo_list))
-            elif metric_field == "change_request_closure_ratio":
-                metrics.update(change_request_closure_ratio(self.client, self.pr_index, date, repo_list))
-            elif metric_field == "change_request_closure_ratio_recently_period":
-                metrics.update(change_request_closure_ratio_recently_period(self.client, self.pr_index, date, repo_list))
-
-            # repo
-            elif metric_field == "recent_releases_count":
-                metrics.update(recent_releases_count(self.client, self.release_index, date, repo_list))
-
-            # contributor
-            elif metric_field == "contributor_count":
-                metrics.update(contributor_count(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "code_contributor_count":
-                metrics.update(code_contributor_count(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "org_contributor_count":
-                metrics.update(org_contributor_count(self.client, self.contributors_index, date, repo_list))
-            elif metric_field == "bus_factor":
-                metrics.update(bus_factor(self.client, self.contributors_index, date, repo_list))
-
-        return metrics
+            if metric_field in metrics_switch:
+                metrics.update(metrics_switch[metric_field]())
+            else:
+                raise Exception("Invalid metric")
+        return metrics     
 
     def get_metrics_score(self, metrics_data):
         """ get model scores based on metric values """
