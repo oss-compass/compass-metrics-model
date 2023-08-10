@@ -68,8 +68,8 @@ def bug_issue_open_time(client, issue_index, date, repos_list):
     issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
     issue_open_time_repo_mid = get_medium(issue_open_time_repo)
     result = {
-        "issue_open_time_repo_avg": issue_open_time_repo_avg,
-        "issue_open_time_repo_mid": issue_open_time_repo_mid
+        "bug_issue_open_time_avg": issue_open_time_repo_avg,
+        "bug_issue_open_time_mid": issue_open_time_repo_mid
     }
     return result
 

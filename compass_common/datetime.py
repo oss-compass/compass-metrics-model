@@ -160,27 +160,40 @@ def unixtime_to_datetime(ut):
         raise InvalidDateError(date=str(ut))
 
 
-def get_date_list(begin_date_str, end_date_str, freq='W-MON'):
-    """Get date list from begin_date to end_date every Monday"""
-    date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
-        str_to_datetime(begin_date_str)), end=datetime_to_utc(str_to_datetime(end_date_str))))]
-    return date_list
-
-
 def get_time_diff_months(start, end):
     """ Number of months between two dates in UTC format  """
+    return get_time_diff_date(start, end, "month")
+
+
+def get_time_diff_days(start, end):
+    ''' Number of days between two dates in UTC format  '''
+    return get_time_diff_date(start, end, "day")
+
+def get_time_diff_date(start, end, date_type="day"):
+    ''' Number of date between two dates in UTC format  '''
+
     if start is None or end is None:
         return None
-    if type(start) is not datetime:
+
+    if type(start) is not datetime.datetime:
         start = str_to_datetime(start).replace(tzinfo=None)
-    if type(end) is not datetime:
+    if type(end) is not datetime.datetime:
         end = str_to_datetime(end).replace(tzinfo=None)
 
-    seconds_month = float(60 * 60 * 24 * 30)
-    diff_months = (end - start).total_seconds() / seconds_month
-    diff_months = float('%.2f' % diff_months)
+    if date_type == "minute":
+        seconds_date = float(60)
+    elif date_type == "hour":
+        seconds_date = float(60 * 60)
+    elif date_type == "day":
+        seconds_date = float(60 * 60 * 24)
+    elif date_type == "month":
+        seconds_date = float(60 * 60 * 24 * 30)
+    
+    diff_date = (end - start).total_seconds() / seconds_date
+    diff_date = float('%.2f' % diff_date)
 
-    return diff_months
+    return diff_date
+
 
 def check_times_has_overlap(start_time1, end_time1, start_time2, end_time2):
     """ Check for overlap between the two time ranges """

@@ -97,6 +97,105 @@ def org_count(client, contributors_index, date, repo_list):
     return result
 
 
+def org_commit_frequency(client, contributors_index, date, repo_list):
+    """ Determine the average number of commits with organization affiliation per week in the past 90 days. """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    total_commit_count = 0
+    org_commit_count = 0
+    org_commit_bot_count = 0
+    org_commit_without_bot_count = 0
+    org_commit_detail_dict = {}
+
+    for contributor in commit_contributor_list:
+        commit_date_list = [x for x in sorted(contributor["code_commit_date_list"]) if from_date_str <= x < to_date_str]
+        total_commit_count += len(commit_date_list)
+        for commit_date in commit_date_list:
+            for org in contributor["org_change_date_list"]:
+                if org["org_name"] is not None and org["first_date"] <= commit_date < org["last_date"]:
+                    org_commit_count += 1
+                    if contributor["is_bot"]:
+                        org_commit_bot_count += 1
+                    else:
+                        org_commit_without_bot_count += 1
+                    break
+
+            org_name_set = set()
+            for org in contributor["org_change_date_list"]:
+                org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                if org_name in org_name_set:
+                    continue
+                org_name_set.add(org_name)
+                is_org = True if org.get("org_name") else False
+                count = org_commit_detail_dict.get(org_name, {}).get("org_commit", 0)
+                if org["first_date"] <= commit_date < org["last_date"]:
+                    count += 1
+                org_commit_detail_dict[org_name] = {
+                    "org_name": org_name,
+                    "is_org": is_org,
+                    "org_commit": count
+                }
+
+    org_commit_frequency_list = []
+    for x in org_commit_detail_dict.values():
+        if x["org_commit"] == 0:
+            continue
+        if x["is_org"]:
+            org_commit_percentage_by_org = 0 if org_commit_count == 0 else x["org_commit"] / org_commit_count
+        else:
+            org_commit_percentage_by_org = 0 if (total_commit_count - org_commit_count) == 0 else \
+                x["org_commit"] / (total_commit_count - org_commit_count)
+        x["org_commit_percentage_by_org"] = round(org_commit_percentage_by_org, 4)
+        x["org_commit_percentage_by_total"] = 0 if total_commit_count == 0 else round(x["org_commit"] / total_commit_count, 4)
+        org_commit_frequency_list.append(x)
+    org_commit_frequency_list = sorted(org_commit_frequency_list, key=lambda x: x["org_commit"], reverse=True)
+    result = {
+        'org_commit_frequency': round(org_commit_count/12.85, 4),
+        'org_commit_frequency_bot': round(org_commit_bot_count/12.85, 4),
+        'org_commit_frequency_without_bot': round(org_commit_without_bot_count/12.85, 4),
+        'org_commit_frequency_list': org_commit_frequency_list
+    }
+    return result
+
+
+def org_contribution_last(client, contributors_index, date, repo_list):
+    """ Total contribution time of all organizations to the community in the past 90 days (weeks). """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    contribution_last = 0
+    repo_contributor_group_dict = {}
+    for contributor in commit_contributor_list:
+        repo_contributor_list = repo_contributor_group_dict.get(contributor["repo_name"], [])
+        repo_contributor_list.append(contributor)
+        repo_contributor_group_dict[contributor["repo_name"]] = repo_contributor_list
+
+    date_list = get_date_list(begin_date=str(from_date), end_date=str(to_date), freq='7D')
+    for repo, repo_contributor_list in repo_contributor_group_dict.items():
+        for day in date_list:
+            org_name_set = set()
+            from_day = (day - timedelta(days=7)).strftime("%Y-%m-%d")
+            to_day = day.strftime("%Y-%m-%d")
+            for contributor in repo_contributor_list:
+                for org in contributor["org_change_date_list"]:
+                    if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"],
+                                                                                   from_day, to_day):
+                        for commit_date in contributor["code_commit_date_list"]:
+                            if from_day <= commit_date <= to_day:
+                                org_name_set.add(org.get("org_name"))
+                                break
+            contribution_last += len(org_name_set)
+    result = {
+        "org_contribution_last": contribution_last
+    }
+    return result
+
+
 def is_maintained(client, git_index, date, repos_list, level):
     is_maintained_list = []
     if level == "repo":
@@ -120,18 +219,18 @@ def is_maintained(client, git_index, date, repos_list, level):
                 is_maintained_list.append("True")
             else:
                 is_maintained_list.append("False")
-                
+
     try:
         is_maintained = is_maintained_list.count("True") / len(is_maintained_list)
     except ZeroDivisionError:
-        is_maintained = 0                    
+        is_maintained = 0
     result = {
         'is_maintained': round(is_maintained, 4)
     }
     return result
 
 
-def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
+def commit_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
     commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
     commits_without_merge_pr = {
         "bool": {
@@ -147,7 +246,7 @@ def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
     commit_count = commit_message['aggregations']["count_of_uuid"]['value']
     commit_pr_cout = 0
     commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
-    
+
     for commit_message_i in set(commit_all_message):
         commit_hash = commit_message_i
         if commit_hash in commit_message_dict:
@@ -165,25 +264,27 @@ def git_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
                 commit_pr_cout += 1
             else:
                 commit_message_dict[commit_hash] = 0
-    if commit_count>0:
-        # return len(commit_all_message), commit_pr_cout, commit_pr_cout/len(commit_all_message)
-        git_pr_linked_ratio = commit_pr_cout/len(commit_all_message)
-    else:
-        # return 0, None, None
-        git_pr_linked_ratio = None
-       
+
     result = {
-        'git_pr_linked_ratio': git_pr_linked_ratio
+        'commit_pr_linked_ratio': commit_pr_cout/len(commit_all_message) if commit_count > 0 else None,
+        'commit_pr': len(commit_all_message),
+        'commit_pr_linked': commit_pr_cout if commit_count > 0 else None
     }
     return result
 
 
-def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
-    query_LOC_frequency = get_uuid_count_query(
-        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
-    LOC_frequency = client.search(index=git_index, body=query_LOC_frequency)[
-        'aggregations']['count_of_uuid']['value']
+def lines_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines added plus lines removed) per week in the past 90 """
+    def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
+        query_LOC_frequency = get_uuid_count_query(
+            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+        loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+            'aggregations']['count_of_uuid']['value']
+        return loc_frequency/12.85
+
     result = {
-        'LOC_frequency': LOC_frequency/12.85
+        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed'),
+        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added'),
+        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed'),
     }
     return result
