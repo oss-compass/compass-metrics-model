@@ -49,7 +49,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
-MAX_BULK_UPDATE_SIZE = 0
+MAX_BULK_UPDATE_SIZE = 5000
 
 SOFTWARE_ARTIFACT = "software-artifact"
 GOVERNANCE = "governance"
@@ -288,9 +288,9 @@ class BaseMetricsModel:
                 "_source": metrics_data
             }
             item_datas.append(item_data)
-            # if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-            helpers.bulk(client=self.client, actions=item_datas)
-            item_datas = []
+            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                helpers.bulk(client=self.client, actions=item_datas)
+                item_datas = []
         helpers.bulk(client=self.client, actions=item_datas)
 
     def get_metrics(self, date, repo_list):
