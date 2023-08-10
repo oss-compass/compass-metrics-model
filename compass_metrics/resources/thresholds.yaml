@@ -52,7 +52,7 @@ metrics_default_threshold:
       multiple_threshold: 8
     - metric: 'close_pr_count'
       repo_threshold: 4500
-      multiple_threshold: 60000
+      multiple_threshold: 6000
     - metric: 'pr_time_to_first_response'
       repo_threshold: 15
       multiple_threshold: 15
