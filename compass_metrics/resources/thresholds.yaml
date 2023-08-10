@@ -1,0 +1,91 @@
+metrics_default_threshold:
+  git: 
+    - metric: 'created_since'
+      repo_threshold: 120
+      multiple_threshold: 240
+    - metric: 'updated_since'
+      repo_threshold: 0.25
+      multiple_threshold: 0.25
+    - metric: 'commit_frequency'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'org_count'
+      repo_threshold: 30
+      multiple_threshold: 30
+    - metric: 'org_commit_frequency'
+      repo_threshold: 800
+      multiple_threshold: 1000
+    - metric: 'org_contribution_last'
+      repo_threshold: 160
+      multiple_threshold: 400
+    - metric: 'is_maintained'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'commit_pr_linked_ratio'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'lines_of_code_frequency'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+  issue: 
+    - metric: 'issue_first_reponse'
+      repo_threshold: 15
+      multiple_threshold: 15
+    - metric: 'bug_issue_open_time'
+      repo_threshold: 60
+      multiple_threshold: 60
+    - metric: 'comment_frequency'
+      repo_threshold: 5
+      multiple_threshold: 5
+    - metric: 'closed_issues_count'
+      repo_threshold: 2500
+      multiple_threshold: 2500
+    - metric: 'updated_issues_count'
+      repo_threshold: 2500
+      multiple_threshold: 2500  
+  pr:
+    - metric: 'pr_open_time'
+      repo_threshold: 30
+      multiple_threshold: 30
+    - metric: 'code_review_count'
+      repo_threshold: 8
+      multiple_threshold: 8
+    - metric: 'close_pr_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'pr_time_to_first_response'
+      repo_threshold: 15
+      multiple_threshold: 15
+    - metric: 'change_request_closure_ratio'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'change_request_closure_ratio_recently_period'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'code_review_ratio'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'code_merge_ratio'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'pr_issue_linked_ratio'
+      repo_threshold: 0.2
+      multiple_threshold: 0.2
+  repo:
+    - metric: 'recent_releases_count'
+      repo_threshold: 12
+      multiple_threshold: 12
+  contributor:
+    - metric: 'contributor_count' 
+      repo_threshold: 2000
+      multiple_threshold: 2200
+    - metric: 'code_contributor_count' 
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'org_contributor_count'
+      repo_threshold: 300
+      multiple_threshold: 350
+    - metric: 'bus_factor'
+      repo_threshold: 5
+      multiple_threshold: 5
+    
