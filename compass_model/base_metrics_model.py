@@ -229,7 +229,8 @@ class BaseMetricsModel:
 
     def get_default_metrics_thresholds(self):
         """ Get default thresholds for metrics """
-        thresholds_data = yaml.safe_load(open("compass_metrics/resources/thresholds.yaml"))["metrics_default_threshold"]
+        thresholds_resouces = pkg_resources.resource_string('compass_metrics', 'resources/thresholds.yaml')
+        thresholds_data = yaml.load(thresholds_resouces, Loader=yaml.FullLoader)["metrics_default_threshold"]
         metrics_thresholds_data = {}
         for thresholds_list in thresholds_data.values():
             for thresholds in thresholds_list:
