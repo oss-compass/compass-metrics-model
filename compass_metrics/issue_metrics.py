@@ -14,7 +14,7 @@ def issue_first_reponse(client, issue_index, date, repos_list):
 
     issue_first_reponse = client.search(index=issue_index, body=query_issue_first_reponse_avg)
     if issue_first_reponse["hits"]["total"]["value"] == 0:
-        return None, None
+        return { "issue_first_reponse_avg": None, "issue_first_reponse_mid": None }
     issue_first_reponse_avg = issue_first_reponse['aggregations']["count_of_uuid"]['value']
 
     query_issue_first_reponse_mid = get_uuid_count_query(
@@ -55,7 +55,7 @@ def bug_issue_open_time(client, issue_index, date, repos_list):
     issue_opens_items = client.search(
         index=issue_index, body=query_issue_opens)['hits']['hits']
     if len(issue_opens_items) == 0:
-        return None, None
+        return { "bug_issue_open_time_avg": None, "bug_issue_open_time_mid": None }
     issue_open_time_repo = []
     for item in issue_opens_items:
         if 'state' in item['_source']:
