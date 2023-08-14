@@ -149,7 +149,7 @@ def cache_last_metrics_data(item, last_metrics_data):
     """ Cache last non None metrics, used for decay function """
     cache_metrics = INCREMENT_DECAY_METRICS + DECREASE_DECAY_METRICS
     for metrics in cache_metrics:
-        if metrics in item:
+        if metrics in item and item[metrics]:
             data = [item[metrics], item['grimoire_creation_date']]
             last_metrics_data[metrics] = data
 

@@ -17,7 +17,7 @@ def pr_open_time(client, pr_index, date, repos_list):
     query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     pr_opens_items = client.search(index=pr_index, body=query_pr_opens)['hits']['hits']
     if len(pr_opens_items) == 0:
-        return None, None
+        return { "pr_open_time_avg": None, "pr_open_time_mid": None }
     pr_open_time_repo = []
     for item in pr_opens_items:
         if 'state' in item['_source']:
