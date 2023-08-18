@@ -77,6 +77,12 @@ metrics_default_threshold:
     - metric: 'code_review_ratio'
       repo_threshold: 1
       multiple_threshold: 1
+    - metric: 'pr_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'pr_count_with_review'
+      repo_threshold: 4500
+      multiple_threshold: 6000
     - metric: 'code_merge_ratio'
       repo_threshold: 1
       multiple_threshold: 1

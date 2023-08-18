@@ -119,7 +119,6 @@ def change_request_closure_ratio_recently_period(client, pr_index, date, repos_l
     return result
 
 
-
 def change_request_closure(client, pr_index, from_date, to_date, repos_list):
     """Measures the ratio between the total number of open change requests and the total number
         of closed change requests in the range from_date and to_date"""
@@ -146,21 +145,37 @@ def change_request_closure(client, pr_index, from_date, to_date, repos_list):
 
 
 def code_review_ratio(client, pr_index, date, repos_list):
+    """ Determine the percentage of code commits with at least one reviewer (not PR creator) in the last 90 days. """
+    code_pr_count = pr_count(client, pr_index, date, repos_list)
+    review_count = pr_count_with_review(client, pr_index, date, repos_list)
+    result = {
+        "code_review_ratio": review_count/code_pr_count if code_pr_count > 0 else None
+    }
+    return result
+
+
+def pr_count(client, pr_index, date, repos_list):
+    """ The number of PR created in the last 90 days. """
     query_pr_count = get_uuid_count_query(
         "cardinality", repos_list, "uuid", size=0, from_date=(date-timedelta(days=90)), to_date=date)
-    pr_count = client.search(index=pr_index, body=query_pr_count)[
-        'aggregations']["count_of_uuid"]['value']
+    query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    pr_count = client.search(index=pr_index, body=query_pr_count)['aggregations']["count_of_uuid"]['value']
+    result = {
+        "pr_count": pr_count
+    }
+    return result
+
+
+def pr_count_with_review(client, pr_index, date, repos_list):
+    """ The Number of pr with review in the last 90 days """
     query_pr_body = get_pr_message_count(repos_list, "uuid", "grimoire_creation_date", size=0,
                                          filter_field="num_review_comments_without_bot", from_date=(date-timedelta(days=90)), to_date=date)
     prs = client.search(index=pr_index, body=query_pr_body)[
         'aggregations']["count_of_uuid"]['value']
     result = {
-        "code_review_ratio": prs/pr_count if pr_count > 0 else None,
-        "total_pr": pr_count,
-        "code_review": prs
+        "pr_count_with_review": prs
     }
-    return result
-    
+    return result 
 
 
 def code_merge_ratio(client, pr_index, date, repos_list):
