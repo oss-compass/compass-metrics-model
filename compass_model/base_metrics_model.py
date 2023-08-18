@@ -27,6 +27,11 @@ from compass_metrics.git_metrics import (created_since,
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import (contributor_count,
                                                  code_contributor_count, 
+                                                 commit_contributor_count,
+                                                 pr_authors_contributor_count,
+                                                 pr_review_contributor_count,
+                                                 issue_authors_contributor_count,
+                                                 issue_comments_contributor_count,
                                                  org_contributor_count,
                                                  bus_factor)
 from compass_metrics.issue_metrics import (comment_frequency,
@@ -328,6 +333,11 @@ class BaseMetricsModel:
             # contributor
             "contributor_count": lambda: contributor_count(self.client, self.contributors_index, date, repo_list),
             "code_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "commit_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "pr_authors_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "pr_review_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "issue_authors_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "issue_comments_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
             "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list)
         }

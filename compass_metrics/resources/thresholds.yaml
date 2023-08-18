@@ -82,6 +82,21 @@ metrics_default_threshold:
     - metric: 'code_contributor_count' 
       repo_threshold: 1000
       multiple_threshold: 1000
+    - metric: 'commit_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'pr_authors_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'pr_review_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'issue_authors_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'issue_comments_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
     - metric: 'org_contributor_count'
       repo_threshold: 300
       multiple_threshold: 350
