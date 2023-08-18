@@ -24,6 +24,12 @@ metrics_default_threshold:
     - metric: 'commit_pr_linked_ratio'
       repo_threshold: 1
       multiple_threshold: 1
+    - metric: 'commit_count'
+      repo_threshold: 12850
+      multiple_threshold: 12850
+    - metric: 'commit_pr_linked_count'
+      repo_threshold: 12850
+      multiple_threshold: 12850
     - metric: 'lines_of_code_frequency'
       repo_threshold: 300000
       multiple_threshold: 300000

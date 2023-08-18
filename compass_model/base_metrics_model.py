@@ -21,6 +21,8 @@ from compass_metrics.git_metrics import (created_since,
                                          org_count,
                                          is_maintained,
                                          commit_pr_linked_ratio,
+                                         commit_count,
+                                         commit_pr_linked_count,
                                          lines_of_code_frequency,
                                          org_commit_frequency,
                                          org_contribution_last)
@@ -309,7 +311,9 @@ class BaseMetricsModel:
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
             "is_maintained": lambda: is_maintained(self.client, self.git_index, date, repo_list, self.level),
-            "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.git_index, self.pr_index, date, repo_list),
+            "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.contributors_index, self.git_index, self.pr_index, date, repo_list),
+            "commit_count": lambda: commit_count(self.client, self.contributors_index, date, repo_list),
+            "commit_pr_linked_count": lambda: commit_pr_linked_count(self.client, self.git_index, self.pr_index, date, repo_list),
             "org_commit_frequency": lambda: org_commit_frequency(self.client, self.contributors_index, date, repo_list),
             "org_contribution_last": lambda: org_contribution_last(self.client, self.contributors_index, date, repo_list),
             # issue
@@ -333,11 +337,11 @@ class BaseMetricsModel:
             # contributor
             "contributor_count": lambda: contributor_count(self.client, self.contributors_index, date, repo_list),
             "code_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "commit_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "pr_authors_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "pr_review_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "issue_authors_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "issue_comments_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "commit_contributor_count": lambda: commit_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "pr_authors_contributor_count": lambda: pr_authors_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "pr_review_contributor_count": lambda: pr_review_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "issue_authors_contributor_count": lambda: issue_authors_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "issue_comments_contributor_count": lambda: issue_comments_contributor_count(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
             "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list)
         }
