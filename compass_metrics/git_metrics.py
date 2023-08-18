@@ -279,17 +279,24 @@ def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
 
 def lines_of_code_frequency(client, git_index, date, repos_list):
     """ Determine the average number of lines touched (lines added plus lines removed) per week in the past 90 """
-    def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
-        query_LOC_frequency = get_uuid_count_query(
-            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
-        loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
-            'aggregations']['count_of_uuid']['value']
-        return loc_frequency/12.85
-
     result = {
-        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed'),
-        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added'),
-        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed'),
+        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed')
+    }
+    return result
+
+
+def lines_add_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines added) per week in the past 90 """
+    result = {
+        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added')
+    }
+    return result
+
+
+def lines_remove_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines removed) per week in the past 90 """
+    result = {
+        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed')
     }
     return result
 
@@ -313,3 +320,12 @@ def get_commit_count(from_date, to_date, contributor_list, company=None, is_bot=
                                     get_oldest_date(org["last_date"], to_date_str):
                                 commit_count += 1
     return commit_count
+
+
+def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
+    """ Determine the average number of lines touched per week in the past 90 """
+    query_LOC_frequency = get_uuid_count_query(
+        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+    loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+        'aggregations']['count_of_uuid']['value']
+    return loc_frequency/12.85

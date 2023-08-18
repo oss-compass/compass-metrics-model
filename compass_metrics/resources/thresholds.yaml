@@ -33,6 +33,12 @@ metrics_default_threshold:
     - metric: 'lines_of_code_frequency'
       repo_threshold: 300000
       multiple_threshold: 300000
+    - metric: 'lines_add_of_code_frequency'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+    - metric: 'lines_remove_of_code_frequency'
+      repo_threshold: 300000
+      multiple_threshold: 300000
   issue: 
     - metric: 'issue_first_reponse'
       repo_threshold: 15

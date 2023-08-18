@@ -24,6 +24,8 @@ from compass_metrics.git_metrics import (created_since,
                                          commit_count,
                                          commit_pr_linked_count,
                                          lines_of_code_frequency,
+                                         lines_add_of_code_frequency,
+                                         lines_remove_of_code_frequency,
                                          org_commit_frequency,
                                          org_contribution_last)
 from compass_metrics.repo_metrics import recent_releases_count
@@ -310,6 +312,8 @@ class BaseMetricsModel:
             "updated_since": lambda: updated_since(self.client, self.git_index, date, repo_list),
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
+            "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),
+            "lines_remove_of_code_frequency": lambda: lines_remove_of_code_frequency(self.client, self.git_index, date, repo_list),
             "is_maintained": lambda: is_maintained(self.client, self.git_index, date, repo_list, self.level),
             "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.contributors_index, self.git_index, self.pr_index, date, repo_list),
             "commit_count": lambda: commit_count(self.client, self.contributors_index, date, repo_list),
