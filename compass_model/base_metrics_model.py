@@ -54,6 +54,12 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         pr_time_to_first_response,
                                         change_request_closure_ratio,
                                         change_request_closure_ratio_recently_period,
+                                        total_create_close_pr_count,
+                                        total_pr_count,
+                                        create_close_pr_count,
+                                        code_merge_count_with_non_author,
+                                        code_merge_count,
+                                        pr_issue_linked_count,
                                         )
 from typing import Dict, Any
 
@@ -339,7 +345,13 @@ class BaseMetricsModel:
             "pr_issue_linked_ratio": lambda: pr_issue_linked_ratio(self.client, self.pr_index, self.pr_comments_index, date, repo_list),
             "pr_time_to_first_response": lambda: pr_time_to_first_response(self.client, self.pr_index, date, repo_list),
             "change_request_closure_ratio": lambda: change_request_closure_ratio(self.client, self.pr_index, date, repo_list),
-            "change_request_closure_ratio_recently_period": lambda: change_request_closure_ratio_recently_period(self.client, self.pr_index, date, repo_list),
+            "total_create_close_pr_count": lambda: total_create_close_pr_count(self.client, self.pr_index, date, repo_list),
+            "total_pr_count": lambda: total_pr_count(self.client, self.pr_index, date, repo_list),
+            "create_close_pr_count": lambda: create_close_pr_count(self.client, self.pr_index, date, repo_list),
+            "code_merge_count_with_non_author": lambda: code_merge_count_with_non_author(self.client, self.pr_index, date, repo_list),
+            "code_merge_count": lambda: code_merge_count(self.client, self.pr_index, date, repo_list),
+            "pr_issue_linked_count": lambda: pr_issue_linked_count(self.client, self.pr_index, self.pr_comments_index, date, repo_list),
+
             # repo
             "recent_releases_count": lambda: recent_releases_count(self.client, self.release_index, date, repo_list),
             # contributor

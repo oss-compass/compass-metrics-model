@@ -89,6 +89,24 @@ metrics_default_threshold:
     - metric: 'pr_issue_linked_ratio'
       repo_threshold: 0.2
       multiple_threshold: 0.2
+    - metric: 'total_create_close_pr_count'
+      repo_threshold: 20000
+      multiple_threshold: 20000
+    - metric: 'total_pr_count'
+      repo_threshold: 20000
+      multiple_threshold: 20000
+    - metric: 'create_close_pr_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'code_merge_count_with_non_author'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'code_merge_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'pr_issue_linked_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
   repo:
     - metric: 'recent_releases_count'
       repo_threshold: 12
