@@ -212,8 +212,8 @@ def is_maintained(client, git_index, date, repos_list, level):
 
 def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list):
     """ Determine the percentage of new code commit link pull request in the last 90 days """
-    code_commit_count = commit_count(client, contributors_index, date, repos_list)
-    code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list)
+    code_commit_count = commit_count(client, contributors_index, date, repos_list)["commit_count"]
+    code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list)["commit_pr_linked_count"]
 
     result = {
         'commit_pr_linked_ratio': code_commit_pr_linked_count/code_commit_count if code_commit_count > 0 else None

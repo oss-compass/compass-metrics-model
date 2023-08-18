@@ -97,8 +97,8 @@ def pr_time_to_first_response(client, pr_index, date, repos_list):
 def change_request_closure_ratio(client, pr_index, date, repos_list):
     """Measures the ratio between the total number of open change requests and the total number
     of closed change requests from the beginning to now."""
-    close_pr_count = total_create_close_pr_count(client, pr_index, date, repos_list)
-    pr_count = total_pr_count(client, pr_index, date, repos_list)
+    close_pr_count = total_create_close_pr_count(client, pr_index, date, repos_list)["total_create_close_pr_count"]
+    pr_count = total_pr_count(client, pr_index, date, repos_list)["total_pr_count"]
 
     result = {
         "change_request_closure_ratio": close_pr_count/pr_count if pr_count > 0 else None
@@ -109,19 +109,19 @@ def change_request_closure_ratio(client, pr_index, date, repos_list):
 def change_request_closure_ratio_recently_period(client, pr_index, date, repos_list):
     """Measures the ratio between the total number of open change requests and the total number
     of closed change requests in the last 90 days."""
-    close_pr_count = create_close_pr_count(client, pr_index, date, repos_list)
-    pr_count = pr_count(client, pr_index, date, repos_list)
+    close_pr_count = create_close_pr_count(client, pr_index, date, repos_list)["create_close_pr_count"]
+    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
 
     result = {
-        "change_request_closure_ratio_recently_period": close_pr_count/pr_count if pr_count > 0 else None
+        "change_request_closure_ratio_recently_period": close_pr_count/code_pr_count if code_pr_count > 0 else None
     }
     return result
 
 
 def code_review_ratio(client, pr_index, date, repos_list):
     """ Determine the percentage of code commits with at least one reviewer (not PR creator) in the last 90 days. """
-    code_pr_count = pr_count(client, pr_index, date, repos_list)
-    review_count = pr_count_with_review(client, pr_index, date, repos_list)
+    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
+    review_count = pr_count_with_review(client, pr_index, date, repos_list)["pr_count_with_review"]
     result = {
         "code_review_ratio": review_count/code_pr_count if code_pr_count > 0 else None
     }
@@ -155,8 +155,8 @@ def pr_count_with_review(client, pr_index, date, repos_list):
 
 def code_merge_ratio(client, pr_index, date, repos_list):
     """ Determine the percentage of PR Mergers and PR authors who are not the same person in the last 90 days of commits. """
-    merge_count_with_non_author = code_merge_count_with_non_author(client, pr_index, date, repos_list)
-    merge_count = code_merge_count(client, pr_index, date, repos_list)
+    merge_count_with_non_author = code_merge_count_with_non_author(client, pr_index, date, repos_list)["code_merge_count_with_non_author"]
+    merge_count = code_merge_count(client, pr_index, date, repos_list)["code_merge_count"]
     
     result = {
         "code_merge_ratio": merge_count_with_non_author/merge_count if merge_count > 0 else None
@@ -166,8 +166,8 @@ def code_merge_ratio(client, pr_index, date, repos_list):
 
 def pr_issue_linked_ratio(client, pr_index, pr_comments_index, date, repos_list):
     """ Determine the percentage of new pull request link issues in the last 90 days. """
-    code_pr_count = pr_count(client, pr_index, date, repos_list)
-    code_pr_issue_linked_count = pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list)
+    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
+    code_pr_issue_linked_count = pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list)["pr_issue_linked_count"]
     result = {
         "pr_issue_linked_ratio": code_pr_issue_linked_count/code_pr_count if code_pr_count > 0 else None
     }
