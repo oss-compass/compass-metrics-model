@@ -47,34 +47,14 @@ def updated_since(client, git_index, date, repo_list):
 
 def commit_frequency(client, contributors_index, date, repo_list):
     """ Determine the average number of commits per week in the past 90 days. """
-    def get_commit_frequency(from_date, to_date, contributor_list, company=None, is_bot=None):
-        from_date_str = from_date.strftime("%Y-%m-%d")
-        to_date_str = to_date.strftime("%Y-%m-%d")
-        commit_count = 0
-        for contributor in contributor_list:
-            if is_bot is None or contributor["is_bot"] == is_bot:
-                if company is None:
-                    for commit_date in contributor["code_commit_date_list"]:
-                        if from_date_str <= commit_date <= to_date_str:
-                            commit_count += 1
-                else:
-                    for org in contributor["org_change_date_list"]:
-                        if org.get("org_name") is not None and org.get("org_name") == company and \
-                                check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
-                            for commit_date in contributor["code_commit_date_list"]:
-                                if get_latest_date(from_date_str, org["first_date"]) <= commit_date < \
-                                        get_oldest_date(org["last_date"], to_date_str):
-                                    commit_count += 1
-        return commit_count/12.85
-
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
                                                    "code_commit_date_list")
     result = {
-        'commit_frequency': get_commit_frequency(from_date, to_date, commit_contributor_list),
-        'commit_frequency_bot': get_commit_frequency(from_date, to_date, commit_contributor_list, is_bot=True),
-        'commit_frequency_without_bot': get_commit_frequency(from_date, to_date, commit_contributor_list, is_bot=False)
+        'commit_frequency': get_commit_count(from_date, to_date, commit_contributor_list)/12.85,
+        'commit_frequency_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True)/12.85,
+        'commit_frequency_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)/12.85
     }
     return result
 
@@ -230,7 +210,33 @@ def is_maintained(client, git_index, date, repos_list, level):
     return result
 
 
-def commit_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
+def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list):
+    """ Determine the percentage of new code commit link pull request in the last 90 days """
+    code_commit_count = commit_count(client, contributors_index, date, repos_list)["commit_count"]
+    code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list)["commit_pr_linked_count"]
+
+    result = {
+        'commit_pr_linked_ratio': code_commit_pr_linked_count/code_commit_count if code_commit_count > 0 else None
+    }
+    return result
+
+
+def commit_count(client, contributors_index, date, repo_list):
+    """ Determine the number of commits in the past 90 days. """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_commit_date_list")
+    result = {
+        'commit_count': get_commit_count(from_date, to_date, commit_contributor_list),
+        'commit_count_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True),
+        'commit_count_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)
+    }
+    return result
+
+
+def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
+    """ Determine the numbers of new code commit link pull request in the last 90 days. """
     commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
     commits_without_merge_pr = {
         "bool": {
@@ -266,25 +272,60 @@ def commit_pr_linked_ratio(client, git_index, pr_index, date, repos_list):
                 commit_message_dict[commit_hash] = 0
 
     result = {
-        'commit_pr_linked_ratio': commit_pr_cout/len(commit_all_message) if commit_count > 0 else None,
-        'commit_pr': len(commit_all_message),
-        'commit_pr_linked': commit_pr_cout if commit_count > 0 else None
+        'commit_pr_linked_count': commit_pr_cout if commit_count > 0 else None
     }
     return result
 
 
 def lines_of_code_frequency(client, git_index, date, repos_list):
     """ Determine the average number of lines touched (lines added plus lines removed) per week in the past 90 """
-    def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
-        query_LOC_frequency = get_uuid_count_query(
-            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
-        loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
-            'aggregations']['count_of_uuid']['value']
-        return loc_frequency/12.85
-
     result = {
-        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed'),
-        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added'),
-        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed'),
+        "lines_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_changed')
     }
     return result
+
+
+def lines_add_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines added) per week in the past 90 """
+    result = {
+        "lines_add_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_added')
+    }
+    return result
+
+
+def lines_remove_of_code_frequency(client, git_index, date, repos_list):
+    """ Determine the average number of lines touched (lines removed) per week in the past 90 """
+    result = {
+        "lines_remove_of_code_frequency": LOC_frequency(client, git_index, date, repos_list, 'lines_removed')
+    }
+    return result
+
+
+def get_commit_count(from_date, to_date, contributor_list, company=None, is_bot=None):
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    commit_count = 0
+    for contributor in contributor_list:
+        if is_bot is None or contributor["is_bot"] == is_bot:
+            if company is None:
+                for commit_date in contributor["code_commit_date_list"]:
+                    if from_date_str <= commit_date <= to_date_str:
+                        commit_count += 1
+            else:
+                for org in contributor["org_change_date_list"]:
+                    if org.get("org_name") is not None and org.get("org_name") == company and \
+                            check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                        for commit_date in contributor["code_commit_date_list"]:
+                            if get_latest_date(from_date_str, org["first_date"]) <= commit_date < \
+                                    get_oldest_date(org["last_date"], to_date_str):
+                                commit_count += 1
+    return commit_count
+
+
+def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
+    """ Determine the average number of lines touched per week in the past 90 """
+    query_LOC_frequency = get_uuid_count_query(
+        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+    loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+        'aggregations']['count_of_uuid']['value']
+    return loc_frequency/12.85

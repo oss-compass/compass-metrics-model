@@ -24,7 +24,19 @@ metrics_default_threshold:
     - metric: 'commit_pr_linked_ratio'
       repo_threshold: 1
       multiple_threshold: 1
+    - metric: 'commit_count'
+      repo_threshold: 12850
+      multiple_threshold: 12850
+    - metric: 'commit_pr_linked_count'
+      repo_threshold: 12850
+      multiple_threshold: 12850
     - metric: 'lines_of_code_frequency'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+    - metric: 'lines_add_of_code_frequency'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+    - metric: 'lines_remove_of_code_frequency'
       repo_threshold: 300000
       multiple_threshold: 300000
   issue: 
@@ -65,12 +77,36 @@ metrics_default_threshold:
     - metric: 'code_review_ratio'
       repo_threshold: 1
       multiple_threshold: 1
+    - metric: 'pr_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'pr_count_with_review'
+      repo_threshold: 4500
+      multiple_threshold: 6000
     - metric: 'code_merge_ratio'
       repo_threshold: 1
       multiple_threshold: 1
     - metric: 'pr_issue_linked_ratio'
       repo_threshold: 0.2
       multiple_threshold: 0.2
+    - metric: 'total_create_close_pr_count'
+      repo_threshold: 20000
+      multiple_threshold: 20000
+    - metric: 'total_pr_count'
+      repo_threshold: 20000
+      multiple_threshold: 20000
+    - metric: 'create_close_pr_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'code_merge_count_with_non_author'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'code_merge_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
+    - metric: 'pr_issue_linked_count'
+      repo_threshold: 4500
+      multiple_threshold: 6000
   repo:
     - metric: 'recent_releases_count'
       repo_threshold: 12
@@ -80,6 +116,21 @@ metrics_default_threshold:
       repo_threshold: 2000
       multiple_threshold: 2200
     - metric: 'code_contributor_count' 
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'commit_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'pr_authors_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'pr_review_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'issue_authors_contributor_count'
+      repo_threshold: 1000
+      multiple_threshold: 1000
+    - metric: 'issue_comments_contributor_count'
       repo_threshold: 1000
       multiple_threshold: 1000
     - metric: 'org_contributor_count'
