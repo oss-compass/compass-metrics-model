@@ -77,7 +77,9 @@ INCREMENT_DECAY_METRICS = ["issue_first_reponse_avg",
                            "bug_issue_open_time_avg",
                            "bug_issue_open_time_mid",
                            "pr_open_time_avg",
-                           "pr_open_time_mid"]
+                           "pr_open_time_mid",
+                           "pr_time_to_first_response_avg",
+                           "pr_time_to_first_response_mid"]
 DECREASE_DECAY_METRICS = ["comment_frequency",
                           "code_review_count",
                           "code_merge_ratio",
