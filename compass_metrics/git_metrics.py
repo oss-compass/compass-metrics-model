@@ -3,9 +3,9 @@
 from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_uuid_count_query)
 from compass_metrics.contributor_metrics import get_contributor_list
-from compass_common.datetime import (get_time_diff_months, 
-                                    check_times_has_overlap, 
-                                    get_oldest_date, 
+from compass_common.datetime import (get_time_diff_months,
+                                    check_times_has_overlap,
+                                    get_oldest_date,
                                     get_latest_date,
                                     get_date_list)
 from datetime import timedelta
@@ -216,7 +216,7 @@ def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date
     code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list)["commit_pr_linked_count"]
 
     result = {
-        'commit_pr_linked_ratio': code_commit_pr_linked_count/code_commit_count if code_commit_count > 0 else None
+        'commit_pr_linked_ratio': code_commit_pr_linked_count/code_commit_count if code_commit_pr_linked_count and code_commit_count > 0 else None
     }
     return result
 
