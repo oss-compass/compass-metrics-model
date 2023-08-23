@@ -84,6 +84,11 @@ DECREASE_DECAY_METRICS = ["comment_frequency",
                           "code_review_ratio",
                           "pr_issue_linked_ratio",
                           "git_pr_linked_ratio"]
+NEGATICE_METRICS=["updated_since",
+                  "issue_first_reponse",
+                  "bug_issue_open_time",
+                  "pr_open_time",
+                  "pr_time_to_first_response"]   
 
 
 def get_dict_hash(dictionary: Dict[str, Any]) -> str:
@@ -231,6 +236,9 @@ class BaseMetricsModel:
             for metrics, weights_thresholds in metrics_weights_thresholds.items():
                 if weights_thresholds["threshold"] is None:
                     weights_thresholds["threshold"] = default_metrics_thresholds[metrics]
+                weights_thresholds["weight"] = abs(weights_thresholds["weight"])
+                if metrics in NEGATICE_METRICS:
+                    weights_thresholds["weight"] = -weights_thresholds["weight"]
             self.metrics_weights_thresholds = metrics_weights_thresholds
             self.metrics_weights_thresholds_hash = get_dict_hash(metrics_weights_thresholds)
         else:
