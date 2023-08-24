@@ -466,3 +466,58 @@ def get_message_list_query(field="tag", field_values=[], date_field="grimoire_cr
     if len(search_after) > 0:
         query['search_after'] = search_after
     return query
+
+
+def get_updated_issues_count_query(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    """ Query statement for counting the number of issue updates according to conditions """
+    query = {
+        "size": 0,
+        "track_total_hits": "true",
+        "aggs": {
+            "count_of_uuid": {
+                "cardinality": {
+                    "field": "issue_id"
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "tag": repo_list
+                        }
+                    },
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "range": {
+                                        "issue_updated_at": {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                },
+                                {
+                                    "range": {
+                                        "comment_updated_at": {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                }
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "issue_pull_request": "false"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query

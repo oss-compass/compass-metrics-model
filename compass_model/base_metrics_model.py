@@ -343,7 +343,7 @@ class BaseMetricsModel:
             "bug_issue_open_time": lambda: bug_issue_open_time(self.client, self.issue_index, date, repo_list),
             "comment_frequency": lambda: comment_frequency(self.client, self.issue_index, date, repo_list),
             "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
-            "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_index, date, repo_list),
+            "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_comments_index, date, repo_list),
             # pr
             "pr_open_time": lambda: pr_open_time(self.client, self.issue_index, date, repo_list),
             "close_pr_count": lambda: close_pr_count(self.client, self.issue_index, date, repo_list),
