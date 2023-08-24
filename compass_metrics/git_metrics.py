@@ -181,12 +181,13 @@ def org_contribution_last(client, contributors_index, date, repo_list):
 
 def is_maintained(client, git_index, date, repos_list, level):
     is_maintained_list = []
+    git_repos_list = [repo_url+'.git' for repo_url in repos_list]
     if level == "repo":
         date_list_maintained = get_date_list(begin_date=str(
             date-timedelta(days=90)), end_date=str(date), freq='7D')
         for day in date_list_maintained:
             query_git_commit_i = get_uuid_count_query(
-                "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
+                "cardinality", git_repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
             commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)[
                 'aggregations']["count_of_uuid"]['value']
             if commit_frequency_i > 0:
@@ -195,8 +196,8 @@ def is_maintained(client, git_index, date, repos_list, level):
                 is_maintained_list.append("False")
 
     elif level in ["project", "community"]:
-        for repo in repos_list:
-            query_git_commit_i = get_uuid_count_query("cardinality",[repo+'.git'], "hash",from_date=date-timedelta(days=30), to_date=date)
+        for repo in git_repos_list:
+            query_git_commit_i = get_uuid_count_query("cardinality", repo, "hash",from_date=date-timedelta(days=30), to_date=date)
             commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
             if commit_frequency_i > 0:
                 is_maintained_list.append("True")
@@ -308,8 +309,9 @@ def get_commit_count(from_date, to_date, contributor_list, company=None, is_bot=
 
 def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
     """ Determine the average number of lines touched per week in the past 90 """
+    git_repos_list = [repo_url+'.git' for repo_url in repos_list]
     query_LOC_frequency = get_uuid_count_query(
-        'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+        'sum', git_repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
     loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
         'aggregations']['count_of_uuid']['value']
     return loc_frequency/12.85

@@ -235,7 +235,7 @@ def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation
                             "should": [
                                 {
                                     "simple_query_string": {
-                                        "query": i + "*",
+                                        "query": i,
                                         "fields": ["tag"]
                                     }
                                 } for i in repo_list
