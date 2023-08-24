@@ -1,7 +1,8 @@
 """ Set of git related metrics """
 
 from compass_metrics.db_dsl import (get_updated_since_query,
-                                    get_uuid_count_query)
+                                    get_uuid_count_query,
+                                    get_message_list_query)
 from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
@@ -9,6 +10,8 @@ from compass_common.datetime import (get_time_diff_months,
                                     get_latest_date,
                                     get_date_list)
 from datetime import timedelta
+import numpy as np
+import math
 
 
 def created_since(client, git_index, date, repo_list):
@@ -237,42 +240,23 @@ def commit_count(client, contributors_index, date, repo_list):
 
 def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
     """ Determine the numbers of new code commit link pull request in the last 90 days. """
-    commit_frequency = get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
-    commits_without_merge_pr = {
-        "bool": {
-            "should": [{"script": {
-                "script": "if (doc.containsKey('message') && doc['message'].size()>0 &&doc['message'].value.indexOf('Merge pull request') == -1){return true}"
-            }
-            }],
-            "minimum_should_match": 1}
-    }
-    commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr)
-    commit_message = client.search(index=git_index, body=commit_frequency)
-    commit_message_dict = {}
-    commit_count = commit_message['aggregations']["count_of_uuid"]['value']
-    commit_pr_cout = 0
-    commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
-
-    for commit_message_i in set(commit_all_message):
-        commit_hash = commit_message_i
-        if commit_hash in commit_message_dict:
-            commit_pr_cout += commit_message_dict[commit_hash]
-        else:
-            pr_message = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0)
-            commit_hash_query = { "bool": {"should": [ {"match_phrase": {"commits_data": commit_hash} }],
-                                    "minimum_should_match": 1
-                                }
-                            }
-            pr_message["query"]["bool"]["must"].append(commit_hash_query)
-            prs = client.search(index=pr_index, body=pr_message)
-            if prs['aggregations']["count_of_uuid"]['value']>0:
-                commit_message_dict[commit_hash] = 1
-                commit_pr_cout += 1
-            else:
-                commit_message_dict[commit_hash] = 0
+    repo_git_list = [repo+".git" for repo in repos_list]
+    commit_message_list = get_message_list(client, git_index, date - timedelta(days=90), date, repo_git_list)
+    commit_hash_set = {message["hash"] for message in commit_message_list}
+    commit_hash_list = list(commit_hash_set)
+    if len(commit_hash_list) == 0:
+        return {'commit_pr_linked_count': 0}
+    sub_commit_hash_list = np.array_split(commit_hash_list, math.ceil(len(commit_hash_list) / 100))
+    pr_commits_data_set = set()
+    for sublist in sub_commit_hash_list:
+        pr_message_query = get_message_list_query(field="commits_data", field_values=list(sublist), size=100)
+        pr_message_list = client.search(index=pr_index, body=pr_message_query)['hits']['hits']
+        for pr_message in pr_message_list:
+            pr_commits_data_set = pr_commits_data_set.union(set(pr_message['_source']['commits_data']))
+    linked_count = commit_hash_set & pr_commits_data_set
 
     result = {
-        'commit_pr_linked_count': commit_pr_cout if commit_count > 0 else None
+        'commit_pr_linked_count': len(linked_count)
     }
     return result
 
@@ -329,3 +313,19 @@ def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
     loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
         'aggregations']['count_of_uuid']['value']
     return loc_frequency/12.85
+
+
+
+def get_message_list(client, index_name, from_date, to_date, repo_list):
+    """ Getting a list of message data in the from_date,to_date time period. """
+    result_list = []
+    search_after = []
+    while True:
+        query = get_message_list_query(field_values=repo_list, size=500, from_date=from_date, to_date=to_date,
+                                       search_after=search_after)
+        message_list = client.search(index=index_name, body=query)["hits"]["hits"]
+        if len(message_list) == 0:
+            break
+        search_after = message_list[len(message_list) - 1]["sort"]
+        result_list = result_list + [message["_source"] for message in message_list]
+    return result_list
