@@ -5,11 +5,11 @@ from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_message_list_query,
                                     get_repo_message_query)
 from compass_metrics.contributor_metrics import get_contributor_list
-from compass_common.datetime import (get_time_diff_months, 
-                                    check_times_has_overlap, 
-                                    get_oldest_date, 
-                                    get_latest_date,
-                                    get_date_list)
+from compass_common.datetime import (get_time_diff_months,
+                                     check_times_has_overlap,
+                                     get_oldest_date,
+                                     get_latest_date,
+                                     get_date_list)
 from datetime import timedelta
 import numpy as np
 import math
