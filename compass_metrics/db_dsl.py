@@ -235,7 +235,7 @@ def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation
                             "should": [
                                 {
                                     "simple_query_string": {
-                                        "query": i + "*",
+                                        "query": i,
                                         "fields": ["tag"]
                                     }
                                 } for i in repo_list
@@ -420,6 +420,100 @@ def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_
                                 "gte": from_date.strftime("%Y-%m-%d"),
                                 "lt": to_date.strftime("%Y-%m-%d")
                             }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    return query
+
+
+def get_message_list_query(field="tag", field_values=[], date_field="grimoire_creation_date", size=0,
+                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow(), search_after=[]):
+    """ Getting a list of message data according to conditions """
+    query = {
+        "size": size,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            field: field_values
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range": {
+                            date_field: {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "sort": [
+            {
+                "_id": {
+                    "order": "asc"
+                }
+            }
+        ]
+    }
+    if len(search_after) > 0:
+        query['search_after'] = search_after
+    return query
+
+
+def get_updated_issues_count_query(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+    """ Query statement for counting the number of issue updates according to conditions """
+    query = {
+        "size": 0,
+        "track_total_hits": "true",
+        "aggs": {
+            "count_of_uuid": {
+                "cardinality": {
+                    "field": "issue_id"
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "tag": repo_list
+                        }
+                    },
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "range": {
+                                        "issue_updated_at": {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                },
+                                {
+                                    "range": {
+                                        "comment_updated_at": {
+                                            "gte": from_date.strftime("%Y-%m-%d"),
+                                            "lt": to_date.strftime("%Y-%m-%d")
+                                        }
+                                    }
+                                }
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "issue_pull_request": "false"
                         }
                     }
                 ]

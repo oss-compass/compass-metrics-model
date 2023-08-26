@@ -327,7 +327,7 @@ class BaseMetricsModel:
             # git metadata
             "commit_frequency": lambda: commit_frequency(self.client, self.contributors_index, date, repo_list),
             "created_since": lambda: created_since(self.client, self.git_index, date, repo_list),
-            "updated_since": lambda: updated_since(self.client, self.git_index, date, repo_list),
+            "updated_since": lambda: updated_since(self.client, self.git_index, self.repo_index, date, repo_list, self.level),
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),
@@ -343,7 +343,7 @@ class BaseMetricsModel:
             "bug_issue_open_time": lambda: bug_issue_open_time(self.client, self.issue_index, date, repo_list),
             "comment_frequency": lambda: comment_frequency(self.client, self.issue_index, date, repo_list),
             "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
-            "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_index, date, repo_list),
+            "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_comments_index, date, repo_list),
             # pr
             "pr_open_time": lambda: pr_open_time(self.client, self.issue_index, date, repo_list),
             "close_pr_count": lambda: close_pr_count(self.client, self.issue_index, date, repo_list),

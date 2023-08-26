@@ -1,6 +1,6 @@
 """ Set of issue related metrics """
 
-from compass_metrics.db_dsl import get_uuid_count_query
+from compass_metrics.db_dsl import get_uuid_count_query, get_updated_issues_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
@@ -108,13 +108,10 @@ def closed_issues_count(client, issue_index, date, repo_list):
     return result
 
 
-def updated_issues_count(client, issue_index, date, repo_list):
+def updated_issues_count(client, issue_comments_index, date, repo_list):
     """ Determine the number of issues updated in the last 90 days. """
-    query_issue_updated_since = get_uuid_count_query("cardinality", repo_list, "uuid",
-                                                     date_field='metadata__updated_on', size=0,
-                                                     from_date=(date-timedelta(days=90)), to_date=date)
-    query_issue_updated_since["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
-    issues_count = client.search(index=issue_index, body=query_issue_updated_since)[
+    updated_issues_count_query = get_updated_issues_count_query(repo_list, date-timedelta(days=90), date)
+    issues_count = client.search(index=issue_comments_index, body=updated_issues_count_query)[
         'aggregations']["count_of_uuid"]['value']
     result = {
         'updated_issues_count': issues_count
