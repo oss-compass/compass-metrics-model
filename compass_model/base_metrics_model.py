@@ -327,7 +327,7 @@ class BaseMetricsModel:
             # git metadata
             "commit_frequency": lambda: commit_frequency(self.client, self.contributors_index, date, repo_list),
             "created_since": lambda: created_since(self.client, self.git_index, date, repo_list),
-            "updated_since": lambda: updated_since(self.client, self.git_index, date, repo_list),
+            "updated_since": lambda: updated_since(self.client, self.git_index, self.repo_index, date, repo_list, self.level),
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),

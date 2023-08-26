@@ -2,7 +2,8 @@
 
 from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_uuid_count_query,
-                                    get_message_list_query)
+                                    get_message_list_query,
+                                    get_repo_message_query)
 from compass_metrics.contributor_metrics import get_contributor_list
 from compass_common.datetime import (get_time_diff_months, 
                                     check_times_has_overlap, 
@@ -32,10 +33,19 @@ def created_since(client, git_index, date, repo_list):
     return result
 
 
-def updated_since(client, git_index, date, repo_list):
+def updated_since(client, git_index, repo_index, date, repo_list, level):
     """ Determine the average time per repository since the repository was last updated (in months). """
     updated_since_list = []
     for repo in repo_list:
+        if level in ["project", "community"]:
+            repo_message_query = get_repo_message_query(repo)
+            repo_message_list = client.search(index=repo_index, body=repo_message_query)['hits']['hits']
+            if len(repo_message_list) > 0:
+                repo_message = repo_message_list[0]['_source']
+                archived_at = repo_message.get('archivedAt')
+                if archived_at is not None and archived_at < date.strftime("%Y-%m-%d"):
+                    continue
+
         query_updated_since = get_updated_since_query(
             [repo], date_field='metadata__updated_on', to_date=date)
         updated_since = client.search(index=git_index, body=query_updated_since)['hits']['hits']
@@ -43,7 +53,7 @@ def updated_since(client, git_index, date, repo_list):
             updated_since_list.append(get_time_diff_months(
                 updated_since[0]['_source']["metadata__updated_on"], str(date)))
     result = {
-        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if updated_since_list else 0
+        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if len(updated_since_list) > 0 else None
     }
     return result
 
