@@ -207,7 +207,7 @@ def is_maintained(client, git_index, date, repos_list, level):
 
     elif level in ["project", "community"]:
         for repo in git_repos_list:
-            query_git_commit_i = get_uuid_count_query("cardinality", repo, "hash",from_date=date-timedelta(days=30), to_date=date)
+            query_git_commit_i = get_uuid_count_query("cardinality", [repo], "hash",from_date=date-timedelta(days=30), to_date=date)
             commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
             if commit_frequency_i > 0:
                 is_maintained_list.append("True")

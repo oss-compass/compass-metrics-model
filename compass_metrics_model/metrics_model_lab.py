@@ -55,7 +55,7 @@ class StarterProjectHealthMetricsModel(MetricsModel):
             'aggregations']["count_of_uuid"]['value']
 
         pr_closed_dsl = pr_total_dsl
-        pr_closed_dsl["query"]["bool"]["must"][0]["bool"]["filter"].append({
+        pr_closed_dsl["query"]["bool"]["filter"].append({
                                         "range": {
                                             "closed_at": {
                                                 "gte": from_date.strftime("%Y-%m-%d"),

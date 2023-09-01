@@ -183,7 +183,7 @@ def total_create_close_pr_count(client, pr_index, date, repos_list):
     pr_total_dsl["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
 
     pr_closed_dsl = pr_total_dsl
-    pr_closed_dsl["query"]["bool"]["must"][0]["bool"]["filter"].append({
+    pr_closed_dsl["query"]["bool"]["filter"].append({
                                     "range": {
                                         "closed_at": {
                                             "gte": from_date.strftime("%Y-%m-%d"),
@@ -220,7 +220,7 @@ def create_close_pr_count(client, pr_index, date, repos_list):
     pr_total_dsl["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
 
     pr_closed_dsl = pr_total_dsl
-    pr_closed_dsl["query"]["bool"]["must"][0]["bool"]["filter"].append({
+    pr_closed_dsl["query"]["bool"]["filter"].append({
                                     "range": {
                                         "closed_at": {
                                             "gte": from_date.strftime("%Y-%m-%d"),

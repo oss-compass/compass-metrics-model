@@ -427,26 +427,18 @@ class MetricsModel:
                 "bool": {
                     "must": [
                         {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "simple_query_string": {
-                                            "query": i + "*",
-                                            "fields": ["tag"]
-                                        }
-                                    } for i in repos_list
-                                ],
-                                "minimum_should_match": 1,
-                                "filter": [
-                                    {
-                                        "range": {
-                                            date_field: {
-                                                "gte": from_date.strftime("%Y-%m-%d"),
-                                                "lt": to_date.strftime("%Y-%m-%d")
-                                            }
-                                        }
-                                    }
-                                ]
+                            "terms": {
+                                "tag": repos_list
+                            }
+                        }
+                    ],
+                    "filter": [
+                        {
+                            "range": {
+                                date_field: {
+                                    "gte": from_date.strftime("%Y-%m-%d"),
+                                    "lt": to_date.strftime("%Y-%m-%d")
+                                }
                             }
                         }
                     ]
@@ -495,16 +487,13 @@ class MetricsModel:
             },
             "query": {
                 "bool": {
-                    "must": [{
-                        "bool": {
-                            "should": [{
-                                "simple_query_string": {
-                                    "query": i,
-                                    "fields": ["tag"]
-                                }}for i in repos_list],
-                            "minimum_should_match": 1
+                    "must": [
+                        {
+                            "terms": {
+                                "tag": repos_list
+                            }
                         }
-                    }],
+                    ],
                     "must_not": [
                         {"term": {"state": "open"}},
                         {"term": {"state": "progressing"}}
@@ -536,21 +525,17 @@ class MetricsModel:
             },
             "query": {
                 "bool": {
-                    "must": [{
-                        "bool": {
-                            "should": [{
-                                "simple_query_string": {
-                                    "query": i,
-                                    "fields": ["tag"]
-                                }}for i in repos_list],
-                            "minimum_should_match": 1
-                        }
-                    },
+                    "must": [
                         {
-                        "match_phrase": {
-                            "pull_request": "true"
+                            "terms": {
+                                "tag": repos_list
+                            }
+                        },
+                        {
+                            "match_phrase": {
+                                "pull_request": "true"
+                            }
                         }
-                    }
                     ],
                     "must_not": [
                         {"term": {"state": "open"}},
@@ -583,16 +568,12 @@ class MetricsModel:
             },
             "query": {
                 "bool": {
-                    "must": [{
-                        "bool": {
-                            "should": [{
-                                "simple_query_string": {
-                                    "query": i,
-                                    "fields": ["tag.keyword"]
-                                }}for i in repos_list],
-                            "minimum_should_match": 1
+                    "must": [
+                        {
+                            "terms": {
+                                "tag.keyword": repos_list
+                            }
                         }
-                    }
                     ],
                     "filter": {
                         "range": {
@@ -1106,13 +1087,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 "bool": {
                     "must": [
                         {
-                            "bool": {
-                                "should": [{
-                                    "simple_query_string": {
-                                        "query": i,
-                                        "fields": ["tag"]
-                                    }}for i in repos_list],
-                                "minimum_should_match": 1
+                            "terms": {
+                                "tag": repos_list
                             }
                         },
                         {
@@ -1182,18 +1158,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                     "minimum_should_match": 1,
                     "must": [
                         {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "simple_query_string": {
-                                            "query": repo,
-                                            "fields": [
-                                                "tag"
-                                            ]
-                                        }
-                                    }
-                                ],
-                                "minimum_should_match": 1
+                            "term": {
+                                "tag": repo
                             }
                         }
                     ],
@@ -1214,12 +1180,13 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
     def is_maintained(self, date, repos_list, level):
         is_maintained_list = []
+        git_repos_list = [repo_url + ".git" for repo_url in repos_list]
         if level == "repo":
             date_list_maintained = get_date_list(begin_date=str(
                 date-timedelta(days=90)), end_date=str(date), freq='7D')
             for day in date_list_maintained:
                 query_git_commit_i = self.get_uuid_count_query(
-                    "cardinality", repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
+                    "cardinality", git_repos_list, "hash", size=0, from_date=day-timedelta(days=7), to_date=day)
                 commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)[
                     'aggregations']["count_of_uuid"]['value']
                 if commit_frequency_i > 0:
@@ -1228,8 +1195,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                     is_maintained_list.append("False")
 
         elif level in ["project", "community"]:
-            for repo in repos_list:
-                query_git_commit_i = self.get_uuid_count_query("cardinality",[repo+'.git'], "hash",from_date=date-timedelta(days=30), to_date=date)
+            for repo in git_repos_list:
+                query_git_commit_i = self.get_uuid_count_query("cardinality",[repo], "hash",from_date=date-timedelta(days=30), to_date=date)
                 commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
                 if commit_frequency_i > 0:
                     is_maintained_list.append("True")
@@ -1241,8 +1208,9 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             return 0
 
     def LOC_frequency(self, date, repos_list, field='lines_changed'):
+        git_repos_list = [repo_url + ".git" for repo_url in repos_list]
         query_LOC_frequency = self.get_uuid_count_query(
-            'sum', repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
+            'sum', git_repos_list, field, 'grimoire_creation_date', size=0, from_date=date-timedelta(days=90), to_date=date)
         LOC_frequency = self.es_in.search(index=self.git_index, body=query_LOC_frequency)[
             'aggregations']['count_of_uuid']['value']
         return LOC_frequency/12.85
@@ -1263,7 +1231,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
 
     def git_pr_linked_ratio(self, date, repos_list):
-        commit_frequency = self.get_uuid_count_query("cardinality", repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
+        git_repos_list = [repo_url + ".git" for repo_url in repos_list]
+        commit_frequency = self.get_uuid_count_query("cardinality", git_repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
         commits_without_merge_pr = {
             "bool": {
                 "should": [{"script": {
