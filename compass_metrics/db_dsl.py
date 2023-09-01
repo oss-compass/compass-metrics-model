@@ -231,26 +231,18 @@ def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation
             "bool": {
                 "must": [
                     {
-                        "bool": {
-                            "should": [
-                                {
-                                    "simple_query_string": {
-                                        "query": i,
-                                        "fields": ["tag"]
-                                    }
-                                } for i in repo_list
-                            ],
-                            "minimum_should_match": 1,
-                            "filter": [
-                                {
-                                    "range": {
-                                        date_field: {
-                                            "gte": from_date.strftime("%Y-%m-%d"),
-                                            "lt": to_date.strftime("%Y-%m-%d")
-                                        }
-                                    }
-                                }
-                            ]
+                        "terms": {
+                            "tag": repo_list
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range": {
+                            date_field: {
+                                "gte": from_date.strftime("%Y-%m-%d"),
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
                         }
                     }
                 ]
@@ -273,16 +265,12 @@ def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetim
         },
         "query": {
             "bool": {
-                "must": [{
-                    "bool": {
-                        "should": [{
-                            "simple_query_string": {
-                                "query": i,
-                                "fields": ["tag"]
-                            }}for i in repos_list],
-                        "minimum_should_match": 1
-                    }
-                },
+                "must": [
+                    {
+                        "terms": {
+                            "tag": repos_list
+                        }
+                    },
                     {
                     "match_phrase": {
                         "pull_request": "true"
@@ -323,13 +311,8 @@ def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date",
             "bool": {
                 "must": [
                     {
-                        "bool": {
-                            "should": [{
-                                "simple_query_string": {
-                                    "query": i,
-                                    "fields": ["tag"]
-                                }}for i in repos_list],
-                            "minimum_should_match": 1
+                        "terms": {
+                            "tag": repos_list
                         }
                     },
                     {
@@ -398,20 +381,10 @@ def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_
                 "minimum_should_match": 1,
                 "must": [
                     {
-                        "bool": {
-                            "should": [
-                                {
-                                    "simple_query_string": {
-                                        "query": repo,
-                                        "fields": [
-                                            "tag"
-                                        ]
-                                    }
-                                }
-                            ],
-                            "minimum_should_match": 1
+                        "term": {
+                            "tag": repo
                         }
-                    }
+                    }  
                 ],
                 "filter": [
                     {

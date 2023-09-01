@@ -85,7 +85,7 @@ DECREASE_DECAY_METRICS = ["comment_frequency",
                           "code_merge_ratio",
                           "code_review_ratio",
                           "pr_issue_linked_ratio",
-                          "git_pr_linked_ratio"]
+                          "commit_pr_linked_ratio"]
 NEGATICE_METRICS=["updated_since",
                   "issue_first_reponse",
                   "bug_issue_open_time",
