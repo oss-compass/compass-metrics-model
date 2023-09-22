@@ -3,7 +3,7 @@
 
 index : gitee-git_raw, github-git_raw
 
-```json
+```
  {
     "_index" : "gitee-git_raw",  //index名称
     "_id" : "bb6658ca89bdb1109d125b2d2b73051ea469bf50",  //id
@@ -73,7 +73,7 @@ index : gitee-git_raw, github-git_raw
 
 index : gitee-repo_raw, github-repo_raw
 
-```json
+```
 {
   "_index" : "gitee-repo_raw",   //index名称
   "_id" : "258d5cf635e3f38c5699161cb4ff9904f4db4d7f",  //id
@@ -291,7 +291,7 @@ index : gitee-repo_raw, github-repo_raw
 
 index : gitee-issues_raw, github-issues_raw
 
-```json
+```
 
 {
     "_index" : "gitee-issues_raw",  //index名称
@@ -751,7 +751,7 @@ index : gitee-issues_raw, github-issues_raw
 
 index : gitee-pulls_raw, github-pulls_raw
 
-```json
+```
 {
     "_index" : "gitee-pulls_raw",  //index名称
     "_id" : "25d9276042074629b6bc8b46e7d18aecc52bc42f",  //id
@@ -1189,7 +1189,7 @@ index : gitee-pulls_raw, github-pulls_raw
 
 index : gitee-git_enriched, github-git_enriched
 
-```json
+```
 {
   "_index" : "gitee-git_enriched",   //index名称
   "_id" : "bb6658ca89bdb1109d125b2d2b73051ea469bf50",  //id
@@ -1353,7 +1353,7 @@ index : gitee-git_enriched, github-git_enriched
 
 index : gitee-repo_enriched, github-repo_enriched
 
-```json
+```
 {
     "_index" : "gitee-repo_enriched",  //index名称
     "_id" : "258d5cf635e3f38c5699161cb4ff9904f4db4d7f",  //id
@@ -1402,7 +1402,7 @@ index : gitee-repo_enriched, github-repo_enriched
 
 index : gitee-releases_enriched, github-releases_enriched
 
-```json
+```
 {
     "_index" : "gitee-releases_enriched",  //index名称
     "_id" : "1a86c5b1fb357a77e2c75f884e8cfefe4a3f496f",  //id
@@ -1426,7 +1426,7 @@ index : gitee-releases_enriched, github-releases_enriched
 
 index : gitee-issues_enriched, github-issues_enriched
 
-```json
+```
 {
     "_index" : "gitee-issues_enriched",  //index名称
     "_id" : "fc96ee418df32b4a4b2d23f8569152cccc60a7d3",  //id
@@ -1526,7 +1526,7 @@ index : gitee-issues_enriched, github-issues_enriched
 
 index : gitee2-issues_enriched, github2-issues_enriched
 
-```json
+```
 {
     "_index" : "gitee2-issues_enriched",  //index名称
     "_id" : "10108112_issue_comment_14312838",  //id
@@ -1601,7 +1601,7 @@ index : gitee2-issues_enriched, github2-issues_enriched
 
 index : gitee-pulls_enriched, github-pulls_enriched
 
-```json
+```
 {
     "_index" : "gitee-pulls_enriched",  //index名称
     "_id" : "25d9276042074629b6bc8b46e7d18aecc52bc42f",  //id
@@ -1714,7 +1714,7 @@ index : gitee-pulls_enriched, github-pulls_enriched
 
 index : gitee2-pulls_enriched, github2-pulls_enriched
 
-```json
+```
 {
     "_index" : "gitee2-pulls_enriched",  //index名称
     "_id" : "4483990_review_comment_6360833",  //id 
@@ -1799,7 +1799,7 @@ index : gitee2-pulls_enriched, github2-pulls_enriched
 
 index : compass_metric_model_activity
 
-```json
+```
 {
     "_index" : "compass_metric_model_activity",
     "_id" : "144e577a6cf94671b4fe67387ca8d9439623f2e1",
@@ -1837,7 +1837,7 @@ index : compass_metric_model_activity
 
 index : compass_metric_model_codequality
 
-```json
+```
 {
     "_index" : "compass_metric_model_codequality",
     "_id" : "94e798aebf5860ae37489fcc902322b6884459f4",
@@ -1876,7 +1876,7 @@ index : compass_metric_model_codequality
 
 index : compass_metric_model_community
 
-```json
+```
 {
     "_index" : "compass_metric_model_community",
     "_id" : "9d6d71855a55b1629af3db92c463d36947c20109",
@@ -1911,7 +1911,7 @@ index : compass_metric_model_community
 
 index : compass_metric_model_group_activity
 
-```json
+```
 {
     "_index" : "compass_metric_model_group_activity",
     "_id" : "24c96c972b414c13146570ca1c57f0a48f7b7b07",
