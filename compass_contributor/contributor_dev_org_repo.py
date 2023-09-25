@@ -5,10 +5,13 @@ import logging
 from datetime import datetime, timedelta
 import urllib3
 from elasticsearch import helpers
-from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc)
+from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc, get_date_list)
 from compass_common.uuid_utils import get_uuid 
 from compass_common.opensearch_client_utils import get_elasticsearch_client  
 from compass_common.datetime import get_latest_date, get_oldest_date  
+from compass_metrics.contributor_metrics import contributor_detail_list
+from compass_metrics.git_metrics import created_since
+import time
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -86,14 +89,16 @@ def is_bot_by_author_name(bots_dict, repo, author_name_list):
                 return True
     return False
 
-def get_all_repo(json_file):
-    """ Get list of repositories """
+def get_all_repo(json_file, origin):
     all_repo = []
     all_repo_json = json.load(open(json_file))
     for project in all_repo_json:
+        origin_software_artifact = origin + "-software-artifact"
+        origin_governance = origin + "-governance"
         for key in all_repo_json[project].keys():
-            for repo in all_repo_json[project].get(key):
-                all_repo.append(repo)
+            if key == origin_software_artifact or key == origin_governance or key == origin:
+                for repo in all_repo_json[project].get(key):
+                    all_repo.append(repo)
     return all_repo
 
 def get_email_prefix_domain(email):
@@ -110,8 +115,8 @@ def get_email_prefix_domain(email):
 
 class ContributorDevOrgRepo:
     def __init__(self, json_file, identities_config_file, organizations_config_file, bots_config_file, issue_index,
-                 pr_index, issue_comments_index, pr_comments_index, git_index, contributors_index, from_date, end_date,
-                 repo_index, event_index=None, company=None, stargazer_index=None, fork_index=None):
+                 pr_index, issue_comments_index, pr_comments_index, git_index, contributors_index, contributors_enriched_index, 
+                 from_date, end_date, repo_index, event_index=None, company=None, stargazer_index=None, fork_index=None):
         """ Build a contributor profile of the repository, including issues, pr, commit, organization, etc.
         :param json_file: the path of json file containing repository message.
         :param identities_config_file: the path of json file containing contributor identity message.
@@ -123,6 +128,7 @@ class ContributorDevOrgRepo:
         :param pr_comments_index: pr comment index
         :param git_index: git index
         :param contributors_index: contributor index
+        :param contributors_enriched_index: contributors_enriched_index
         :param from_date: the beginning of time for contributor profile
         :param end_date: the end of time for contributor profile
         :param repo_index: repo index
@@ -138,6 +144,7 @@ class ContributorDevOrgRepo:
         self.git_index = git_index
         self.repo_index = repo_index
         self.contributors_index = contributors_index
+        self.contributors_enriched_index = contributors_enriched_index
         self.from_date = from_date
         self.end_date = end_date
         self.organizations_dict = get_organizations_info(organizations_config_file)
@@ -148,7 +155,7 @@ class ContributorDevOrgRepo:
         self.stargazer_index = stargazer_index
         self.fork_index = fork_index
         self.client = None
-        self.all_repo = get_all_repo(json_file)
+        self.all_repo = get_all_repo(json_file, 'gitee' if 'gitee' in issue_index else 'github')
 
         self.platform_item_id_dict = {}
         self.platform_item_identity_dict = {}
@@ -164,6 +171,8 @@ class ContributorDevOrgRepo:
             self.client.indices.create(index=self.contributors_index, body=self.get_contributor_index_mapping())
         for repo in self.all_repo:
             self.processing_data(repo)
+            time.sleep(5)  #Ensure that data has been saved to ES
+            self.contributor_enrich(repo)
 
     def processing_data(self, repo):
         """ Start processing data, generate contributor profiles """
@@ -904,3 +913,43 @@ class ContributorDevOrgRepo:
             "hits"]["hits"]
         return pr_hits
         
+    def contributor_enrich(self, repo):
+        """ save enrichment contributor data for the past 90 days. """
+        start_time = datetime.now()
+        es_exist = self.client.indices.exists(index=self.contributors_enriched_index)
+        if not es_exist:
+            self.client.indices.create(index=self.contributors_enriched_index, body=self.get_contributor_index_mapping())
+        date_list = get_date_list(self.from_date, self.end_date)
+        count = 0
+        item_datas = []
+        for date in date_list:
+            created_since_metric = created_since(self.client, self.git_index, date, [repo])
+            if created_since_metric is None:
+                continue
+            from_date = date - timedelta(days=7)
+            contributor_list = contributor_detail_list(self.client, self.contributors_index, from_date, date, [repo])["contributor_detail_list"]
+            count += len(contributor_list)
+            for item in contributor_list:
+                item_uuid = get_uuid(item["contributor"], repo, str(date))
+                contributor_data = {
+                    "_index": self.contributors_enriched_index,
+                    "_id": item_uuid,
+                    "_source": {
+                        "uuid": item_uuid,
+                        "contributor": item["contributor"],
+                        "contribution": item["contribution"],
+                        "ecological_type": item["ecological_type"],
+                        "organization": item["organization"],
+                        "contribution_type_list": item["contribution_type_list"],
+                        "is_bot": item["is_bot"],
+                        "repo_name": repo,
+                        'grimoire_creation_date': date.isoformat(),
+                        'metadata__enriched_on': datetime_utcnow().isoformat()
+                    }
+                }
+                item_datas.append(contributor_data)
+                if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                    helpers.bulk(client=self.client, actions=item_datas)
+                    item_datas = []
+        helpers.bulk(client=self.client, actions=item_datas)
+        logger.info(repo + " contributor enrich data save finish count:" + str(count) + " " + str(datetime.now() - start_time))
