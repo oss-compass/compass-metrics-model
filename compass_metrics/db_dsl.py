@@ -215,7 +215,7 @@ def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=1
 
 
 def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation_date", size=0,
-                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow(), repo_field="tag"):
     """ Counting the number of records according to conditions """
     query = {
         "size": size,
@@ -232,7 +232,7 @@ def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation
                 "must": [
                     {
                         "terms": {
-                            "tag": repo_list
+                            repo_field: repo_list
                         }
                     }
                 ],
