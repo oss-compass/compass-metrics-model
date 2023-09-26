@@ -106,11 +106,13 @@ def change_request_closure_ratio(client, pr_index, date, repos_list):
     return result
 
 
-def change_request_closure_ratio_recently_period(client, pr_index, date, repos_list):
+def change_request_closure_ratio_recently_period(client, pr_index, date, repos_list, from_date=None):
     """Measures the ratio between the total number of open change requests and the total number
     of closed change requests in the last 90 days."""
-    close_pr_count = create_close_pr_count(client, pr_index, date, repos_list)["create_close_pr_count"]
-    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    close_pr_count = create_close_pr_count(client, pr_index, date, repos_list, from_date)["create_close_pr_count"]
+    code_pr_count = pr_count(client, pr_index, date, repos_list, from_date)["pr_count"]
 
     result = {
         "change_request_closure_ratio_recently_period": close_pr_count/code_pr_count if code_pr_count > 0 else None
@@ -118,20 +120,24 @@ def change_request_closure_ratio_recently_period(client, pr_index, date, repos_l
     return result
 
 
-def code_review_ratio(client, pr_index, date, repos_list):
+def code_review_ratio(client, pr_index, date, repos_list, from_date=None):
     """ Determine the percentage of code commits with at least one reviewer (not PR creator) in the last 90 days. """
-    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
-    review_count = pr_count_with_review(client, pr_index, date, repos_list)["pr_count_with_review"]
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    code_pr_count = pr_count(client, pr_index, date, repos_list, from_date)["pr_count"]
+    review_count = pr_count_with_review(client, pr_index, date, repos_list, from_date)["pr_count_with_review"]
     result = {
         "code_review_ratio": review_count/code_pr_count if code_pr_count > 0 else None
     }
     return result
 
 
-def pr_count(client, pr_index, date, repos_list):
-    """ The number of PR created from the beginning to now """
+def pr_count(client, pr_index, date, repos_list, from_date=None):
+    """ The number of PR created in the last 90 days. """
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query_pr_count = get_uuid_count_query(
-        "cardinality", repos_list, "uuid", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+        "cardinality", repos_list, "uuid", size=0, from_date=from_date, to_date=date)
     query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     query_pr_count["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     pr_count = client.search(index=pr_index, body=query_pr_count)['aggregations']["count_of_uuid"]['value']
@@ -141,10 +147,12 @@ def pr_count(client, pr_index, date, repos_list):
     return result
 
 
-def pr_count_with_review(client, pr_index, date, repos_list):
+def pr_count_with_review(client, pr_index, date, repos_list, from_date=None):
     """ The Number of pr with review in the last 90 days """
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query_pr_body = get_pr_message_count(repos_list, "uuid", "grimoire_creation_date", size=0,
-                                         filter_field="num_review_comments_without_bot", from_date=(date-timedelta(days=90)), to_date=date)
+                                         filter_field="num_review_comments_without_bot", from_date=from_date, to_date=date)
     prs = client.search(index=pr_index, body=query_pr_body)[
         'aggregations']["count_of_uuid"]['value']
     result = {
@@ -199,7 +207,7 @@ def total_create_close_pr_count(client, pr_index, date, repos_list):
 
 
 def total_pr_count(client, pr_index, date, repos_list):
-    """ The number of PR created in the last 90 days. """
+    """ The number of PR created from the beginning to now """
     query_pr_count = get_uuid_count_query(
         "cardinality", repos_list, "uuid", size=0, from_date=str_to_datetime("1970-01-01"), to_date=date)
     query_pr_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
@@ -211,9 +219,10 @@ def total_pr_count(client, pr_index, date, repos_list):
     return result
 
 
-def create_close_pr_count(client, pr_index, date, repos_list):
+def create_close_pr_count(client, pr_index, date, repos_list, from_date=None):
     """The number of pr created in the last 90 days and it has been accepted and declined"""
-    from_date = date - timedelta(days=90)
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     pr_total_dsl = get_uuid_count_query(
         "cardinality", repos_list, "uuid", size=0, from_date=from_date, to_date=date)
     pr_total_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
@@ -277,5 +286,30 @@ def pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list)
             'aggregations']["count_of_uuid"]['value']
     result = {
         "pr_issue_linked_count": pr_linked_issue,
+    }
+    return result
+
+
+def pr_close_time(client, pr_index, date, repos_list, from_date=None):
+    """ Determine the time interval from PR creation to closure in the past 90 days. """
+    if from_date is None:
+        from_date = date - timedelta(days=90)
+    query_pr_close_time_avg = get_uuid_count_query(
+        "avg", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
+    query_pr_close_time_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    pr_close_time_avg = client.search(index=pr_index, body=query_pr_close_time_avg)[
+        'aggregations']["count_of_uuid"]['value']
+
+    query_pr_close_time_mid = get_uuid_count_query(
+        "percentiles", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
+    query_pr_close_time_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    query_pr_close_time_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
+        50]
+    pr_close_time_mid = client.search(index=pr_index, body=query_pr_close_time_mid)[
+        'aggregations']["count_of_uuid"]['values']['50.0']
+
+    result = {
+        'pr_close_time_avg': round(pr_close_time_avg, 4) if pr_close_time_avg is not None else None,
+        'pr_close_time_mid': round(pr_close_time_mid, 4) if pr_close_time_mid is not None else None,
     }
     return result

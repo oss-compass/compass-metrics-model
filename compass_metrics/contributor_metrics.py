@@ -1,6 +1,6 @@
-from compass_metrics.db_dsl import get_contributor_query
-from compass_common.datetime import get_time_diff_months, check_times_has_overlap
-from datetime import timedelta
+from compass_metrics.db_dsl import get_contributor_query, get_uuid_count_query
+from compass_common.datetime import get_time_diff_months, check_times_has_overlap, datetime_utcnow
+from datetime import timedelta, datetime
 
 
 def contributor_count(client, contributors_index, date, repo_list):
@@ -192,17 +192,20 @@ def bus_factor(client, contributors_index, date, repo_list):
 def get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field):
     """ Get the contributors who have contributed in the from_date,to_date time period. """
     result_list = []
+    if isinstance(date_field, str):
+        date_field_list = [date_field]
+    elif isinstance(date_field, list):
+        date_field_list = date_field
     for repo in repo_list:
         search_after = []
         while True:
-            query = get_contributor_query(repo, date_field, from_date, to_date, 500, search_after)
+            query = get_contributor_query(repo, date_field_list, from_date, to_date, 500, search_after)
             contributor_list = client.search(index=contributors_index, body=query)["hits"]["hits"]
             if len(contributor_list) == 0:
                 break
             search_after = contributor_list[len(contributor_list) - 1]["sort"]
             result_list = result_list + [contributor["_source"] for contributor in contributor_list]
     return result_list
-
 
 
 def get_contributor_count(contributor_list, is_bot=None):
@@ -215,3 +218,273 @@ def get_contributor_count(contributor_list, is_bot=None):
                 elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
                     contributor_set.add(contributor["id_git_author_name_list"][0])
         return len(contributor_set)
+
+
+def contributor_detail_list(client, contributors_index, from_date, to_date, repo_list):
+    """ Get an itemized list of contributors in the from_date, to_date time period. """
+
+    def get_eco_contributor_dict(from_date, to_date, contributor_list):
+        from_date_str = from_date.isoformat()
+        to_date_str = to_date.isoformat()
+        eco_contributor_dict = {}
+        for contributor in contributor_list:
+            is_admin = False
+            if contributor.get("admin_date_list") and len(contributor.get("admin_date_list")) > 0 \
+                    and contributor["admin_date_list"][0]["first_date"] <= to_date_str:
+                is_admin = True
+            is_org = False
+            org_name = None
+            for org in contributor["org_change_date_list"]:
+                if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                    if org.get("org_name") is not None:
+                        is_org = True
+                        org_name = org.get("org_name")
+                    break
+            contributor_name = None
+            if contributor.get("id_platform_login_name_list") and len(
+                    contributor.get("id_platform_login_name_list")) > 0:
+                contributor_name = contributor["id_platform_login_name_list"][0]
+            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                contributor_name = contributor["id_git_author_name_list"][0]
+
+            if is_admin and is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "organization manager",
+                    "organization": org_name
+                }
+            elif is_admin and not is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "individual manager",
+                    "organization": org_name
+                }
+            elif not is_admin and is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "organization participant",
+                    "organization": org_name
+                }
+            elif not is_admin and not is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "individual participant",
+                    "organization": org_name
+                }
+            eco_contributor_dict[contributor_name]["is_bot"] = contributor["is_bot"]
+        return eco_contributor_dict
+
+    def get_type_contributor_dict(from_date, to_date, contributor_list):
+        from_date_str = from_date.isoformat()
+        to_date_str = to_date.isoformat()
+        type_contributor_dict = {}
+
+        type_contributor_date_field_dict = {
+            "observe": observe_date_field,
+            "issue": issue_date_field,
+            "code": code_date_field,
+            "issue_admin": issue_admin_date_field,
+            "code_admin": code_admin_date_field,
+        }
+        for contributor in contributor_list:
+            contributor_name = None
+            type_list = []
+            if contributor.get("id_platform_login_name_list") and len(
+                    contributor.get("id_platform_login_name_list")) > 0:
+                contributor_name = contributor["id_platform_login_name_list"][0]
+            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                contributor_name = contributor["id_git_author_name_list"][0]
+            
+            for type, date_field_list in type_contributor_date_field_dict.items():
+                for date_field in date_field_list:
+                    contribution_count = len(list(filter(lambda x: from_date_str <= x < to_date_str, contributor.get(date_field, []))))
+                    if contribution_count > 0:
+                        date_field_replace = date_field.replace("_date_list", "")
+                        if type == "code":
+                            date_field_replace = date_field_replace.replace("code_", "")
+                        if type in ["issue_admin", "issue"]:
+                            date_field_replace = date_field_replace.replace("issue_", "")
+                        if type == "code_admin":
+                            date_field_replace = date_field_replace.replace("pr_", "")
+                        type_name = type + "_" + date_field_replace
+                        type_list.append({
+                            "contribution_type": type_name,
+                            "contribution": contribution_count
+                        })
+
+            type_contributor_dict[contributor_name] = type_list
+        return type_contributor_dict
+
+
+    observe_date_field = ["star_date_list", "fork_date_list", "watch_date_list"]
+    issue_date_field = ["issue_creation_date_list", "issue_comments_date_list"]
+    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_commit_date_list"]
+    issue_admin_date_field = ["issue_label_date_list","issue_close_date_list","issue_reopen_date_list",
+                                "issue_assign_date_list","issue_milestone_date_list","issue_mark_as_duplicate_date_list",
+                                "issue_transfer_date_list","issue_lock_date_list"]
+    code_admin_date_field = ["pr_label_date_list", "pr_close_date_list", "pr_reopen_date_list", "pr_assign_date_list", 
+                                "pr_milestone_date_list", "pr_mark_as_duplicate_date_list", "pr_transfer_date_list",
+                                "pr_lock_date_list", "pr_merge_date_list", "pr_review_date_list", "code_direct_commit_date_list"]
+    date_field_list = observe_date_field + issue_date_field + code_date_field + issue_admin_date_field + code_admin_date_field
+
+    contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+
+    eco_contributor_dict = get_eco_contributor_dict(from_date, to_date, contributor_list)
+    type_contributor_dict = get_type_contributor_dict(from_date, to_date, contributor_list)
+    result_list = []
+    for contributor_name in eco_contributor_dict:
+        contribution_type_list = type_contributor_dict.get(contributor_name, [])
+        contribution = sum([contribution_type.get("contribution", 0) for contribution_type in contribution_type_list 
+            if contribution_type.get("contribution_type") not in "code_admin_code_direct_commit"])
+        if contribution == 0:
+            continue
+        result = {
+            "contributor": contributor_name,
+            "contribution": contribution,
+            "is_bot": eco_contributor_dict.get(contributor_name).get("is_bot"),
+            "ecological_type": eco_contributor_dict.get(contributor_name).get("ecological_type"),
+            "organization": eco_contributor_dict.get(contributor_name).get("organization"),
+            "contribution_type_list": contribution_type_list
+        }
+        result_list.append(result)
+    return {"contributor_detail_list": result_list}
+
+
+def contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """All contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
+                        to_date=to_date, repo_field="repo_name.keyword")
+    query_contribution_count["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "is_bot": "true" if is_bot else "false"
+            }
+        })                        
+    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
+        'aggregations']['count_of_uuid']['value']
+    return {"contribution_count": count}
+
+
+def organization_manager_contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """organization manager contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
+                        to_date=to_date, repo_field="repo_name.keyword")
+    query_contribution_count["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "ecological_type.keyword": "organization manager"
+            }
+        })
+    query_contribution_count["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "is_bot": "true" if is_bot else "false"
+            }
+        })
+    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
+        'aggregations']['count_of_uuid']['value']
+    return {"organization_manager_contribution_count": count}
+
+
+def organization_manager_contribution_ratio(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """organization manager contribution ratio(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    count = organization_manager_contribution_count(
+        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["organization_manager_contribution_count"]
+    total_count = contribution_count(
+        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["contribution_count"]
+    result = {
+        "organization_manager_contribution_ratio": count/total_count if count > 0 and total_count > 0 else 0
+    }
+    return result
+
+
+def individual_participant_contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """individual participant contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
+                        to_date=to_date, repo_field="repo_name.keyword")
+    query_contribution_count["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "ecological_type.keyword": "individual participant"
+            }
+        })
+    query_contribution_count["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "is_bot": "true" if is_bot else "false"
+            }
+        })
+    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
+        'aggregations']['count_of_uuid']['value']
+    return {"individual_participant_contribution_count": count}
+
+
+def individual_participant_contribution_ratio(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """individual participant contribution ratio(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    count = individual_participant_contribution_count(
+        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["individual_participant_contribution_count"]
+    total_count = contribution_count(
+        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["contribution_count"]
+    result = {
+        "individual_participant_contribution_ratio": count/total_count if count > 0 and total_count > 0 else 0
+    }
+    return result
+
+
+def highest_contribution_organization(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """ Name of the organization with the highest contribution in the range from_date and to_date """
+    query = get_uuid_count_query(option="terms", repo_list=repo_list, field="organization.keyword", from_date=from_date, 
+                        to_date=to_date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "ecological_type": "organization"
+            }
+        })
+    query["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "is_bot": "true" if is_bot else "false"
+            }
+        })
+    query["aggs"]["count_of_uuid"]["aggs"] = {
+        "sum_contribution": {
+          "sum": {
+            "field": "contribution"
+          }
+        }
+      }
+    query["aggs"]["max_sum_contribution"] = {
+        "max_bucket": {
+            "buckets_path": "count_of_uuid>sum_contribution"
+        }
+    }
+    keys = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['max_sum_contribution']['keys']
+    organization = None
+    if len(keys) > 0:
+        organization = keys[0]
+    return {"highest_contribution_organization": organization}
+
+
+def highest_contribution_individual(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+    """ Name of the individual with the highest contribution in the range from_date and to_date """
+    query = get_uuid_count_query(option="terms", repo_list=repo_list, field="contributor.keyword", from_date=from_date, 
+                        to_date=to_date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "ecological_type": "individual"
+            }
+        })
+    query["query"]["bool"]["must"].append({
+            "match_phrase": {
+                "is_bot": "true" if is_bot else "false"
+            }
+        })
+    query["aggs"]["count_of_uuid"]["aggs"] = {
+        "sum_contribution": {
+          "sum": {
+            "field": "contribution"
+          }
+        }
+      }
+    query["aggs"]["max_sum_contribution"] = {
+        "max_bucket": {
+            "buckets_path": "count_of_uuid>sum_contribution"
+        }
+    }
+    keys = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['max_sum_contribution']['keys']
+    individual = None
+    if len(keys) > 0:
+        individual = keys[0]
+    return {"highest_contribution_individual": individual}
