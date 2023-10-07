@@ -360,68 +360,6 @@ def contribution_count(client, contributors_enriched_index, from_date, to_date, 
     return {"contribution_count": count}
 
 
-def organization_manager_contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """organization manager contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
-    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
-                        to_date=to_date, repo_field="repo_name.keyword")
-    query_contribution_count["query"]["bool"]["must"].append({
-            "match_phrase": {
-                "ecological_type.keyword": "organization manager"
-            }
-        })
-    query_contribution_count["query"]["bool"]["must"].append({
-            "match_phrase": {
-                "is_bot": "true" if is_bot else "false"
-            }
-        })
-    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
-        'aggregations']['count_of_uuid']['value']
-    return {"organization_manager_contribution_count": count}
-
-
-def organization_manager_contribution_ratio(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """organization manager contribution ratio(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
-    count = organization_manager_contribution_count(
-        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["organization_manager_contribution_count"]
-    total_count = contribution_count(
-        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["contribution_count"]
-    result = {
-        "organization_manager_contribution_ratio": count/total_count if count > 0 and total_count > 0 else 0
-    }
-    return result
-
-
-def individual_participant_contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """individual participant contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
-    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
-                        to_date=to_date, repo_field="repo_name.keyword")
-    query_contribution_count["query"]["bool"]["must"].append({
-            "match_phrase": {
-                "ecological_type.keyword": "individual participant"
-            }
-        })
-    query_contribution_count["query"]["bool"]["must"].append({
-            "match_phrase": {
-                "is_bot": "true" if is_bot else "false"
-            }
-        })
-    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
-        'aggregations']['count_of_uuid']['value']
-    return {"individual_participant_contribution_count": count}
-
-
-def individual_participant_contribution_ratio(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """individual participant contribution ratio(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
-    count = individual_participant_contribution_count(
-        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["individual_participant_contribution_count"]
-    total_count = contribution_count(
-        client, contributors_enriched_index, from_date, to_date, repo_list, is_bot)["contribution_count"]
-    result = {
-        "individual_participant_contribution_ratio": count/total_count if count > 0 and total_count > 0 else 0
-    }
-    return result
-
-
 def highest_contribution_organization(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
     """ Name of the organization with the highest contribution in the range from_date and to_date """
     query = get_uuid_count_query(option="terms", repo_list=repo_list, field="organization.keyword", from_date=from_date, 
