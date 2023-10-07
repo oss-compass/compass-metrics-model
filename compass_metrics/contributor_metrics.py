@@ -346,24 +346,39 @@ def contributor_detail_list(client, contributors_index, from_date, to_date, repo
     return {"contributor_detail_list": result_list}
 
 
-def contribution_count(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """All contribution counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
-    query_contribution_count = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", from_date=from_date, 
-                        to_date=to_date, repo_field="repo_name.keyword")
-    query_contribution_count["query"]["bool"]["must"].append({
+def org_all_count(client, contributors_enriched_index, date, repo_list, from_date=None):
+    """All organization counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="organization.keyword", from_date=from_date, 
+                        to_date=date, repo_field="repo_name.keyword")                      
+    count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"org_all_count": count}
+
+
+def contributor_all_count(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False):
+    """All contributor counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword", from_date=from_date, 
+                        to_date=date, repo_field="repo_name.keyword")     
+    query["query"]["bool"]["must"].append({
             "match_phrase": {
                 "is_bot": "true" if is_bot else "false"
             }
-        })                        
-    count = client.search(index=contributors_enriched_index, body=query_contribution_count)[
+        })                  
+    count = client.search(index=contributors_enriched_index, body=query)[
         'aggregations']['count_of_uuid']['value']
-    return {"contribution_count": count}
+    return {"contributor_all_count": count}
 
 
-def highest_contribution_organization(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
+def highest_contribution_organization(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False):
     """ Name of the organization with the highest contribution in the range from_date and to_date """
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(option="terms", repo_list=repo_list, field="organization.keyword", from_date=from_date, 
-                        to_date=to_date, repo_field="repo_name.keyword")
+                        to_date=date, repo_field="repo_name.keyword")
     query["query"]["bool"]["must"].append({
             "match_phrase": {
                 "ecological_type": "organization"
@@ -394,15 +409,12 @@ def highest_contribution_organization(client, contributors_enriched_index, from_
     return {"highest_contribution_organization": organization}
 
 
-def highest_contribution_individual(client, contributors_enriched_index, from_date, to_date, repo_list, is_bot=False):
-    """ Name of the individual with the highest contribution in the range from_date and to_date """
+def highest_contribution_contributor(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False):
+    """ Name of the contributor with the highest contribution in the range from_date and to_date """
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(option="terms", repo_list=repo_list, field="contributor.keyword", from_date=from_date, 
-                        to_date=to_date, repo_field="repo_name.keyword")
-    query["query"]["bool"]["must"].append({
-            "match_phrase": {
-                "ecological_type": "individual"
-            }
-        })
+                        to_date=date, repo_field="repo_name.keyword")
     query["query"]["bool"]["must"].append({
             "match_phrase": {
                 "is_bot": "true" if is_bot else "false"
@@ -425,4 +437,4 @@ def highest_contribution_individual(client, contributors_enriched_index, from_da
     individual = None
     if len(keys) > 0:
         individual = keys[0]
-    return {"highest_contribution_individual": individual}
+    return {"highest_contribution_contributor": individual}
