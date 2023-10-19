@@ -1794,6 +1794,93 @@ index : gitee2-pulls_enriched, github2-pulls_enriched
 }
 
 ```
+
+# contributor data
+
+index : gitee_contributors_org_repo, github_contributors_org_repo
+
+```
+{
+    "_index" : "github_contributors_org_repo",   //index名称
+    "_id" : "69aa8dc5589d6306de726ac0fe4cdc2dc1bf24c6",  //id 
+    "_score" : 1.0,
+    "_source" : {
+      "uuid" : "69aa8dc5589d6306de726ac0fe4cdc2dc1bf24c6",   //id 
+      "id_git_author_name_list" : [     //Git作者名称
+        "Travis Beatty"
+      ],    
+      "id_git_author_email_list" : [   //Git 作者邮箱
+        "travisby@gmail.com"
+      ],  
+      "id_platform_login_name_list" : [     // 平台(Github/Gitee)登录名称
+        "travisby"
+      ],  
+      "id_platform_author_name_list" : [    // 平台(Github/Gitee)作者名称
+        "Travis Beatty"
+      ],   
+      "id_platform_author_email_list" : [    // 平台(Github/Gitee)作者邮箱
+        "travisby@gmail.com"         
+      ],  
+      "id_identity_list" : [       //贡献者身份信息(对贡献者邮箱前缀和贡献者名称去除特殊符号后, 并统一小写后得到)
+        "travisby",
+        "travisbeatty"
+      ],
+      "first_issue_creation_date" : "2014-06-11T12:21:55.014834+00:00",     //首次Issue创建时间
+      "first_pr_creation_date" : "2014-06-11T12:21:55.014834+00:00",        //首次PR创建时间
+      "first_issue_comments_date" : "2014-06-11T12:21:55.014834+00:00",     //首次Issue评论时间
+      "first_pr_review_date" : "2014-06-11T12:21:55.014834+00:00",          //首次PR评论时间
+      "first_code_commit_date" : "2014-06-11T08:21:45.083475+00:00",        //首次Code提交时间
+      "first_fork_date" : "2014-06-11T12:16:06.082526+00:00",   //首次fork时间
+      "first_star_date" : "2014-06-11T12:16:06.082526+00:00",   //首次star时间
+      "first_watch_date" : "2014-06-11T12:16:06.082526+00:00",  //首次watch时间
+      "issue_creation_date_list" : [                //Issue创建时间列表    
+        "2014-06-11T12:16:06.082526+00:00",
+        "2014-06-11T12:16:06.082526+00:00"
+      ],
+      "pr_creation_date_list" : [                   //PR创建时间列表
+        "2014-06-11T12:21:55.014834+00:00"
+      ],
+      "issue_comments_date_list" : [                //Issue评论时间列表
+        "2014-06-11T12:16:06.082526+00:00",
+        "2014-06-11T12:16:06.082526+00:00"
+      ],             
+      "pr_review_date_list" : [                     //PR评论时间列表
+        "2014-06-11T12:16:06.082526+00:00",
+        "2014-06-11T12:16:06.082526+00:00"
+      ],
+      "code_commit_date_list" : [                   //Code提交时间列表
+        "2014-06-11T08:21:45.083475+00:00"
+      ],
+      "fork_date_list" : [                          //fork时间列表
+        "2014-06-11T12:16:06.082526+00:00"
+      ],
+      "star_date_list" : [                          //star时间列表
+        "2014-06-11T12:16:06.082526+00:00"
+      ],
+      "watch_date_list" : [                         //watch时间列表
+        "2014-06-11T12:16:06.082526+00:00"
+      ],
+      "last_contributor_date" : "2014-06-11T12:21:55.014834+00:00",         //最后贡献时间
+      "org_change_date_list" : [                   //组织转变时间列表 
+        {
+          "domain" : "gmail.com",                               //邮箱后缀
+          "org_name" : null,                                    //组织名
+          "first_date" : "2014-06-11T08:21:45.083475+00:00",    //组织贡献开始时间
+          "last_date" : "2014-06-11T08:21:45.083475+00:00"      //组织贡献结束时间
+        }
+      ],
+      "platform_type" : "github",       //平台类(github / gitee)
+      "domain" : "gmail.com",           //最后参与贡献的邮箱后缀
+      "org_name" : null,                //最后参与贡献的组织名
+      "community" : "kubernetes",       //社区名
+      "repo_name" : "https://github.com/kubernetes/kubernetes",     //仓库名
+      "is_bot" : false,                 //是否机器人
+      "update_at_date" : "2023-07-13T05:09:35.908271+00:00"         //文档数据更新时间
+    }
+} 
+```
+
+
 # Model Data
 # Activity-活跃度模型
 
