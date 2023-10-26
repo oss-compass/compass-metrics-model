@@ -202,3 +202,45 @@ def create_close_issue_count(client, issue_index, date, repo_list, from_date=Non
         "create_close_issue_count": issue_closed_count
     }
     return result
+
+
+def issue_state_distribution(client, issue_index, date, repo_list, from_date=None):
+    """Define the distribution of the status of new issues in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "state", size=0, from_date=from_date, to_date=date)
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    buckets = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_issue_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_issue_count == 0:
+        return {"issue_state_distribution": None}
+    state_distribution = {}
+    for bucket in buckets:
+        state_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_issue_count}
+    result = {
+        "issue_state_distribution": state_distribution
+    }
+    return result
+
+
+def issue_comment_distribution(client, issue_index, date, repo_list, from_date=None):
+    """Define the distribution of the comment of new issues in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "num_of_comments_without_bot", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["terms"]["size"] = 1000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    buckets = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_issue_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_issue_count == 0:
+        return {"issue_comment_distribution": None}
+    commet_distribution = {}
+    for bucket in buckets:
+        commet_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_issue_count}
+    result = {
+        "issue_comment_distribution": commet_distribution
+    }
+    return result
+    
