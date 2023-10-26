@@ -305,3 +305,57 @@ def pr_unresponsive_count(client, pr_index, date, repo_list, from_date=None):
         "pr_unresponsive_count": unresponsive_count
     }
     return result
+
+def pr_unresponsive_ratio(client, pr_index, date, repo_list, from_date=None):
+    """Measures the ratio between the total number of pull request and the total number
+    of unresponsive pull request in the last 90 days."""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    count = pr_unresponsive_count(client, pr_index, date, repo_list, from_date)["pr_unresponsive_count"]
+    total_count = pr_count(client, pr_index, date, repo_list, from_date)["pr_count"]
+
+    result = {
+        "pr_unresponsive_ratio": count/total_count if count > 0 else None
+    }
+    return result
+
+
+def pr_state_distribution(client, pr_index, date, repo_list, from_date=None):
+    """Define the distribution of the status of new pr in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "state", size=0, from_date=from_date, to_date=date)
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    buckets = client.search(index=pr_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_pr_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_pr_count == 0:
+        return {"pr_state_distribution": None}
+    state_distribution = {}
+    for bucket in buckets:
+        state_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_pr_count}
+    result = {
+        "pr_state_distribution": state_distribution
+    }
+    return result
+
+
+def pr_comment_distribution(client, pr_index, date, repo_list, from_date=None):
+    """Define the distribution of the comment of new pr in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "num_review_comments_without_bot", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["terms"]["size"] = 1000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    buckets = client.search(index=pr_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_pr_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_pr_count == 0:
+        return {"pr_comment_distribution": None}
+    commet_distribution = {}
+    for bucket in buckets:
+        commet_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_pr_count}
+    result = {
+        "pr_comment_distribution": commet_distribution
+    }
+    return result
