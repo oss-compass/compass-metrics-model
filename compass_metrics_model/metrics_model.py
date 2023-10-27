@@ -772,7 +772,7 @@ class ActivityMetricsModel(MetricsModel):
             issue_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_creation_date_list")
             issue_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_comments_date_list")
             pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
-            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_comments_date_list")
             D1_contributor_list = commit_contributor_list + issue_contributor_list + pr_contributor_list + issue_comment_contributor_list + pr_comment_contributor_list
 
             comment_frequency = self.comment_frequency(date, repos_list)
@@ -1320,7 +1320,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             to_date = date
             commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
             pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
-            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_review_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_comments_date_list")
             D2_C1_pr_contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
 
             git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
