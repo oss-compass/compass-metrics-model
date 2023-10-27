@@ -9,7 +9,7 @@ from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_
 from compass_common.uuid_utils import get_uuid 
 from compass_common.opensearch_client_utils import get_elasticsearch_client  
 from compass_common.datetime import get_latest_date, get_oldest_date  
-from compass_metrics.contributor_metrics import contributor_detail_list
+from compass_metrics.contributor_metrics import contributor_eco_type_list
 from compass_metrics.git_metrics import created_since
 import time
 
@@ -155,7 +155,8 @@ class ContributorDevOrgRepo:
         self.stargazer_index = stargazer_index
         self.fork_index = fork_index
         self.client = None
-        self.all_repo = get_all_repo(json_file, 'gitee' if 'gitee' in issue_index else 'github')
+        self.source = 'gitee' if 'gitee' in issue_index else 'github'
+        self.all_repo = get_all_repo(json_file, self.source)
 
         self.platform_item_id_dict = {}
         self.platform_item_identity_dict = {}
@@ -185,35 +186,63 @@ class ContributorDevOrgRepo:
         self.date_field_list = []
         self.admin_date_field_list = []
         platform_index_type_dict = {
-            # fork and star
+            # observe 
             "fork": {"index": self.fork_index, "date_field": "fork_date_list"},
             "star": {"index": self.stargazer_index, "date_field": "star_date_list"},
-            # issue and issue comment
-            "issue": {"index": self.issue_index, "date_field": "issue_creation_date_list"},
+            # issue
+            "issue_creation": {"index": self.issue_index, "date_field": "issue_creation_date_list"},
             "issue_comments": {"index": self.issue_comments_index, "date_field": "issue_comments_date_list"},
-            # issue event
-            "issue_LabeledEvent": {"index": self.event_index, "date_field": "issue_label_date_list"},
-            "issue_ClosedEvent": {"index": self.event_index, "date_field": "issue_close_date_list"},
-            "issue_ReopenedEvent": {"index": self.event_index, "date_field": "issue_reopen_date_list"},
-            "issue_AssignedEvent": {"index": self.event_index, "date_field": "issue_assign_date_list"},
-            "issue_MilestonedEvent": {"index": self.event_index, "date_field": "issue_milestone_date_list"},
-            "issue_MarkedAsDuplicateEvent": {"index": self.event_index, "date_field": "issue_mark_as_duplicate_date_list"},
-            "issue_TransferredEvent": {"index": self.event_index, "date_field": "issue_transfer_date_list"},
-            "issue_LockedEvent": {"index": self.event_index, "date_field": "issue_lock_date_list"},
-            # pr and pr comment
-            "pr": {"index": self.pr_index, "date_field": "pr_creation_date_list"},
+            # issue admin
+            "issue_LabeledEvent": {"index": self.event_index, "date_field": "issue_labeled_date_list"},
+            "issue_UnlabeledEvent": {"index": self.event_index, "date_field": "issue_unlabeled_date_list"},
+            "issue_ClosedEvent": {"index": self.event_index, "date_field": "issue_closed_date_list"},
+            "issue_ReopenedEvent": {"index": self.event_index, "date_field": "issue_reopened_date_list"},
+            "issue_AssignedEvent": {"index": self.event_index, "date_field": "issue_assigned_date_list"},
+            "issue_UnassignedEvent": {"index": self.event_index, "date_field": "issue_unassigned_date_list"},
+            "issue_MilestonedEvent": {"index": self.event_index, "date_field": "issue_milestoned_date_list"},
+            "issue_DemilestonedEvent": {"index": self.event_index, "date_field": "issue_demilestoned_date_list"},
+            "issue_MarkedAsDuplicateEvent": {"index": self.event_index, "date_field": "issue_marked_as_duplicate_date_list"},
+            "issue_TransferredEvent": {"index": self.event_index, "date_field": "issue_transferred_date_list"},
+            "issue_RenamedTitleEvent": {"index": self.event_index, "date_field": "issue_renamed_title_date_list"},
+            "issue_ChangeDescriptionEvent": {"index": self.event_index, "date_field": "issue_change_description_date_list"},
+            "issue_SettingPriorityEvent": {"index": self.event_index, "date_field": "issue_setting_priority_date_list"},
+            "issue_ChangePriorityEvent": {"index": self.event_index, "date_field": "issue_change_priority_date_list"},
+            "issue_LinkPullRequestEvent": {"index": self.event_index, "date_field": "issue_link_pull_request_date_list"},
+            "issue_UnlinkPullRequestEvent": {"index": self.event_index, "date_field": "issue_unlink_pull_request_date_list"},
+            "issue_AssignCollaboratorEvent": {"index": self.event_index, "date_field": "issue_assign_collaborator_date_list"},
+            "issue_UnassignCollaboratorEvent": {"index": self.event_index, "date_field": "issue_unassign_collaborator_date_list"},
+            "issue_ChangeIssueStateEvent": {"index": self.event_index, "date_field": "issue_change_issue_state_date_list"},
+            "issue_ChangeIssueTypeEvent": {"index": self.event_index, "date_field": "issue_change_issue_type_date_list"},
+            "issue_SettingBranchEvent": {"index": self.event_index, "date_field": "issue_setting_branch_date_list"},
+            "issue_ChangeBranchEvent": {"index": self.event_index, "date_field": "issue_change_branch_date_list"},
+            # code
+            "pr_creation": {"index": self.pr_index, "date_field": "pr_creation_date_list"},
             "pr_comments": {"index": self.pr_comments_index, "date_field": "pr_comments_date_list"},
-            # pr event
-            "pr_LabeledEvent": {"index": self.event_index, "date_field": "pr_label_date_list"},
-            "pr_ClosedEvent": {"index": self.event_index, "date_field": "pr_close_date_list"},
-            "pr_AssignedEvent": {"index": self.event_index, "date_field": "pr_assign_date_list"},
-            "pr_ReopenedEvent": {"index": self.event_index, "date_field": "pr_reopen_date_list"},
-            "pr_MilestonedEvent": {"index": self.event_index, "date_field": "pr_milestone_date_list"},
-            "pr_MarkedAsDuplicateEvent": {"index": self.event_index, "date_field": "pr_mark_as_duplicate_date_list"},
-            "pr_TransferredEvent": {"index": self.event_index, "date_field": "pr_transfer_date_list"},
-            "pr_LockedEvent": {"index": self.event_index, "date_field": "pr_lock_date_list"},
-            "pr_MergedEvent": {"index": self.event_index, "date_field": "pr_merge_date_list"},
+            # code admin
+            "pr_LabeledEvent": {"index": self.event_index, "date_field": "pr_labeled_date_list"},
+            "pr_UnlabeledEvent": {"index": self.event_index, "date_field": "pr_unlabeled_date_list"},
+            "pr_ClosedEvent": {"index": self.event_index, "date_field": "pr_closed_date_list"},
+            "pr_AssignedEvent": {"index": self.event_index, "date_field": "pr_assigned_date_list"},
+            "pr_UnassignedEvent": {"index": self.event_index, "date_field": "pr_unassigned_date_list"},
+            "pr_ReopenedEvent": {"index": self.event_index, "date_field": "pr_reopened_date_list"},
+            "pr_MilestonedEvent": {"index": self.event_index, "date_field": "pr_milestoned_date_list"},
+            "pr_DemilestonedEvent": {"index": self.event_index, "date_field": "pr_demilestoned_date_list"},
+            "pr_MarkedAsDuplicateEvent": {"index": self.event_index, "date_field": "pr_marked_as_duplicate_date_list"},
+            "pr_TransferredEvent": {"index": self.event_index, "date_field": "pr_transferred_date_list"},
+            "pr_RenamedTitleEvent": {"index": self.event_index, "date_field": "pr_renamed_title_date_list"},
+            "pr_ChangeDescriptionEvent": {"index": self.event_index, "date_field": "pr_change_description_date_list"},
+            "pr_SettingPriorityEvent": {"index": self.event_index, "date_field": "pr_setting_priority_date_list"},
+            "pr_ChangePriorityEvent": {"index": self.event_index, "date_field": "pr_change_priority_date_list"},
+            "pr_MergedEvent": {"index": self.event_index, "date_field": "pr_merged_date_list"},
             "pr_PullRequestReview": {"index": self.event_index, "date_field": "pr_review_date_list"},
+            "pr_SetTesterEvent": {"index": self.event_index, "date_field": "pr_set_tester_date_list"},
+            "pr_UnsetTesterEvent": {"index": self.event_index, "date_field": "pr_unset_tester_date_list"},
+            "pr_CheckPassEvent": {"index": self.event_index, "date_field": "pr_check_pass_date_list"},
+            "pr_TestPassEvent": {"index": self.event_index, "date_field": "pr_test_pass_date_list"},
+            "pr_ResetAssignResultEvent": {"index": self.event_index, "date_field": "pr_reset_assign_result_date_list"},
+            "pr_ResetTestResultEvent": {"index": self.event_index, "date_field": "pr_reset_test_result_date_list"},
+            "pr_LinkIssueEvent": {"index": self.event_index, "date_field": "pr_link_issue_date_list"},
+            "pr_UnlinkIssueEvent": {"index": self.event_index, "date_field": "pr_unlink_issue_date_list"},
         }
         if self.git_index is not None:
             self.date_field_list.append("code_commit_date_list")
@@ -232,7 +261,7 @@ class ContributorDevOrgRepo:
             return
 
         all_items_dict = self.get_merge_platform_git_contributor_data(repo, self.git_item_id_dict, self.platform_item_id_dict)
-        self.delete_contributor(repo)
+        self.delete_contributor(repo, self.contributors_index)
         logger.info(repo + "  save data...")
         all_bulk_data = []
         community =repo.split("/")[-2]
@@ -314,23 +343,19 @@ class ContributorDevOrgRepo:
         start_time = datetime.now()
         while True:
             results = []
-            if type == "issue":
+            if type == "issue_creation":
                 results = self.get_issue_enrich_data(index, repo, from_date, to_date, page_size, search_after)
-            elif type == "pr":
+            elif type == "pr_creation":
                 results = self.get_pr_enrich_data(index, repo, from_date, to_date, page_size, search_after)
             elif type == "issue_comments":
                 results = self.get_issue_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
             elif type == "pr_comments":
                 results = self.get_pr_comment_enrich_data(index, repo, from_date, to_date, page_size, search_after)
-            elif type in ["fork", "star", "watch"]:
+            elif type in ["fork", "star"]:
                 results = self.get_observe_enrich_data(index, repo, from_date, to_date, page_size, search_after)
-            elif type in ["issue_LabeledEvent", "issue_ClosedEvent", "issue_ReopenedEvent", "issue_AssignedEvent",
-                          "issue_MilestonedEvent", "issue_MarkedAsDuplicateEvent", "issue_TransferredEvent",
-                          "issue_LockedEvent"]:
+            elif re.match(r"^issue_.*Event$", type):
                 results = self.get_issue_event_enrich_data(index, repo, from_date, to_date, page_size, search_after, type.replace("issue_", ""))
-            elif type in ["pr_LabeledEvent", "pr_ClosedEvent", "pr_ReopenedEvent", "pr_AssignedEvent",
-                          "pr_MilestonedEvent", "pr_MarkedAsDuplicateEvent", "pr_TransferredEvent",
-                          "pr_LockedEvent", "pr_MergedEvent", "pr_PullRequestReview"]:
+            elif re.match(r"^pr_.*Event$", type) or type in "pr_PullRequestReview":
                 results = self.get_pr_event_enrich_data(index, repo, from_date, to_date, page_size, search_after, type.replace("pr_", ""))
 
             count = count + len(results)
@@ -404,7 +429,8 @@ class ContributorDevOrgRepo:
             pr_hits = self.get_pr_list_by_commit_hash(repo, hash_list)
             pr_data_dict = {}
             for pr_hit in pr_hits:
-                pr_data_dict[pr_hit["_source"]["merge_commit_sha"]] = pr_hit["_source"]
+                if pr_hit["_source"].get("merge_commit_sha"):
+                    pr_data_dict[pr_hit["_source"]["merge_commit_sha"]] = pr_hit["_source"]
                 for pr_commit_hash in pr_hit["_source"]["commits_data"]:
                     pr_data_dict[pr_commit_hash] = pr_hit["_source"]
             for result in results:
@@ -433,8 +459,11 @@ class ContributorDevOrgRepo:
                         org_change_date_list.append(org_date)
                 code_direct_commit_date = None
                 if grimoire_creation_date >= created_at and source["hash"] not in pr_data_dict \
-                        and ((source["committer_name"] in "GitHub" and source["committer_email"] in "noreply@github.com")
-                             or (source["committer_name"] == source["author_name"] and source["committer_email"] == source["author_email"])):
+                        and (
+                            (self.source == "github" and len(source["parents"]) <= 1 and source["committer_name"] == "GitHub" and source["committer_email"] == "noreply@github.com")
+                            or (self.source == "gitee" and len(source["parents"]) <= 1 and source["committer_name"] == "Gitee" and source["committer_email"] == "noreply@gitee.com")
+                             or (self.source == "github" and source["committer_name"] == source["author_name"] and source["committer_email"] == source["author_email"])
+                             ):
                     code_direct_commit_date = grimoire_creation_date
 
                 item = {
@@ -528,7 +557,8 @@ class ContributorDevOrgRepo:
             pr_hits = self.get_pr_list_by_commit_hash(repo, list(hash_set))
             pr_data_dict = {}
             for pr_hit in pr_hits:
-                pr_data_dict[pr_hit["_source"]["merge_commit_sha"]] = pr_hit["_source"]
+                if pr_hit["_source"].get("merge_commit_sha"):
+                    pr_data_dict[pr_hit["_source"]["merge_commit_sha"]] = pr_hit["_source"]
                 for pr_commit_hash in pr_hit["_source"]["commits_data"]:
                     pr_data_dict[pr_commit_hash] = pr_hit["_source"]
             for hit in results:
@@ -539,12 +569,13 @@ class ContributorDevOrgRepo:
                     pr_data = pr_data_dict[data["hash"]]
                     merge_login = pr_data["merge_author_login"]
                     create_login = pr_data["user_login"]
-                    if len(set(pr_data["commits_data"]) & hash_set) > 0 or len(data["parents"]) > 1:
+                    if data["hash"] in pr_data["commits_data"] or len(data["parents"]) > 1:
                         # merge
                         pr_commit_author_name = {hash_git_dict.get(pr_commit_hash)["_source"]["author_name"] for pr_commit_hash in pr_data["commits_data"] if hash_git_dict.get(pr_commit_hash)}
                         if len(pr_commit_author_name) > 1:
                             continue
-                        if pr_data["merge_commit_sha"] is not None and data["hash"] in pr_data["merge_commit_sha"] and data["committer_name"] in "GitHub" and data["committer_email"] in "noreply@github.com":
+                        if len(data["parents"]) > 1 and pr_data.get("merge_commit_sha") is not None and data["hash"] in pr_data["merge_commit_sha"] \
+                                and data["committer_name"] in "GitHub" and data["committer_email"] in "noreply@github.com":
                             author_set = login_author_name_dict.get(merge_login, set())
                             author_set.add(commit_author_name)
                             login_author_name_dict[merge_login] = author_set
@@ -734,7 +765,9 @@ class ContributorDevOrgRepo:
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"event_type": type}})
-        if type in ["ClosedEvent", "ReopenedEvent"]:
+        gitee_event_creatable_by_creator = ["RenamedTitleEvent", "ChangeDescriptionEvent", "ChangeIssueStateEvent", "ChangeIssueTypeEvent"]
+        github_event_creatable_by_creator = ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"]
+        if (self.source == "gitee" and type in gitee_event_creatable_by_creator) or (self.source == "github" and type in github_event_creatable_by_creator):
             query_dsl["query"]["bool"]["must"].append({
                 "script": {
                     "script": "doc['actor_username'].size() > 0 && doc['reporter_user_name'].size() > 0 &&  doc['actor_username'].value != doc['reporter_user_name'].value"
@@ -748,7 +781,11 @@ class ContributorDevOrgRepo:
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size, search_after)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"event_type": type}})
-        if type in ["ClosedEvent", "ReopenedEvent"]:
+        gitee_event_creatable_by_creator = ["LabeledEvent", "UnlabeledEvent", "ClosedEvent", "ReopenedEvent", "AssignedEvent", 
+                "MilestonedEvent", "DemilestonedEvent", "RenamedTitleEvent", "ChangeDescriptionEvent", "SettingPriorityEvent",
+                "ChangePriorityEvent", "SetTesterEvent", "LinkIssueEvent", "UnlinkIssueEvent"]
+        github_event_creatable_by_creator = ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"]
+        if (self.source == "gitee" and type in gitee_event_creatable_by_creator) or (self.source == "github" and type in github_event_creatable_by_creator):
             query_dsl["query"]["bool"]["must"].append({
                 "script": {
                     "script": "doc['actor_username'].size() > 0 && doc['reporter_user_name'].size() > 0 &&  doc['actor_username'].value != doc['reporter_user_name'].value"
@@ -863,9 +900,9 @@ class ContributorDevOrgRepo:
         }
         hits = self.client.search(index=self.repo_index, body=repo_query)["hits"]["hits"]
         created_at = hits[0]["_source"]["created_at"]
-        return created_at.replace("Z", "")
+        return datetime_to_utc(str_to_datetime(created_at)).isoformat()
 
-    def delete_contributor(self, repo):
+    def delete_contributor(self, repo, contributors_index):
         query = {
             "query": { 
                 "match_phrase": {
@@ -873,7 +910,7 @@ class ContributorDevOrgRepo:
                 }
             }
         }
-        self.client.delete_by_query(index=self.contributors_index, body=query)
+        self.client.delete_by_query(index=contributors_index, body=query)
 
     def get_pr_list_by_commit_hash(self, repo, hash_list):
         """ Get PR list based on commit hash value """
@@ -922,12 +959,13 @@ class ContributorDevOrgRepo:
         date_list = get_date_list(self.from_date, self.end_date)
         count = 0
         item_datas = []
+        self.delete_contributor(repo, self.contributors_enriched_index)
         for date in date_list:
             created_since_metric = created_since(self.client, self.git_index, date, [repo])
             if created_since_metric is None:
                 continue
             from_date = date - timedelta(days=7)
-            contributor_list = contributor_detail_list(self.client, self.contributors_index, from_date, date, [repo])["contributor_detail_list"]
+            contributor_list = contributor_eco_type_list(self.client, self.contributors_index, from_date, date, [repo])["contributor_eco_type_list"]
             count += len(contributor_list)
             for item in contributor_list:
                 item_uuid = get_uuid(item["contributor"], repo, str(date))
@@ -938,6 +976,7 @@ class ContributorDevOrgRepo:
                         "uuid": item_uuid,
                         "contributor": item["contributor"],
                         "contribution": item["contribution"],
+                        "contribution_without_observe": item["contribution_without_observe"],
                         "ecological_type": item["ecological_type"],
                         "organization": item["organization"],
                         "contribution_type_list": item["contribution_type_list"],

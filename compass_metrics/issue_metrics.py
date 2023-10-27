@@ -121,12 +121,12 @@ def updated_issues_count(client, issue_comments_index, date, repo_list):
     return result
 
 
-def issue_count(client, issue_index, date, repos_list, from_date=None):
+def issue_count(client, issue_index, date, repo_list, from_date=None):
     """ The number of issue created in the last 90 days. """
     if from_date is None:
         from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(
-        "cardinality", repos_list, "uuid", size=0, from_date=from_date, to_date=date)
+        "cardinality", repo_list, "uuid", size=0, from_date=from_date, to_date=date)
     query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     count = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['value']
@@ -136,38 +136,44 @@ def issue_count(client, issue_index, date, repos_list, from_date=None):
     return result
 
 
-def issue_close_time(client, issue_index, date, repos_list, from_date=None):
-    """ Determine the time interval from issue creation to closure in the past 90 days. """
+def issue_unresponsive_count(client, issue_index, date, repo_list, from_date=None):
+    """Defines the number of new issues created in the last 90 days that are still open and have no comments."""
     if from_date is None:
-        from_date = date - timedelta(days=90)
-    query_issue_close_time_avg = get_uuid_count_query(
-        "avg", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
-    query_issue_close_time_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-    issue_close_time_avg = client.search(index=issue_index, body=query_issue_close_time_avg)[
-        'aggregations']["count_of_uuid"]['value']
-
-    query_issue_close_time_mid = get_uuid_count_query(
-        "percentiles", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
-    query_issue_close_time_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-    query_issue_close_time_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
-        50]
-    issue_close_time_mid = client.search(index=issue_index, body=query_issue_close_time_mid)[
-        'aggregations']["count_of_uuid"]['values']['50.0']
-
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "cardinality", repo_list, "uuid", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    query["query"]["bool"]["must"].append({"match_phrase": {"num_of_comments_without_bot": 0}})
+    query["query"]["bool"]["must"].append({"terms": {"state": ["open", "progressing"]}})
+    unresponsive_count = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['value']
     result = {
-        'issue_close_time_avg': round(issue_close_time_avg, 4) if issue_close_time_avg is not None else None,
-        'issue_close_time_mid': round(issue_close_time_mid, 4) if issue_close_time_mid is not None else None,
+        "issue_unresponsive_count": unresponsive_count
     }
     return result
 
 
-def issue_completion_ratio(client, issue_index, date, repos_list, from_date=None):
-    """Measures the ratio between the total number of open issue and the total number
+def issue_unresponsive_ratio(client, issue_index, date, repo_list, from_date=None):
+    """Measures the ratio between the total number of issue and the total number
+    of unresponsive issue in the last 90 days."""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    count = issue_unresponsive_count(client, issue_index, date, repo_list, from_date)["issue_unresponsive_count"]
+    total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
+
+    result = {
+        "issue_unresponsive_ratio": count/total_count if count > 0 else None
+    }
+    return result
+
+
+def issue_completion_ratio(client, issue_index, date, repo_list, from_date=None):
+    """Measures the ratio between the total number of issue and the total number
     of closed issue in the last 90 days."""
     if from_date is None:
         from_date = (date-timedelta(days=90))
-    count = create_close_issue_count(client, issue_index, date, repos_list, from_date)["create_close_issue_count"]
-    total_count = issue_count(client, issue_index, date, repos_list, from_date)["issue_count"]
+    count = create_close_issue_count(client, issue_index, date, repo_list, from_date)["create_close_issue_count"]
+    total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
 
     result = {
         "issue_completion_ratio": count/total_count if count > 0 else None
@@ -175,12 +181,12 @@ def issue_completion_ratio(client, issue_index, date, repos_list, from_date=None
     return result
 
 
-def create_close_issue_count(client, issue_index, date, repos_list, from_date=None):
+def create_close_issue_count(client, issue_index, date, repo_list, from_date=None):
     """The number of issue created in the last 90 days and it has been closed or rejected"""
     if from_date is None:
         from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(
-        "cardinality", repos_list, "uuid", size=0, from_date=from_date, to_date=date)
+        "cardinality", repo_list, "uuid", size=0, from_date=from_date, to_date=date)
     query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     query["query"]["bool"]["filter"].append({
@@ -196,3 +202,45 @@ def create_close_issue_count(client, issue_index, date, repos_list, from_date=No
         "create_close_issue_count": issue_closed_count
     }
     return result
+
+
+def issue_state_distribution(client, issue_index, date, repo_list, from_date=None):
+    """Define the distribution of the status of new issues in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "state", size=0, from_date=from_date, to_date=date)
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    buckets = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_issue_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_issue_count == 0:
+        return {"issue_state_distribution": None}
+    state_distribution = {}
+    for bucket in buckets:
+        state_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_issue_count}
+    result = {
+        "issue_state_distribution": state_distribution
+    }
+    return result
+
+
+def issue_comment_distribution(client, issue_index, date, repo_list, from_date=None):
+    """Define the distribution of the comment of new issues in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "num_of_comments_without_bot", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["terms"]["size"] = 1000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    buckets = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_issue_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_issue_count == 0:
+        return {"issue_comment_distribution": None}
+    commet_distribution = {}
+    for bucket in buckets:
+        commet_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_issue_count}
+    result = {
+        "issue_comment_distribution": commet_distribution
+    }
+    return result
+    

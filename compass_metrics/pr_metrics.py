@@ -290,26 +290,72 @@ def pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list)
     return result
 
 
-def pr_close_time(client, pr_index, date, repos_list, from_date=None):
-    """ Determine the time interval from PR creation to closure in the past 90 days. """
+def pr_unresponsive_count(client, pr_index, date, repo_list, from_date=None):
+    """Defines the number of new pull request created in the last 90 days that are still open and have no comments."""
     if from_date is None:
-        from_date = date - timedelta(days=90)
-    query_pr_close_time_avg = get_uuid_count_query(
-        "avg", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
-    query_pr_close_time_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-    pr_close_time_avg = client.search(index=pr_index, body=query_pr_close_time_avg)[
-        'aggregations']["count_of_uuid"]['value']
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "cardinality", repo_list, "uuid", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    query["query"]["bool"]["must"].append({"match_phrase": {"num_review_comments_without_bot": 0}})
+    query["query"]["bool"]["must"].append({"match_phrase": {"state": "open"}})
+    unresponsive_count = client.search(index=pr_index, body=query)['aggregations']["count_of_uuid"]['value']
+    result = {
+        "pr_unresponsive_count": unresponsive_count
+    }
+    return result
 
-    query_pr_close_time_mid = get_uuid_count_query(
-        "percentiles", repos_list, "time_to_close_days", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
-    query_pr_close_time_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-    query_pr_close_time_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
-        50]
-    pr_close_time_mid = client.search(index=pr_index, body=query_pr_close_time_mid)[
-        'aggregations']["count_of_uuid"]['values']['50.0']
+def pr_unresponsive_ratio(client, pr_index, date, repo_list, from_date=None):
+    """Measures the ratio between the total number of pull request and the total number
+    of unresponsive pull request in the last 90 days."""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    count = pr_unresponsive_count(client, pr_index, date, repo_list, from_date)["pr_unresponsive_count"]
+    total_count = pr_count(client, pr_index, date, repo_list, from_date)["pr_count"]
 
     result = {
-        'pr_close_time_avg': round(pr_close_time_avg, 4) if pr_close_time_avg is not None else None,
-        'pr_close_time_mid': round(pr_close_time_mid, 4) if pr_close_time_mid is not None else None,
+        "pr_unresponsive_ratio": count/total_count if count > 0 else None
+    }
+    return result
+
+
+def pr_state_distribution(client, pr_index, date, repo_list, from_date=None):
+    """Define the distribution of the status of new pr in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "state", size=0, from_date=from_date, to_date=date)
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    buckets = client.search(index=pr_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_pr_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_pr_count == 0:
+        return {"pr_state_distribution": None}
+    state_distribution = {}
+    for bucket in buckets:
+        state_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_pr_count}
+    result = {
+        "pr_state_distribution": state_distribution
+    }
+    return result
+
+
+def pr_comment_distribution(client, pr_index, date, repo_list, from_date=None):
+    """Define the distribution of the comment of new pr in the last 90 days"""
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query = get_uuid_count_query(
+        "terms", repo_list, "num_review_comments_without_bot", size=0, from_date=from_date, to_date=date)
+    query["aggs"]["count_of_uuid"]["terms"]["size"] = 1000
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    buckets = client.search(index=pr_index, body=query)['aggregations']["count_of_uuid"]['buckets']
+    total_pr_count = sum([bucket["doc_count"] for bucket in buckets])
+    if total_pr_count == 0:
+        return {"pr_comment_distribution": None}
+    commet_distribution = {}
+    for bucket in buckets:
+        commet_distribution[bucket["key"]] = {"count": bucket["doc_count"], "ratio": bucket["doc_count"] / total_pr_count}
+    result = {
+        "pr_comment_distribution": commet_distribution
     }
     return result
