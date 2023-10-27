@@ -20,7 +20,7 @@ def contributor_count(client, contributors_index, date, repo_list):
     pr_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
                                                "pr_creation_date_list")
     pr_comment_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                       "pr_review_date_list")
+                                                       "pr_comments_date_list")
     D1_contributor_list = commit_contributor_list + issue_contributor_list + pr_contributor_list + \
                           issue_comment_contributor_list + pr_comment_contributor_list
     result = {
@@ -40,7 +40,7 @@ def code_contributor_count(client, contributors_index, date, repo_list):
     pr_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
                                                "pr_creation_date_list")
     pr_comment_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                       "pr_review_date_list")
+                                                       "pr_comments_date_list")
     contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
     result = {
         "code_contributor_count": get_contributor_count(contributor_list),
@@ -77,7 +77,7 @@ def pr_authors_contributor_count(client, contributors_index, date, repo_list):
 def pr_review_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active pr review participants there are in the past 90 days """
     pr_comment_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date,
-                                                       repo_list, "pr_review_date_list")
+                                                       repo_list, "pr_comments_date_list")
     result = {
         "pr_review_contributor_count": get_contributor_count(pr_comment_contributor_list),
         "pr_review_contributor_count_bot": get_contributor_count(pr_comment_contributor_list, is_bot=True),
