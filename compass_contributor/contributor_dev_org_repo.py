@@ -4,10 +4,9 @@ import re
 import logging
 from datetime import datetime, timedelta
 import urllib3
-from elasticsearch import helpers
 from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc, get_date_list)
 from compass_common.uuid_utils import get_uuid 
-from compass_common.opensearch_client_utils import get_elasticsearch_client  
+from compass_common.opensearch_client_utils import get_client, get_helpers as helpers
 from compass_common.datetime import get_latest_date, get_oldest_date  
 from compass_metrics.contributor_metrics import contributor_eco_type_list
 from compass_metrics.git_metrics import created_since
@@ -166,7 +165,7 @@ class ContributorDevOrgRepo:
 
     def run(self, elastic_url):
         """Run tasks"""
-        self.client = get_elasticsearch_client(elastic_url)
+        self.client = get_client(elastic_url)
         exist = self.client.indices.exists(index=self.contributors_index)
         if not exist:
             self.client.indices.create(index=self.contributors_index, body=self.get_contributor_index_mapping())
@@ -330,9 +329,9 @@ class ContributorDevOrgRepo:
             }
             all_bulk_data.append(contributor_data)
             if len(all_bulk_data) > MAX_BULK_UPDATE_SIZE:
-                helpers.bulk(client=self.client, actions=all_bulk_data, request_timeout=100)
+                helpers().bulk(client=self.client, actions=all_bulk_data, request_timeout=100)
                 all_bulk_data = []
-        helpers.bulk(client=self.client, actions=all_bulk_data, request_timeout=100)
+        helpers().bulk(client=self.client, actions=all_bulk_data, request_timeout=100)
         logger.info(repo + " finish count:" + str(len(all_items_dict)) + " " + str(datetime.now() - start_time))
 
     def processing_platform_data(self, index, repo, from_date, to_date, date_field, type="issue"):
@@ -988,7 +987,7 @@ class ContributorDevOrgRepo:
                 }
                 item_datas.append(contributor_data)
                 if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-                    helpers.bulk(client=self.client, actions=item_datas)
+                    helpers().bulk(client=self.client, actions=item_datas)
                     item_datas = []
-        helpers.bulk(client=self.client, actions=item_datas)
+        helpers().bulk(client=self.client, actions=item_datas)
         logger.info(repo + " contributor enrich data save finish count:" + str(count) + " " + str(datetime.now() - start_time))

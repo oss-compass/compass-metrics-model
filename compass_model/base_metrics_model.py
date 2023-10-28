@@ -8,8 +8,7 @@ import urllib3
 import pkg_resources
 import yaml
 
-from elasticsearch import helpers
-from compass_common.opensearch_client_utils import get_elasticsearch_client
+from compass_common.opensearch_client_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,
                                      datetime_utcnow)
 from compass_common.uuid_utils import get_uuid
@@ -164,9 +163,9 @@ def add_release_message(es_client, all_repo, repo_index, release_index):
                 }
                 item_datas.append(release_data)
                 if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-                    helpers.bulk(client=es_client, actions=item_datas)
+                    helpers().bulk(client=es_client, actions=item_datas)
                     item_datas = []
-            helpers.bulk(client=es_client, actions=item_datas)
+            helpers().bulk(client=es_client, actions=item_datas)
 
 
 def cache_last_metrics_data(item, last_metrics_data):
@@ -270,7 +269,7 @@ class BaseMetricsModel:
 
     def metrics_model_metrics(self, elastic_url):
         """ Execute model calculation tasks """
-        self.client = get_elasticsearch_client(elastic_url)
+        self.client = get_client(elastic_url)
         if self.level == "repo":
             repo_list = get_repo_list(self.json_file, self.source)
             if len(repo_list) > 0:
@@ -317,9 +316,9 @@ class BaseMetricsModel:
             }
             item_datas.append(item_data)
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
-                helpers.bulk(client=self.client, actions=item_datas)
+                helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []
-        helpers.bulk(client=self.client, actions=item_datas)
+        helpers().bulk(client=self.client, actions=item_datas)
 
     def get_metrics(self, date, repo_list):
         """ Get the corresponding metrics data according to the metrics field """
