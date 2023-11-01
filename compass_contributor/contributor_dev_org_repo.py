@@ -171,7 +171,8 @@ class ContributorDevOrgRepo:
             self.client.indices.create(index=self.contributors_index, body=self.get_contributor_index_mapping())
         for repo in self.all_repo:
             self.processing_data(repo)
-            time.sleep(5)  #Ensure that data has been saved to ES
+            self.client.indices.flush(index=self.contributors_index) #Ensure that data has been saved to ES
+            time.sleep(5)
             self.contributor_enrich(repo)
 
     def processing_data(self, repo):
