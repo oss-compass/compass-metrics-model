@@ -172,7 +172,6 @@ class ContributorDevOrgRepo:
         for repo in self.all_repo:
             self.processing_data(repo)
             self.client.indices.flush(index=self.contributors_index) #Ensure that data has been saved to ES
-            time.sleep(5)
             self.contributor_enrich(repo)
 
     def processing_data(self, repo):
