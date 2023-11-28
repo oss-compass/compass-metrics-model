@@ -39,7 +39,9 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  bus_factor,
                                                  activity_casual_contributor_count,
                                                  activity_regular_contributor_count,
-                                                 activity_core_contributor_count)
+                                                 activity_core_contributor_count,
+                                                 activity_organization_contributor_count,
+                                                 activity_individual_contributor_count)
 from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
@@ -382,6 +384,8 @@ class BaseMetricsModel:
             "activity_casual_contributor_count": lambda: activity_casual_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_regular_contributor_count": lambda: activity_regular_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_core_contributor_count": lambda: activity_core_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_organization_contributor_count": lambda: activity_core_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_individual_contributor_count": lambda: activity_core_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():

@@ -148,4 +148,10 @@ metrics_default_threshold:
     - metric: 'activity_core_contributor_count'
       repo_threshold: 20
       multiple_threshold: 20
+    - metric: 'activity_organization_contributor_count'
+      repo_threshold: 300
+      multiple_threshold: 300
+    - metric: 'activity_core_contributor_count'
+      repo_threshold: 2000
+      multiple_threshold: 2000
     

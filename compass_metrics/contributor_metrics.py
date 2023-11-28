@@ -347,7 +347,7 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
 
 def contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False, filter_mileage=None):
     """ Get detailed list of contributors in from_date, to_date time range. 
-    :param filter_mileage: Filter by mileage role, choose from core, regular
+    :param filter_mileage: Filter by mileage role, choose from core, regular, casual
     """
     if from_date is None:
         from_date = (date - timedelta(days=90))
@@ -397,6 +397,15 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
                 result_contributor[k] = {**v, "mileage_type": "regular"}
         core_name = core_contributor.keys()
         return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
+
+    def get_casual_contributor(contributor_dict, core_contributor, regular_contributor):
+        core_name = core_contributor.keys()
+        regular_name = regular_contributor.keys()
+        casual_contributor = {}
+        for k, v in contributor_dict.items():
+            if k not in core_name and k not in regular_name:
+                casual_contributor[k] = {**contributor_dict[k], "mileage_type": "casual"}
+        return casual_contributor
 
     contributor_list = get_contributor_list(client, contributors_enriched_index, from_date, date, \
             repo_list, ["grimoire_creation_date"], 1000)
@@ -452,18 +461,21 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
 
     core_contributor = get_core_contributor(contributor_dict)
     regular_contributor = get_regular_contributor(contributor_dict, core_contributor)
+    casual_contributor = get_casual_contributor(contributor_dict, core_contributor, regular_contributor)
     if filter_mileage is None:
-        contributor_detail_list = list(core_contributor.values()) + list(regular_contributor.values())
+        contributor_detail_list = list(core_contributor.values()) + list(regular_contributor.values()) + list(casual_contributor.values())
     elif filter_mileage is "core":
         contributor_detail_list = list(core_contributor.values())
     elif filter_mileage is "regular":
         contributor_detail_list = list(regular_contributor.values())
+    elif filter_mileage is "casual":
+        contributor_detail_list = list(casual_contributor.values())
 
     return {
         "contributor_detail_list": contributor_detail_list,
         "core_count": len(core_contributor),
         "regular_count": len(regular_contributor),
-        "casual_count": len(contributor_dict) - len(core_contributor) - len(regular_contributor)
+        "casual_count": len(casual_contributor)
     }
     
 
@@ -742,4 +754,26 @@ def activity_core_contributor_count(client, contributors_enriched_index, date, r
     from_date = (date - timedelta(days=90))
     contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     return {"activity_core_contributor_count": contributor_data["core_count"]}
+
+
+def activity_organization_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Define the number of active contributors in the last 90 days, counting the number of contributors who are organizations.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = contributor_data["contributor_detail_list"]
+    organization_contributor_list = [item for item in contributor_list \
+        if item["ecological_type"] in ["organization manager","organization participant"]]
+    return {"activity_organization_contributor_count": len(organization_contributor_list)}
+
+
+def activity_individual_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Define the number of active contributors in the past 90 days, counting those who are individuals.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = contributor_data["contributor_detail_list"]
+    individual_contributor_list = [item for item in contributor_list \
+        if item["ecological_type"] in ["individual manager","individual participant"]]
+    return {"activity_individual_contributor_count": len(individual_contributor_list)}
 
