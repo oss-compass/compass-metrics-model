@@ -7,11 +7,11 @@ from opensearchpy import helpers as opensearchpy_helpers
 
 def get_client(url):
     """ Get default client by url """
-    return get_opensearch_client(url)
+    return get_elasticsearch_client(url)
 
 def get_helpers():
     """ Collection of simple helper functions that abstract some specifics of the raw API """
-    return opensearchpy_helpers
+    return elasticsearch_helpers
 
 
 def get_elasticsearch_client(elastic_url):
