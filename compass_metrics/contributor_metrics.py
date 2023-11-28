@@ -713,3 +713,33 @@ def contributor_distribution(client, contributors_enriched_index, date, repo_lis
         "individual participant": contributor_data.get("individual participant", None),
     }
     return { "contributor_distribution": contributor_distribution_data}
+
+
+def activity_casual_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days Individuals who contribute to the remaining contributions in the community after excluding core 
+    and regular contributions (including observation contributions).
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_casual_contributor_count": contributor_data["casual_count"]}
+
+def activity_regular_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days After excluding the contributions of core contributors, 
+    the next 30% (excluding observation contributions) of contributions made by at least one group of people, 
+    including those who have been involved in contributing at least 3/4 of the time in the last 90 days, 
+    These individuals are referred to as regular contributors.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_regular_contributor_count": contributor_data["regular_count"]}
+
+def activity_core_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days contributors who contribute 50% (excluding observation contributions like star, fork, watch) of 
+    all domain-specific contributions in the current year, achieved by at least one group of people. 
+    This group is referred to as core contributors. Contributions across domains are not weighted, 
+    only counted by frequency.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_core_contributor_count": contributor_data["core_count"]}
+

@@ -139,4 +139,13 @@ metrics_default_threshold:
     - metric: 'bus_factor'
       repo_threshold: 5
       multiple_threshold: 5
+    - metric: 'activity_casual_contributor_count'
+      repo_threshold: 2000
+      multiple_threshold: 2000
+    - metric: 'activity_regular_contributor_count'
+      repo_threshold: 200
+      multiple_threshold: 200
+    - metric: 'activity_core_contributor_count'
+      repo_threshold: 20
+      multiple_threshold: 20
     

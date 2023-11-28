@@ -36,7 +36,10 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  issue_authors_contributor_count,
                                                  issue_comments_contributor_count,
                                                  org_contributor_count,
-                                                 bus_factor)
+                                                 bus_factor,
+                                                 activity_casual_contributor_count,
+                                                 activity_regular_contributor_count,
+                                                 activity_core_contributor_count)
 from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
@@ -190,7 +193,7 @@ def decrease_decay(last_data, threshold, days):
 
 class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
-                 contributors_index, release_index, out_index, from_date, end_date, level, community, source,
+                 contributors_index, contributors_enriched_index, release_index, out_index, from_date, end_date, level, community, source,
                  json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param repo_index: repo index
@@ -200,6 +203,7 @@ class BaseMetricsModel:
         :param issue_comments_index: issue comment index
         :param pr_comments_index: pr comment index
         :param contributors_index: contributor index
+        :param contributors_enriched_index: contributor enrich index
         :param release_index: release index
         :param out_index: target index for Metrics Model.
         :param from_date: the beginning of time for metric model
@@ -220,6 +224,7 @@ class BaseMetricsModel:
         self.issue_comments_index = issue_comments_index
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
+        self.contributors_enriched_index = contributors_enriched_index
         self.release_index = release_index
         self.out_index = out_index
         self.from_date = from_date
@@ -373,7 +378,10 @@ class BaseMetricsModel:
             "issue_authors_contributor_count": lambda: issue_authors_contributor_count(self.client, self.contributors_index, date, repo_list),
             "issue_comments_contributor_count": lambda: issue_comments_contributor_count(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list)
+            "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list),
+            "activity_casual_contributor_count": lambda: activity_casual_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_regular_contributor_count": lambda: activity_regular_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_core_contributor_count": lambda: activity_core_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
