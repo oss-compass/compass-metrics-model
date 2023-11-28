@@ -35,6 +35,7 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
+from compass_common.opensearch_utils import get_all_index_data
 
 from .utils import (get_uuid,
                     get_date_list,
@@ -589,7 +590,7 @@ class MetricsModel:
 
         return query
 
-    def query_contributor_list(self, index, repo, date_field, from_date, to_date, page_size=100, search_after=[]):
+    def query_contributor_list(self, index, repo, date_field, from_date, to_date, page_size=100):
         query = {
             "size": page_size,
             "query": {
@@ -612,29 +613,16 @@ class MetricsModel:
                         }
                     ]
                 }
-            },
-            "sort": [
-                {
-                    "_id": {
-                        "order": "asc"
-                    }
-                }
-            ]
+            }
         }
-        if len(search_after) > 0:
-            query['search_after'] = search_after
-        results = self.es_in.search(index=index, body=query)["hits"]["hits"]
+        results = get_all_index_data(self.es_in, index=index, body=query)
         return results
 
     def get_contributor_list(self, from_date, to_date, repos_list, date_field):
         result_list = []
         for repo in repos_list:
-            search_after = []
-            while True:
-                contributor_list = self.query_contributor_list(self.contributors_index, repo, date_field, from_date, to_date, 500, search_after)
-                if len(contributor_list) == 0:
-                    break
-                search_after = contributor_list[len(contributor_list) - 1]["sort"]
+            contributor_list = self.query_contributor_list(self.contributors_index, repo, date_field, from_date, to_date, 500)
+            if len(contributor_list) > 0:
                 result_list = result_list +[contributor["_source"] for contributor in contributor_list]
         return result_list
 

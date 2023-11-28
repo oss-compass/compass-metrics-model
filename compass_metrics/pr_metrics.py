@@ -321,7 +321,10 @@ def pr_unresponsive_ratio(client, pr_index, date, repo_list, from_date=None):
 
 
 def pr_state_distribution(client, pr_index, date, repo_list, from_date=None):
-    """Define the distribution of the status of new pr in the last 90 days"""
+    """Define the distribution of the states of new pr in the last 90 days
+    github pull request states are 'open' and 'closed',
+    gitee pull request states are 'open', 'merged' and 'closed'
+    """
     if from_date is None:
         from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(

@@ -1,5 +1,6 @@
 from compass_metrics.db_dsl import get_contributor_query, get_uuid_count_query
 from compass_common.datetime import get_time_diff_months, check_times_has_overlap
+from compass_common.opensearch_utils import get_all_index_data
 from datetime import timedelta
 from itertools import groupby
 import pandas as pd
@@ -199,14 +200,11 @@ def get_contributor_list(client, contributors_index, from_date, to_date, repo_li
     elif isinstance(date_field, list):
         date_field_list = date_field
     for repo in repo_list:
-        search_after = []
-        while True:
-            query = get_contributor_query(repo, date_field_list, from_date, to_date, page_size, search_after)
-            contributor_list = client.search(index=contributors_index, body=query)["hits"]["hits"]
-            if len(contributor_list) == 0:
-                break
-            search_after = contributor_list[len(contributor_list) - 1]["sort"]
-            result_list = result_list + [contributor["_source"] for contributor in contributor_list]
+        query = get_contributor_query(repo, date_field_list, from_date, to_date, page_size)
+        contributor_list = get_all_index_data(client, index=contributors_index, body=query)
+        if len(contributor_list) == 0:
+            continue
+        result_list = result_list + [contributor["_source"] for contributor in contributor_list]
     return result_list
 
 
