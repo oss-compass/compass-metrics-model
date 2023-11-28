@@ -777,3 +777,67 @@ def activity_individual_contributor_count(client, contributors_enriched_index, d
         if item["ecological_type"] in ["individual manager","individual participant"]]
     return {"activity_individual_contributor_count": len(individual_contributor_list)}
 
+def activity_observation_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ observation_contributor: contributors show interest in projects through actions 
+    such as starring and forking repositories. 
+    Define the number of contributors that are starring and forking in the last 90 days.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = contributor_data["contributor_detail_list"]
+    observation_type = ["fork", "star"]
+    observation_contributor_list = []
+    for item in contributor_list:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in observation_type:
+                observation_contributor_list.append(item)
+                break
+    return {"activity_observation_contributor_count": len(observation_contributor_list)}
+
+
+def activity_code_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributors with code behavior 
+    (e.g. creation, comments, code commit, pull request events) in the last 90 days.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = contributor_data["contributor_detail_list"]
+    code_type = ["pr_creation", "pr_comments", "code_commit",
+        "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
+        "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
+        "pr_marked_as_duplicate", "pr_transferred", 
+        "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority", 
+        "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass", 
+        "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue", 
+        "pr_unlink_issue", "code_direct_commit"]
+    code_contributor_list = []
+    for item in contributor_list:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in code_type:
+                code_contributor_list.append(item)
+                break
+    return {"activity_code_contributor_count": len(code_contributor_list)}
+
+
+def activity_issue_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Issue Contributions: Contributions related to issues can be categorized into types such as usage inquiries,
+    bug reports, and task planning. 
+    Defines the number of contributors with issue behavior (e.g. creation, comments,issue events) in the last 90 days.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = contributor_data["contributor_detail_list"]
+    issue_type = ["issue_creation", "issue_comments",
+        "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
+        "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
+        "issue_marked_as_duplicate", "issue_transferred", 
+        "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
+        "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator", "issue_unassign_collaborator",
+        "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
+    issue_contributor_list = []
+    for item in contributor_list:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in issue_type:
+                issue_contributor_list.append(item)
+                break
+    return {"activity_issue_contributor_count": len(issue_contributor_list)}
