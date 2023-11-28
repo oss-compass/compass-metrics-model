@@ -176,7 +176,7 @@ def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01
     return query
 
 
-def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=100, search_after=[]):
+def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=100):
     """ Query statement to get the contributors who have contributed in the from_date,to_date time period. """
     query = {
         "size": page_size,
@@ -190,14 +190,7 @@ def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=1
                     }
                 ]
             }
-        },
-        "sort": [
-            {
-                "_id": {
-                    "order": "asc"
-                }
-            }
-        ]
+        }
     }
     if len(date_field_list) > 0:
         query["query"]["bool"]["should"] = [{
@@ -209,8 +202,6 @@ def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=1
                 }
             } for date_field in date_field_list]
         query["query"]["bool"]["minimum_should_match"] = 1
-    if len(search_after) > 0:
-        query['search_after'] = search_after
     return query
 
 
@@ -403,7 +394,7 @@ def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_
 
 
 def get_message_list_query(field="tag", field_values=[], date_field="grimoire_creation_date", size=0,
-                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow(), search_after=[]):
+                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
     """ Getting a list of message data according to conditions """
     query = {
         "size": size,
@@ -427,17 +418,8 @@ def get_message_list_query(field="tag", field_values=[], date_field="grimoire_cr
                     }
                 ]
             }
-        },
-        "sort": [
-            {
-                "_id": {
-                    "order": "asc"
-                }
-            }
-        ]
+        }
     }
-    if len(search_after) > 0:
-        query['search_after'] = search_after
     return query
 
 

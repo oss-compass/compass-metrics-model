@@ -205,7 +205,10 @@ def create_close_issue_count(client, issue_index, date, repo_list, from_date=Non
 
 
 def issue_state_distribution(client, issue_index, date, repo_list, from_date=None):
-    """Define the distribution of the status of new issues in the last 90 days"""
+    """Define the distribution of the states of new issues in the last 90 days
+    github issue states are 'open' and 'closed',
+    gitee issue states are 'open', 'progressing', 'rejected' and 'closed'
+    """
     if from_date is None:
         from_date = (date-timedelta(days=90))
     query = get_uuid_count_query(

@@ -8,7 +8,7 @@ import urllib3
 import pkg_resources
 import yaml
 
-from compass_common.opensearch_client_utils import get_client, get_helpers as helpers
+from compass_common.opensearch_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,
                                      datetime_utcnow)
 from compass_common.uuid_utils import get_uuid
