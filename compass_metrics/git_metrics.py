@@ -11,6 +11,7 @@ from compass_common.datetime import (get_time_diff_months,
                                      get_latest_date,
                                      get_date_list)
 from datetime import timedelta
+from compass_common.opensearch_utils import get_all_index_data
 import numpy as np
 import math
 
@@ -332,13 +333,8 @@ def LOC_frequency(client, git_index, date, repos_list, field='lines_changed'):
 def get_message_list(client, index_name, from_date, to_date, repo_list):
     """ Getting a list of message data in the from_date,to_date time period. """
     result_list = []
-    search_after = []
-    while True:
-        query = get_message_list_query(field_values=repo_list, size=500, from_date=from_date, to_date=to_date,
-                                       search_after=search_after)
-        message_list = client.search(index=index_name, body=query)["hits"]["hits"]
-        if len(message_list) == 0:
-            break
-        search_after = message_list[len(message_list) - 1]["sort"]
+    query = get_message_list_query(field_values=repo_list, size=500, from_date=from_date, to_date=to_date)
+    message_list = get_all_index_data(client, index=index_name, body=query)
+    if len(message_list) > 0:
         result_list = result_list + [message["_source"] for message in message_list]
     return result_list

@@ -7,11 +7,11 @@ from opensearchpy import helpers as opensearchpy_helpers
 
 def get_client(url):
     """ Get default client by url """
-    return get_opensearch_client(url)
+    return get_elasticsearch_client(url)
 
 def get_helpers():
     """ Collection of simple helper functions that abstract some specifics of the raw API """
-    return opensearchpy_helpers
+    return elasticsearch_helpers
 
 
 def get_elasticsearch_client(elastic_url):
@@ -33,3 +33,24 @@ def get_opensearch_client(url):
         ssl_show_warn=False
     )
     return client
+
+def get_all_index_data(client, index, body):
+    """ Get all index data """
+    result_list = []
+    page_size = body["size"]
+    scroll_id_list = set()
+    taskList = client.search(index=index, body=body, scroll="1m", size=page_size)
+    scrollTotalSize = taskList["hits"]["total"]['value']
+    scroll_id = taskList["_scroll_id"]
+    for i in range(0, int(scrollTotalSize/page_size) + 1):
+        if i == 0:
+            taskHits = taskList["hits"]["hits"]
+        else:
+            scrollRes = client.scroll(scroll_id=scroll_id, scroll='1m')
+            scroll_id = scrollRes["_scroll_id"]
+            taskHits = scrollRes['hits']['hits']
+        scroll_id_list.add(scroll_id)
+        result_list = result_list + taskHits
+    if len(scroll_id_list) > 0:
+        client.clear_scroll(scroll_id=','.join(scroll_id_list))
+    return result_list
