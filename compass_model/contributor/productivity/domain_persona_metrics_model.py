@@ -7,7 +7,7 @@ ACTIVITY_ISSUE_CONTRIBUTOR_COUNT_WEIGHT = 0.4
 class DomainPersonaMetricsModel(BaseMetricsModel):
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                 contributors_index, release_index, out_index, from_date, end_date, level, community, source,
-                json_file):
+                json_file, contributors_enriched_index):
         model_name = 'Role Persona'
         metrics_weights_thresholds = {
             "activity_observation_contributor_count": {
@@ -26,4 +26,4 @@ class DomainPersonaMetricsModel(BaseMetricsModel):
         
         super().__init__(repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                          contributors_index, release_index, out_index, from_date, end_date, level, community, source,
-                         json_file, model_name, metrics_weights_thresholds)
+                         json_file, model_name, metrics_weights_thresholds, contributors_enriched_index=contributors_enriched_index)

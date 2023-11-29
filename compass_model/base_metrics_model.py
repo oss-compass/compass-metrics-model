@@ -198,8 +198,9 @@ def decrease_decay(last_data, threshold, days):
 
 class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
-                 contributors_index, contributors_enriched_index, release_index, out_index, from_date, end_date, level, community, source,
-                 json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None):
+                 contributors_index, release_index, out_index, from_date, end_date, level, community, source,
+                 json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None,
+                 contributors_enriched_index=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param repo_index: repo index
         :param git_index: git index
@@ -208,7 +209,6 @@ class BaseMetricsModel:
         :param issue_comments_index: issue comment index
         :param pr_comments_index: pr comment index
         :param contributors_index: contributor index
-        :param contributors_enriched_index: contributor enrich index
         :param release_index: release index
         :param out_index: target index for Metrics Model.
         :param from_date: the beginning of time for metric model
@@ -221,6 +221,7 @@ class BaseMetricsModel:
         :param metrics_weights_thresholds: dict representation of metrics, the dict values include weights and thresholds.
         :param algorithm: The algorithm chosen by the model,include criticality_score.
         :param custom_fields: custom_fields
+        :param contributors_enriched_index: contributor enrich index
         """
         self.repo_index = repo_index
         self.git_index = git_index
