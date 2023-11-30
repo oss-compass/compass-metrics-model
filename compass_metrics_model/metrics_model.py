@@ -31,11 +31,10 @@ import pkg_resources
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime)
-from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
-from compass_common.opensearch_utils import get_all_index_data
+from compass_common.opensearch_utils import get_all_index_data, get_client
 
 from .utils import (get_uuid,
                     get_date_list,
@@ -58,7 +57,7 @@ sys.path.append('../')
 
 logger = logging.getLogger(__name__)
 
-MAX_BULK_UPDATE_SIZE = 5000
+MAX_BULK_UPDATE_SIZE = 0
 
 def newest_message(repo_url):
     query = {
@@ -277,9 +276,7 @@ class MetricsModel:
             self.custom_fields_hash = None
 
     def metrics_model_metrics(self, elastic_url):
-        is_https = urlparse(elastic_url).scheme == 'https'
-        self.es_in = Elasticsearch(
-            elastic_url, use_ssl=is_https, verify_certs=False, connection_class=RequestsHttpConnection)
+        self.es_in = get_client(elastic_url)
         self.es_out = ElasticSearch(elastic_url, self.out_index)
 
         all_repo_json = json.load(open(self.json_file))
@@ -1230,7 +1227,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 "minimum_should_match": 1}
         }
         commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr)
-        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency)
+        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency, request_timeout=100)
         commit_count = commit_message['aggregations']["count_of_uuid"]['value']
         commit_pr_cout = 0
         commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]

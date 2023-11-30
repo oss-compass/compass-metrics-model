@@ -17,7 +17,16 @@ def get_helpers():
 def get_elasticsearch_client(elastic_url):
     """ Get elasticsearch client by url """
     is_https = urlparse(elastic_url).scheme == 'https'
-    return Elasticsearch(elastic_url, use_ssl=is_https, verify_certs=False, connection_class=RequestsHttpConnection)
+    client = Elasticsearch(
+        elastic_url, 
+        use_ssl=is_https, 
+        verify_certs=False, 
+        connection_class=RequestsHttpConnection,
+        timeout=100, 
+        max_retries=10, 
+        retry_on_timeout=True
+    )
+    return client
 
 
 def get_opensearch_client(url):
