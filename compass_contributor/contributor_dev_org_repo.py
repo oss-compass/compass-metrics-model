@@ -371,18 +371,25 @@ class ContributorDevOrgRepo:
             id_identity_list = set(
                 [exclude_special_str(x.lower()) for x in id_identity_list if x and x.lower() not in exclude_field_list and exclude_special_str(x) ])
             org_change_date_list = []
-            if source.get("user_email") is not None:
+            org_name = None
+            domain = None
+            if source.get("user_email") is not None :
                 domain = get_email_prefix_domain(source.get("user_email"))[1]
                 if domain is not None:
                     org_name = self.get_org_name_by_email(source.get("user_email"))
-                    org_date = {
-                        "domain": domain,
-                        "org_name": org_name,
-                        "first_date": grimoire_creation_date,
-                        "last_date": grimoire_creation_date
-                    }
-                    org_change_date_list.append(org_date)
-
+            if org_name is None:      
+                org_name = source.get('user_org', source.get('user_company', None))
+                if org_name is not None:
+                    org_name = org_name.strip()
+                    org_name = self.organizations_dict[org_name.lower()] if self.organizations_dict.get(org_name.lower()) else org_name
+            if any([org_name, domain]):
+                org_date = {
+                    "domain": domain,
+                    "org_name": org_name,
+                    "first_date": grimoire_creation_date,
+                    "last_date": grimoire_creation_date
+                }
+                org_change_date_list.append(org_date)
             item = {
                 "uuid": get_uuid(repo, "platform", user_login, source.get("user_email"), grimoire_creation_date),
                 "id_platform_login_name_list": set([user_login] if user_login else []),
@@ -490,10 +497,10 @@ class ContributorDevOrgRepo:
         result_data_list = []
         old_data_dict = {}
         for old_data in old_data_list:
-            old_key = old_data["domain"]+":"+(old_data["org_name"] if old_data["org_name"] else "")
+            old_key = f"{old_data['domain']}:{old_data['org_name']}"
             old_data_dict[old_key] = old_data
         for new_data in new_data_list:
-            new_key = new_data["domain"]+":"+(new_data["org_name"] if new_data["org_name"] else "")
+            new_key = f"{new_data['domain']}:{new_data['org_name']}"
             if new_key in old_data_dict.keys():
                 old_data = old_data_dict.pop(new_key)
                 data_dict = {
