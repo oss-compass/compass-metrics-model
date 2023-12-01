@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
    kwargs = {}
    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community',
-                'level']:
+                'level', 'contributors_index']:
        kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
    model_community = CommunitySupportMetricsModel(**kwargs)
    model_community.metrics_model_metrics(elastic_url)
