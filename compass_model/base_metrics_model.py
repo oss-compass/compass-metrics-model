@@ -7,6 +7,7 @@ import pandas as pd
 import urllib3
 import pkg_resources
 import yaml
+from datetime import timedelta
 
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,
@@ -293,7 +294,12 @@ class BaseMetricsModel:
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
             if created_since_metric is None:
                 continue
-            metrics = self.get_metrics(date, repo_list)
+            active_repo_list = repo_list
+            if level == "community":
+                active_repo_list = [repo_url for repo_url in repo_list if self.check_repo_active(repo_url, date)]
+                if len(active_repo_list) == 0:
+                    active_repo_list = repo_list 
+            metrics = self.get_metrics(date, active_repo_list)
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
                                     self.custom_fields_hash)
             metrics_data = {
@@ -438,3 +444,10 @@ class BaseMetricsModel:
                     pendulum.parse(last_data[key][1])).days
                 decay_metrics_data[key] = round(decrease_decay(last_data[key][0], value, days), 4)
         return decay_metrics_data
+
+    def check_repo_active(self, repo, date):
+        """ By checking if there are active contributors for half a year, 
+        if not, the repository is judged to be inactive. """
+        from_date = date - timedelta(days=180)
+        contributor_c = contributor_count(self.client, self.contributors_index, date, [repo], from_date)["contributor_count"]
+        return contributor_c > 0
