@@ -143,17 +143,17 @@ metrics_default_threshold:
       repo_threshold: 2000
       multiple_threshold: 2000
     - metric: 'activity_regular_contributor_count'
-      repo_threshold: 200
-      multiple_threshold: 200
+      repo_threshold: 100
+      multiple_threshold: 100
     - metric: 'activity_core_contributor_count'
       repo_threshold: 20
       multiple_threshold: 20
     - metric: 'activity_organization_contributor_count'
-      repo_threshold: 300
-      multiple_threshold: 300
-    - metric: 'activity_organization_contributor_count'
-      repo_threshold: 2000
-      multiple_threshold: 2000
+      repo_threshold: 1500
+      multiple_threshold: 1500
+    - metric: 'activity_individual_contributor_count'
+      repo_threshold: 3500
+      multiple_threshold: 3500
     - metric: 'activity_observation_contributor_count'
       repo_threshold: 2000
       multiple_threshold: 2000
@@ -161,6 +161,30 @@ metrics_default_threshold:
       repo_threshold: 1000
       multiple_threshold: 1000
     - metric: 'activity_issue_contributor_count'
-      repo_threshold: 1000
-      multiple_threshold: 1000
+      repo_threshold: 500
+      multiple_threshold: 500
+    - metric: 'activity_casual_contribution_per_person'
+      repo_threshold: 5
+      multiple_threshold: 5
+    - metric: 'activity_regular_contribution_per_person'
+      repo_threshold: 25
+      multiple_threshold: 25
+    - metric: 'activity_core_contribution_per_person'
+      repo_threshold: 200
+      multiple_threshold: 200
+    - metric: 'activity_organization_contribution_per_person'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'activity_individual_contribution_per_person'
+      repo_threshold: 5
+      multiple_threshold: 5
+    - metric: 'activity_observation_contribution_per_person'
+      repo_threshold: 5
+      multiple_threshold: 5
+    - metric: 'activity_code_contribution_per_person'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'activity_issue_contribution_per_person'
+      repo_threshold: 10
+      multiple_threshold: 10
     

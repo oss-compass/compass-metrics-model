@@ -733,6 +733,19 @@ def activity_casual_contributor_count(client, contributors_enriched_index, date,
     contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     return {"activity_casual_contributor_count": contributor_data["casual_count"]}
 
+def activity_casual_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active casual contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date, filter_mileage="casual")
+    contributor_count = contributor_data["casual_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution"] for contributor_item in contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_casual_contribution_per_person": contribution_per_person}
+
 def activity_regular_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Defining the last 90 days After excluding the contributions of core contributors, 
     the next 30% (excluding observation contributions) of contributions made by at least one group of people, 
@@ -743,6 +756,19 @@ def activity_regular_contributor_count(client, contributors_enriched_index, date
     contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     return {"activity_regular_contributor_count": contributor_data["regular_count"]}
 
+def activity_regular_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active regular contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date, filter_mileage="regular")
+    contributor_count = contributor_data["regular_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution_without_observe"] for contributor_item in contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_regular_contribution_per_person": contribution_per_person}
+
 def activity_core_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Defining the last 90 days contributors who contribute 50% (excluding observation contributions like star, fork, watch) of 
     all domain-specific contributions in the current year, achieved by at least one group of people. 
@@ -752,6 +778,20 @@ def activity_core_contributor_count(client, contributors_enriched_index, date, r
     from_date = (date - timedelta(days=90))
     contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     return {"activity_core_contributor_count": contributor_data["core_count"]}
+
+
+def activity_core_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active core contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date, filter_mileage="core")
+    contributor_count = contributor_data["core_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution_without_observe"] for contributor_item in contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_core_contribution_per_person": contribution_per_person}
 
 
 def activity_organization_contributor_count(client, contributors_enriched_index, date, repo_list):
@@ -765,6 +805,22 @@ def activity_organization_contributor_count(client, contributors_enriched_index,
     return {"activity_organization_contributor_count": len(organization_contributor_list)}
 
 
+def activity_organization_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active organization contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = [item for item in contributor_data["contributor_detail_list"] \
+        if item["ecological_type"] in ["organization manager","organization participant"]]
+    contributor_count = len(contributor_list)
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution"] for contributor_item in contributor_list]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_organization_contribution_per_person": contribution_per_person}
+
+
 def activity_individual_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Define the number of active contributors in the past 90 days, counting those who are individuals.
     """
@@ -774,6 +830,22 @@ def activity_individual_contributor_count(client, contributors_enriched_index, d
     individual_contributor_list = [item for item in contributor_list \
         if item["ecological_type"] in ["individual manager","individual participant"]]
     return {"activity_individual_contributor_count": len(individual_contributor_list)}
+
+def activity_individual_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active individual contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    contributor_list = [item for item in contributor_data["contributor_detail_list"] \
+        if item["ecological_type"] in ["individual manager","individual participant"]]
+    contributor_count = len(contributor_list)
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution"] for contributor_item in contributor_list]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_individual_contribution_per_person": contribution_per_person}
+
 
 def activity_observation_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ observation_contributor: contributors show interest in projects through actions 
@@ -792,6 +864,23 @@ def activity_observation_contributor_count(client, contributors_enriched_index, 
                 break
     return {"activity_observation_contributor_count": len(observation_contributor_list)}
 
+def activity_observation_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active observation contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    observation_type = ["fork", "star"]
+    contributor_name_set = set()
+    contribution_count = 0
+    for item in contributor_data["contributor_detail_list"]:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in observation_type:
+                contributor_name_set.add(item["contributor"])
+                contribution_count += type_item["contribution"]
+    if len(contributor_name_set) > 0:
+        contribution_per_person = contribution_count / len(contributor_name_set)
+    return {"activity_observation_contribution_per_person": contribution_per_person}
 
 def activity_code_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributors with code behavior 
@@ -816,6 +905,31 @@ def activity_code_contributor_count(client, contributors_enriched_index, date, r
                 break
     return {"activity_code_contributor_count": len(code_contributor_list)}
 
+def activity_code_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active code contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    code_type = ["pr_creation", "pr_comments", "code_commit",
+        "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
+        "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
+        "pr_marked_as_duplicate", "pr_transferred", 
+        "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority", 
+        "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass", 
+        "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue", 
+        "pr_unlink_issue", "code_direct_commit"]
+    contributor_name_set = set()
+    contribution_count = 0
+    for item in contributor_data["contributor_detail_list"]:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in code_type:
+                contributor_name_set.add(item["contributor"])
+                contribution_count += type_item["contribution"]
+    if len(contributor_name_set) > 0:
+        contribution_per_person = contribution_count / len(contributor_name_set)
+    return {"activity_code_contribution_per_person": contribution_per_person}
+
 
 def activity_issue_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Issue Contributions: Contributions related to issues can be categorized into types such as usage inquiries,
@@ -839,3 +953,28 @@ def activity_issue_contributor_count(client, contributors_enriched_index, date, 
                 issue_contributor_list.append(item)
                 break
     return {"activity_issue_contributor_count": len(issue_contributor_list)}
+
+
+def activity_issue_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active issue contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    issue_type = ["issue_creation", "issue_comments",
+        "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
+        "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
+        "issue_marked_as_duplicate", "issue_transferred", 
+        "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
+        "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator", "issue_unassign_collaborator",
+        "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
+    contributor_name_set = set()
+    contribution_count = 0
+    for item in contributor_data["contributor_detail_list"]:
+        for type_item in item["contribution_type_list"]:
+            if type_item["contribution_type"] in issue_type:
+                contributor_name_set.add(item["contributor"])
+                contribution_count += type_item["contribution"]
+    if len(contributor_name_set) > 0:
+        contribution_per_person = contribution_count / len(contributor_name_set)
+    return {"activity_issue_contribution_per_person": contribution_per_person}
