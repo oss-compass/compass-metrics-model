@@ -550,7 +550,7 @@ class ContributorDevOrgRepo:
         query_dsl["query"]["bool"]["filter"].append({"range": {"grimoire_creation_date": {"gte": created_at}}})
         results = get_all_index_data(self.client, index=self.git_index, body=query_dsl)
         if len(results) == 0:
-            return
+            return login_author_name_dict
         pr_hits = []
         hash_git_dict = {result["_source"]["hash"]:result for result in results}
         hash_set = set(hash_git_dict.keys())

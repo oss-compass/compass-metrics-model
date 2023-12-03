@@ -31,11 +31,11 @@ import pkg_resources
 from grimoire_elk.enriched.utils import get_time_diff_days
 from grimoirelab_toolkit.datetime import (datetime_utcnow,
                                           str_to_datetime)
-from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch import helpers
 from elasticsearch.exceptions import NotFoundError
 from grimoire_elk.elastic import ElasticSearch
-from compass_common.opensearch_utils import get_all_index_data
+from compass_common.opensearch_utils import get_all_index_data, get_client
+from compass_metrics.contributor_metrics import contributor_count
 
 from .utils import (get_uuid,
                     get_date_list,
@@ -244,6 +244,13 @@ def get_medium(L):
         return L[m]
 
 
+def check_repo_active(client, contributors_index, repo, date):
+    """ By checking if there are active contributors for half a year, 
+    if not, the repository is judged to be inactive. """
+    from_date = date - timedelta(days=180)
+    contributor_c = contributor_count(client, contributors_index, date, [repo], from_date)["contributor_count"]
+    return contributor_c > 0
+
 class MetricsModel:
     def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None, weights=None, custom_fields=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
@@ -277,9 +284,7 @@ class MetricsModel:
             self.custom_fields_hash = None
 
     def metrics_model_metrics(self, elastic_url):
-        is_https = urlparse(elastic_url).scheme == 'https'
-        self.es_in = Elasticsearch(
-            elastic_url, use_ssl=is_https, verify_certs=False, connection_class=RequestsHttpConnection)
+        self.es_in = get_client(elastic_url)
         self.es_out = ElasticSearch(elastic_url, self.out_index)
 
         all_repo_json = json.load(open(self.json_file))
@@ -754,17 +759,22 @@ class ActivityMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
+            active_repo_list = repos_list
+            if level in ["community", "project"]:
+                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
+                if len(active_repo_list) == 0:
+                    active_repo_list = repos_list 
             from_date = date - timedelta(days=90)
             to_date = date
-            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
-            issue_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_creation_date_list")
-            issue_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "issue_comments_date_list")
-            pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
-            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_comments_date_list")
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "code_commit_date_list")
+            issue_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "issue_creation_date_list")
+            issue_comment_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "issue_comments_date_list")
+            pr_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_creation_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_comments_date_list")
             D1_contributor_list = commit_contributor_list + issue_contributor_list + pr_contributor_list + issue_comment_contributor_list + pr_comment_contributor_list
 
-            comment_frequency = self.comment_frequency(date, repos_list)
-            code_review_count = self.code_review_count(date, repos_list)
+            comment_frequency = self.comment_frequency(date, active_repo_list)
+            code_review_count = self.code_review_count(date, active_repo_list)
             basic_args = [str(date), self.community, level, label, self.model_name, type]
             if self.weights_hash:
                 basic_args.append(self.weights_hash)
@@ -788,13 +798,13 @@ class ActivityMetricsModel(MetricsModel):
                 'commit_frequency_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=True),
                 'commit_frequency_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=False),
                 'org_count': self.org_count(from_date, to_date, commit_contributor_list),
-                # 'created_since': round(self.created_since(date, repos_list), 4),
+                # 'created_since': round(self.created_since(date, active_repo_list), 4),
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
                 'code_review_count': round(code_review_count, 4) if code_review_count is not None else None,
-                'updated_since': float(round(self.updated_since(date, repos_list), 4)),
-                'closed_issues_count': self.closed_issue_count(date, repos_list),
-                'updated_issues_count': self.updated_issue_count(date, repos_list),
-                'recent_releases_count': self.recent_releases_count(date, repos_list),
+                'updated_since': float(round(self.updated_since(date, active_repo_list), 4)),
+                'closed_issues_count': self.closed_issue_count(date, active_repo_list),
+                'updated_issues_count': self.updated_issue_count(date, active_repo_list),
+                'recent_releases_count': self.recent_releases_count(date, active_repo_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat(),
                 **self.custom_fields
@@ -816,12 +826,13 @@ class ActivityMetricsModel(MetricsModel):
 
 
 class CommunitySupportMetricsModel(MetricsModel):
-    def __init__(self, issue_index=None, pr_index=None, git_index=None,  json_file=None, out_index=None, from_date=None, end_date=None, community=None, level=None, weights=None, custom_fields=None):
+    def __init__(self, issue_index=None, pr_index=None, git_index=None,  json_file=None, out_index=None, from_date=None, end_date=None, community=None, level=None, weights=None, custom_fields=None, contributors_index=None):
         super().__init__(json_file, from_date, end_date, out_index, community, level, weights, custom_fields)
         self.issue_index = issue_index
         self.model_name = 'Community Support and Service'
         self.pr_index = pr_index
         self.git_index = git_index
+        self.contributors_index = contributors_index
 
     def issue_first_reponse(self, date, repos_list):
         query_issue_first_reponse_avg = self.get_uuid_count_query(
@@ -988,13 +999,18 @@ class CommunitySupportMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            issue_first = self.issue_first_reponse(date, repos_list)
-            bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
-            issue_open_time = self.issue_open_time(date, repos_list)
-            pr_open_time = self.pr_open_time(date, repos_list)
-            pr_first_response_time = self.pr_first_response_time(date, repos_list)
-            comment_frequency = self.comment_frequency(date, repos_list)
-            code_review_count = self.code_review_count(date, repos_list)
+            active_repo_list = repos_list
+            if level in ["community", "project"]:
+                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
+                if len(active_repo_list) == 0:
+                    active_repo_list = repos_list 
+            issue_first = self.issue_first_reponse(date, active_repo_list)
+            bug_issue_open_time = self.bug_issue_open_time(date, active_repo_list)
+            issue_open_time = self.issue_open_time(date, active_repo_list)
+            pr_open_time = self.pr_open_time(date, active_repo_list)
+            pr_first_response_time = self.pr_first_response_time(date, active_repo_list)
+            comment_frequency = self.comment_frequency(date, active_repo_list)
+            code_review_count = self.code_review_count(date, active_repo_list)
             basic_args = [str(date), self.community, level, label, self.model_name, type]
             if self.weights_hash:
                 basic_args.append(self.weights_hash)
@@ -1018,8 +1034,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'pr_first_response_time_mid': round(pr_first_response_time[1], 4) if pr_first_response_time[1] is not None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
                 'code_review_count': float(code_review_count) if code_review_count is not None else None,
-                'updated_issues_count': self.updated_issue_count(date, repos_list),
-                'closed_prs_count': self.closed_pr_count(date, repos_list),
+                'updated_issues_count': self.updated_issue_count(date, active_repo_list),
+                'closed_prs_count': self.closed_pr_count(date, active_repo_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat(),
                 **self.custom_fields
@@ -1230,7 +1246,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 "minimum_should_match": 1}
         }
         commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr)
-        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency)
+        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency, request_timeout=100)
         commit_count = commit_message['aggregations']["count_of_uuid"]['value']
         commit_pr_cout = 0
         commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
@@ -1304,16 +1320,21 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
+            active_repo_list = repos_list
+            if level in ["community", "project"]:
+                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
+                if len(active_repo_list) == 0:
+                    active_repo_list = repos_list 
             from_date = date - timedelta(days=90)
             to_date = date
-            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
-            pr_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_creation_date_list")
-            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "pr_comments_date_list")
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "code_commit_date_list")
+            pr_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_creation_date_list")
+            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_comments_date_list")
             D2_C1_pr_contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
 
-            git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
-            code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
-            code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
+            git_pr_linked_ratio = self.git_pr_linked_ratio(date, active_repo_list)
+            code_review_ratio, pr_count = self.code_review_ratio(date, active_repo_list)
+            code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, active_repo_list)
             basic_args = [str(date), self.community, level, label, self.model_name, type]
             if self.weights_hash:
                 basic_args.append(self.weights_hash)
@@ -1337,11 +1358,11 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'commit_frequency_inside': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company) if self.company else 0,
                 'commit_frequency_inside_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=True) if self.company else 0,
                 'commit_frequency_inside_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=False) if self.company else 0,
-                'is_maintained': round(self.is_maintained(date, repos_list, level), 4),
-                'LOC_frequency': self.LOC_frequency(date, repos_list),
-                'lines_added_frequency': self.LOC_frequency(date, repos_list, 'lines_added'),
-                'lines_removed_frequency': self.LOC_frequency(date, repos_list, 'lines_removed'),
-                'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
+                'is_maintained': round(self.is_maintained(date, active_repo_list, level), 4),
+                'LOC_frequency': self.LOC_frequency(date, active_repo_list),
+                'lines_added_frequency': self.LOC_frequency(date, active_repo_list, 'lines_added'),
+                'lines_removed_frequency': self.LOC_frequency(date, active_repo_list, 'lines_removed'),
+                'pr_issue_linked_ratio': self.pr_issue_linked(date, active_repo_list),
                 'code_review_ratio': code_review_ratio,
                 'code_merge_ratio': code_merge_ratio,
                 'pr_count': pr_count,
@@ -1498,9 +1519,14 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
+            active_repo_list = repos_list
+            if level in ["community", "project"]:
+                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
+                if len(active_repo_list) == 0:
+                    active_repo_list = repos_list 
             from_date = date - timedelta(days=90)
             to_date = date
-            contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "code_commit_date_list")
             if len(contributor_list) == 0:
                 continue
             self.add_org_name(contributor_list)

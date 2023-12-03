@@ -6,11 +6,11 @@ from itertools import groupby
 import pandas as pd
 
 
-def contributor_count(client, contributors_index, date, repo_list):
+def contributor_count(client, contributors_index, date, repo_list, from_date=None):
     """ Determine how many active code commit authors, pr authors, review participants, issue authors,
     and issue comments participants there are in the past 90 days """
-
-    from_date = date - timedelta(days=90)
+    if from_date is None:
+        from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
                                                    "code_commit_date_list")
