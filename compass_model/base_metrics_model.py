@@ -37,7 +37,23 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  issue_authors_contributor_count,
                                                  issue_comments_contributor_count,
                                                  org_contributor_count,
-                                                 bus_factor)
+                                                 bus_factor,
+                                                 activity_casual_contributor_count,
+                                                 activity_regular_contributor_count,
+                                                 activity_core_contributor_count,
+                                                 activity_organization_contributor_count,
+                                                 activity_individual_contributor_count,
+                                                 activity_observation_contributor_count,
+                                                 activity_code_contributor_count,
+                                                 activity_issue_contributor_count,
+                                                 activity_casual_contribution_per_person,
+                                                 activity_regular_contribution_per_person,
+                                                 activity_core_contribution_per_person,
+                                                 activity_organization_contribution_per_person,
+                                                 activity_individual_contribution_per_person,
+                                                 activity_observation_contribution_per_person,
+                                                 activity_code_contribution_per_person,
+                                                 activity_issue_contribution_per_person)
 from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
@@ -192,7 +208,8 @@ def decrease_decay(last_data, threshold, days):
 class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                  contributors_index, release_index, out_index, from_date, end_date, level, community, source,
-                 json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None):
+                 json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None,
+                 contributors_enriched_index=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param repo_index: repo index
         :param git_index: git index
@@ -213,6 +230,7 @@ class BaseMetricsModel:
         :param metrics_weights_thresholds: dict representation of metrics, the dict values include weights and thresholds.
         :param algorithm: The algorithm chosen by the model,include criticality_score.
         :param custom_fields: custom_fields
+        :param contributors_enriched_index: contributor enrich index
         """
         self.repo_index = repo_index
         self.git_index = git_index
@@ -221,6 +239,7 @@ class BaseMetricsModel:
         self.issue_comments_index = issue_comments_index
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
+        self.contributors_enriched_index = contributors_enriched_index
         self.release_index = release_index
         self.out_index = out_index
         self.from_date = from_date
@@ -379,7 +398,23 @@ class BaseMetricsModel:
             "issue_authors_contributor_count": lambda: issue_authors_contributor_count(self.client, self.contributors_index, date, repo_list),
             "issue_comments_contributor_count": lambda: issue_comments_contributor_count(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
-            "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list)
+            "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list),
+            "activity_casual_contributor_count": lambda: activity_casual_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_regular_contributor_count": lambda: activity_regular_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_core_contributor_count": lambda: activity_core_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_organization_contributor_count": lambda: activity_organization_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_individual_contributor_count": lambda: activity_individual_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_observation_contributor_count": lambda: activity_observation_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_code_contributor_count": lambda: activity_code_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_issue_contributor_count": lambda: activity_issue_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_casual_contribution_per_person": lambda: activity_casual_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_regular_contribution_per_person": lambda: activity_regular_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_core_contribution_per_person": lambda: activity_core_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_organization_contribution_per_person": lambda: activity_organization_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_individual_contribution_per_person": lambda: activity_individual_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_observation_contribution_per_person": lambda: activity_observation_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_code_contribution_per_person": lambda: activity_code_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "activity_issue_contribution_per_person": lambda: activity_issue_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
