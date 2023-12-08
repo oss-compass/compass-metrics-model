@@ -95,7 +95,7 @@ def prediction_activity(repo, model_data_list):
     """ Predict open source project activity """
     data_list = []
     for model_data in model_data_list:
-        df = pd.json_normalize(model_data)
+        df = pd.DataFrame(model_data)
         data_list.append(df)
     data_list = [data_list]
     repo_name_list = [repo]
