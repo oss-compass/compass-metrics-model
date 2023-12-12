@@ -455,7 +455,8 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             "contribution_weeks": len(list(group))
         }
         if is_bot is contributor_item["is_bot"]:
-            contributor_dict[key] = contributor_item
+            if key not in "openharmony_ci":
+                contributor_dict[key] = contributor_item
 
     core_contributor = get_core_contributor(contributor_dict)
     regular_contributor = get_regular_contributor(contributor_dict, core_contributor)
