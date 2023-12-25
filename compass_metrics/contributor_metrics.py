@@ -917,43 +917,25 @@ def activity_observation_contributor_count(client, contributors_enriched_index, 
     such as starring and forking repositories. 
     Define the number of contributors that are starring and forking in the last 90 days.
     """
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = contributor_data["contributor_detail_list"]
     observation_type = ["fork", "star"]
-    observation_contributor_list = []
-    for item in contributor_list:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in observation_type:
-                observation_contributor_list.append(item)
-                break
-    return {"activity_observation_contributor_count": len(observation_contributor_list)}
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, observation_type)
+    return {"activity_observation_contributor_count": contributor_count}
 
 def activity_observation_contribution_per_person(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributions per active observation contributor in the last 90 days.
     """
     contribution_per_person = 0
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     observation_type = ["fork", "star"]
-    contributor_name_set = set()
-    contribution_count = 0
-    for item in contributor_data["contributor_detail_list"]:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in observation_type:
-                contributor_name_set.add(item["contributor"])
-                contribution_count += type_item["contribution"]
-    if len(contributor_name_set) > 0:
-        contribution_per_person = contribution_count / len(contributor_name_set)
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list, observation_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, observation_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
     return {"activity_observation_contribution_per_person": contribution_per_person}
 
 def activity_code_contributor_count(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributors with code behavior 
     (e.g. creation, comments, code commit, pull request events) in the last 90 days.
     """
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = contributor_data["contributor_detail_list"]
     code_type = ["pr_creation", "pr_comments", "code_commit",
         "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
         "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
@@ -961,21 +943,14 @@ def activity_code_contributor_count(client, contributors_enriched_index, date, r
         "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority", 
         "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass", 
         "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue", 
-        "pr_unlink_issue", "code_direct_commit"]
-    code_contributor_list = []
-    for item in contributor_list:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in code_type:
-                code_contributor_list.append(item)
-                break
-    return {"activity_code_contributor_count": len(code_contributor_list)}
+        "pr_unlink_issue"]
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, code_type)
+    return {"activity_code_contributor_count": contributor_count}
 
 def activity_code_contribution_per_person(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributions per active code contributor in the last 90 days.
     """
     contribution_per_person = 0
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     code_type = ["pr_creation", "pr_comments", "code_commit",
         "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
         "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
@@ -983,16 +958,11 @@ def activity_code_contribution_per_person(client, contributors_enriched_index, d
         "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority", 
         "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass", 
         "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue", 
-        "pr_unlink_issue", "code_direct_commit"]
-    contributor_name_set = set()
-    contribution_count = 0
-    for item in contributor_data["contributor_detail_list"]:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in code_type:
-                contributor_name_set.add(item["contributor"])
-                contribution_count += type_item["contribution"]
-    if len(contributor_name_set) > 0:
-        contribution_per_person = contribution_count / len(contributor_name_set)
+        "pr_unlink_issue"]
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list, code_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, code_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
     return {"activity_code_contribution_per_person": contribution_per_person}
 
 
@@ -1001,9 +971,6 @@ def activity_issue_contributor_count(client, contributors_enriched_index, date, 
     bug reports, and task planning. 
     Defines the number of contributors with issue behavior (e.g. creation, comments,issue events) in the last 90 days.
     """
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = contributor_data["contributor_detail_list"]
     issue_type = ["issue_creation", "issue_comments",
         "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
         "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
@@ -1011,21 +978,14 @@ def activity_issue_contributor_count(client, contributors_enriched_index, date, 
         "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
         "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator", "issue_unassign_collaborator",
         "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
-    issue_contributor_list = []
-    for item in contributor_list:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in issue_type:
-                issue_contributor_list.append(item)
-                break
-    return {"activity_issue_contributor_count": len(issue_contributor_list)}
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, issue_type)
+    return {"activity_issue_contributor_count": contributor_count}
 
 
 def activity_issue_contribution_per_person(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributions per active issue contributor in the last 90 days.
     """
     contribution_per_person = 0
-    from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
     issue_type = ["issue_creation", "issue_comments",
         "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
         "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
@@ -1033,13 +993,63 @@ def activity_issue_contribution_per_person(client, contributors_enriched_index, 
         "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
         "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator", "issue_unassign_collaborator",
         "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
-    contributor_name_set = set()
-    contribution_count = 0
-    for item in contributor_data["contributor_detail_list"]:
-        for type_item in item["contribution_type_list"]:
-            if type_item["contribution_type"] in issue_type:
-                contributor_name_set.add(item["contributor"])
-                contribution_count += type_item["contribution"]
-    if len(contributor_name_set) > 0:
-        contribution_per_person = contribution_count / len(contributor_name_set)
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list, issue_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, issue_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
     return {"activity_issue_contribution_per_person": contribution_per_person}
+
+def activity_domain_contribution(client, contributors_enriched_index, date, repo_list, contribution_type):
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["sum"] = {
+        "script": {
+          "source": """
+          int sum = 0;
+          List targetValue = params.targetValue;
+          for(def item : params._source.contribution_type_list){
+            if(targetValue.contains(item.contribution_type)){
+              sum += item.contribution;
+            } 
+          }
+          return sum;
+          """,
+          "params": {
+                "targetValue": contribution_type
+            }
+        }
+      }
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "contribution_type_list.contribution_type.keyword": contribution_type
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return contribution_count
+
+
+def activity_domain_contributor(client, contributors_enriched_index, date, repo_list, contribution_type):
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "contribution_type_list.contribution_type.keyword": contribution_type
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return contributor_count
