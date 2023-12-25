@@ -926,21 +926,21 @@ class CommunitySupportMetricsModel(MetricsModel):
         return issue_first_reponse_avg, issue_first_reponse_mid
 
     def issue_open_time(self, date, repos_list):
-        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=1000, from_date=date-timedelta(days=90), to_date=date)
         query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
-        issue_opens_items = self.es_in.search(index=self.issue_index, body=query_issue_opens)['hits']['hits']
+        issue_opens_items = get_all_index_data(self.es_in, self.issue_index, query_issue_opens)
         if len(issue_opens_items) == 0:
             return None, None
         issue_open_time_repo = []
+        date_str = date.isoformat()
         for item in issue_opens_items:
             if 'state' in item['_source']:
                 if item['_source']['closed_at']:
-                    if item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+                    if item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str:
                         issue_open_time_repo.append(get_time_diff_days(
                             item['_source']['created_at'], item['_source']['closed_at']))
                 else:
-                    issue_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], str(date)))
+                    issue_open_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
         if len(issue_open_time_repo) == 0:
             return None, None
         issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
@@ -948,62 +948,80 @@ class CommunitySupportMetricsModel(MetricsModel):
         return issue_open_time_repo_avg, issue_open_time_repo_mid
 
     def bug_issue_open_time(self, date, repos_list):
-        query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
-                                                      "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
-        query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
-        bug_query = {
-            "bool": {
-                "should": [{
-                    "script": {
-                        "script": "if (doc.containsKey('labels') && doc['labels'].size()>0) { for (int i = 0; i < doc['labels'].length; ++i){ if(doc['labels'][i].toLowerCase().indexOf('bug')!=-1|| doc['labels'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
+        bug_issue_open_time_dict = {}
+        day_date_list = get_date_list(begin_date=str(date-timedelta(days=90)), end_date=str(date), freq='1D')
+        for index, day in enumerate(day_date_list):
+            if index == 0:
+                continue
+            day_str = day.isoformat()
+            if len(self.bug_issue_open_time_deque) > index+6:
+                bug_issue_open_time_dict.update(self.bug_issue_open_time_deque[index+6].get(day_str)) 
+            else:
+                query_issue_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
+                                                            "grimoire_creation_date", size=1000, from_date=day-timedelta(days=1), to_date=day)
+                query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+                bug_query = {
+                    "bool": {
+                        "should": [{
+                            "script": {
+                                "script": "if (doc.containsKey('labels') && doc['labels'].size()>0) { for (int i = 0; i < doc['labels'].length; ++i){ if(doc['labels'][i].toLowerCase().indexOf('bug')!=-1|| doc['labels'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
+                            }
+                        },
+                            {
+                            "script": {
+                                "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0) { for (int i = 0; i < doc['issue_type'].length; ++i){ if(doc['issue_type'][i].toLowerCase().indexOf('bug')!=-1 || doc['issue_type'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
+                            }
+                        }],
+                        "minimum_should_match": 1
                     }
-                },
-                    {
-                    "script": {
-                        "script": "if (doc.containsKey('issue_type') && doc['issue_type'].size()>0) { for (int i = 0; i < doc['issue_type'].length; ++i){ if(doc['issue_type'][i].toLowerCase().indexOf('bug')!=-1 || doc['issue_type'][i].toLowerCase().indexOf('缺陷')!=-1){return true;}}}"
-                    }
-                }],
-                "minimum_should_match": 1
-            }
-        }
-        query_issue_opens["query"]["bool"]["must"].append(bug_query)
-        issue_opens_items = self.es_in.search(
-            index=self.issue_index, body=query_issue_opens)['hits']['hits']
-        if len(issue_opens_items) == 0:
+                }
+                query_issue_opens["query"]["bool"]["must"].append(bug_query)
+                issue_opens_items = get_all_index_data(self.es_in, self.issue_index, query_issue_opens)
+                
+                day_issue_open_time_dict = {}
+                date_str = date.isoformat()
+                for item in issue_opens_items:
+                    if 'state' in item['_source']:
+                        item_source = item['_source']
+                        day_issue_open_time_dict[item_source['uuid']] = {
+                            "created_at": item_source.get('created_at'),
+                            "closed_at": item_source.get('closed_at')
+                        }
+                self.bug_issue_open_time_deque.append({day_str: day_issue_open_time_dict})
+                bug_issue_open_time_dict.update(day_issue_open_time_dict)
+        if len(bug_issue_open_time_dict) == 0:
             return None, None
-        issue_open_time_repo = []
-        for item in issue_opens_items:
-            if 'state' in item['_source']:
-                if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
-                        issue_open_time_repo.append(get_time_diff_days(
-                            item['_source']['created_at'], item['_source']['closed_at']))
+        else:
+            bug_issue_open_time_list = []
+            for item in bug_issue_open_time_dict.values():
+                if item['closed_at'] and item['closed_at'] < date_str:
+                    bug_issue_open_time_list.append(get_time_diff_days(item['created_at'], item['closed_at']))
                 else:
-                    issue_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], str(date)))
-        issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
-        issue_open_time_repo_mid = get_medium(issue_open_time_repo)
-        return issue_open_time_repo_avg, issue_open_time_repo_mid
+                    bug_issue_open_time_list.append(get_time_diff_days(item['created_at'], date_str))
+            issue_open_time_repo_avg = sum(bug_issue_open_time_list) / len(bug_issue_open_time_list)
+            issue_open_time_repo_mid = get_medium(bug_issue_open_time_list)
+            return issue_open_time_repo_avg, issue_open_time_repo_mid
 
     def pr_open_time(self, date, repos_list):
         query_pr_opens = self.get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
-                                                   "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+                                                   "grimoire_creation_date", size=1000, from_date=date-timedelta(days=90), to_date=date)
         query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
-        pr_opens_items = self.es_in.search(
-            index=self.pr_index, body=query_pr_opens)['hits']['hits']
+        pr_opens_items = get_all_index_data(self.es_in, self.pr_index, query_pr_opens)
         if len(pr_opens_items) == 0:
             return None, None
         pr_open_time_repo = []
+        date_str = date.isoformat()
         for item in pr_opens_items:
             if 'state' in item['_source']:
-                if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and str_to_datetime(item['_source']['merged_at']) < date:
+                if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and item['_source']['merged_at'] < date_str:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], item['_source']['merged_at']))
-                if item['_source']['state'] == 'closed' and str_to_datetime(item['_source']['closed_at'] or item['_source']['updated_at']) < date:
+                if item['_source']['state'] == 'closed' and item['_source']['closed_at'] or item['_source']['updated_at'] < date_str:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], str(date)))
+                        item['_source']['created_at'], date_str))
         if len(pr_open_time_repo) == 0:
             return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
@@ -1068,23 +1086,19 @@ class CommunitySupportMetricsModel(MetricsModel):
         date_list = date_list if date_list != None else self.date_list
         item_datas = []
         last_metrics_data = {}
+        self.bug_issue_open_time_deque = deque(maxlen=90)
         for date in date_list:
             logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            active_repo_list = repos_list
-            if level in ["community", "project"]:
-                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
-                if len(active_repo_list) == 0:
-                    active_repo_list = repos_list 
-            issue_first = self.issue_first_reponse(date, active_repo_list)
-            bug_issue_open_time = self.bug_issue_open_time(date, active_repo_list)
-            issue_open_time = self.issue_open_time(date, active_repo_list)
-            pr_open_time = self.pr_open_time(date, active_repo_list)
-            pr_first_response_time = self.pr_first_response_time(date, active_repo_list)
-            comment_frequency = self.comment_frequency(date, active_repo_list)
-            code_review_count = self.code_review_count(date, active_repo_list)
+            issue_first = self.issue_first_reponse(date, repos_list)
+            bug_issue_open_time = self.bug_issue_open_time(date, repos_list)
+            issue_open_time = self.issue_open_time(date, repos_list)
+            pr_open_time = self.pr_open_time(date, repos_list)
+            pr_first_response_time = self.pr_first_response_time(date, repos_list)
+            comment_frequency = self.comment_frequency(date, repos_list)
+            code_review_count = self.code_review_count(date, repos_list)
             basic_args = [str(date), self.community, level, label, self.model_name, type]
             if self.weights_hash:
                 basic_args.append(self.weights_hash)
@@ -1108,8 +1122,8 @@ class CommunitySupportMetricsModel(MetricsModel):
                 'pr_first_response_time_mid': round(pr_first_response_time[1], 4) if pr_first_response_time[1] is not None else None,
                 'comment_frequency': float(round(comment_frequency, 4)) if comment_frequency is not None else None,
                 'code_review_count': float(code_review_count) if code_review_count is not None else None,
-                'updated_issues_count': self.updated_issue_count(date, active_repo_list),
-                'closed_prs_count': self.closed_pr_count(date, active_repo_list),
+                'updated_issues_count': self.updated_issue_count(date, repos_list),
+                'closed_prs_count': self.closed_pr_count(date, repos_list),
                 'grimoire_creation_date': date.isoformat(),
                 'metadata__enriched_on': datetime_utcnow().isoformat(),
                 **self.custom_fields

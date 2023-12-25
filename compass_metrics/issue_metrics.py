@@ -3,8 +3,8 @@
 from compass_metrics.db_dsl import get_uuid_count_query, get_updated_issues_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
-from compass_common.datetime import str_to_datetime
 from compass_common.algorithm_utils import get_medium
+from compass_common.opensearch_utils import get_all_index_data
 
 
 def issue_first_reponse(client, issue_index, date, repos_list):
@@ -34,7 +34,7 @@ def issue_first_reponse(client, issue_index, date, repos_list):
 
 def bug_issue_open_time(client, issue_index, date, repos_list):
     query_issue_opens = get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
-                                                    "grimoire_creation_date", size=10000, from_date=date-timedelta(days=90), to_date=date)
+                                                    "grimoire_creation_date", size=1000, from_date=date-timedelta(days=90), to_date=date)
     query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
     bug_query = {
         "bool": {
@@ -52,19 +52,19 @@ def bug_issue_open_time(client, issue_index, date, repos_list):
         }
     }
     query_issue_opens["query"]["bool"]["must"].append(bug_query)
-    issue_opens_items = client.search(
-        index=issue_index, body=query_issue_opens)['hits']['hits']
+    issue_opens_items = get_all_index_data(client, issue_index, query_issue_opens)
     if len(issue_opens_items) == 0:
         return { "bug_issue_open_time_avg": None, "bug_issue_open_time_mid": None }
     issue_open_time_repo = []
+    date_str = date.isoformat()
     for item in issue_opens_items:
         if 'state' in item['_source']:
-            if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and str_to_datetime(item['_source']['closed_at']) < date:
+            if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str:
                 issue_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['closed_at']))
             else:
                 issue_open_time_repo.append(get_time_diff_days(
-                    item['_source']['created_at'], str(date)))
+                    item['_source']['created_at'],date_str))
     issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
     issue_open_time_repo_mid = get_medium(issue_open_time_repo)
     result = {

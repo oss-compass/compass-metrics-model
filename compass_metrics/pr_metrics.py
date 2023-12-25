@@ -8,27 +8,29 @@ from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
 from compass_common.algorithm_utils import get_medium
+from compass_common.opensearch_utils import get_all_index_data
 
 
 def pr_open_time(client, pr_index, date, repos_list):
     query_pr_opens = get_uuid_count_query(
-        "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=10000,
+        "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=1000,
         from_date=date-timedelta(days=90), to_date=date)
     query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-    pr_opens_items = client.search(index=pr_index, body=query_pr_opens)['hits']['hits']
+    pr_opens_items = get_all_index_data(client, pr_index, query_pr_opens)
     if len(pr_opens_items) == 0:
         return { "pr_open_time_avg": None, "pr_open_time_mid": None }
     pr_open_time_repo = []
+    date_str = date.isoformat()
     for item in pr_opens_items:
         if 'state' in item['_source']:
-            if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and str_to_datetime(item['_source']['merged_at']) < date:
+            if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and item['_source']['merged_at'] < date_str:
                 pr_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['merged_at']))
-            if item['_source']['state'] == 'closed' and str_to_datetime(item['_source']['closed_at'] or item['_source']['updated_at']) < date:
+            if item['_source']['state'] == 'closed' and item['_source']['closed_at'] or item['_source']['updated_at'] < date_str:
                 pr_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
             else:
-                pr_open_time_repo.append(get_time_diff_days(item['_source']['created_at'], str(date)))
+                pr_open_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
 
     pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo)) if len(pr_open_time_repo) > 0 else None
     pr_open_time_repo_mid = get_medium(pr_open_time_repo) if len(pr_open_time_repo) > 0 else None
