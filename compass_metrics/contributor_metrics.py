@@ -1,5 +1,5 @@
 from compass_metrics.db_dsl import get_contributor_query, get_uuid_count_query
-from compass_common.datetime import get_time_diff_months, check_times_has_overlap
+from compass_common.datetime import check_times_has_overlap
 from compass_common.opensearch_utils import get_all_index_data
 from datetime import timedelta
 from itertools import groupby
@@ -12,22 +12,15 @@ def contributor_count(client, contributors_index, date, repo_list, from_date=Non
     if from_date is None:
         from_date = date - timedelta(days=90)
     to_date = date
-    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
-    issue_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                  "issue_creation_date_list")
-    issue_comment_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                          "issue_comments_date_list")
-    pr_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                               "pr_creation_date_list")
-    pr_comment_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                       "pr_comments_date_list")
-    D1_contributor_list = commit_contributor_list + issue_contributor_list + pr_contributor_list + \
-                          issue_comment_contributor_list + pr_comment_contributor_list
+    date_field_list = ["code_commit_date_list", "issue_creation_date_list", "issue_comments_date_list", 
+                        "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                    
     result = {
-        "contributor_count": get_contributor_count(D1_contributor_list),
-        "contributor_count_bot": get_contributor_count(D1_contributor_list, is_bot=True),
-        "contributor_count_without_bot": get_contributor_count(D1_contributor_list, is_bot=False)
+        "contributor_count": contributor_count,
+        "contributor_count_bot": contributor_count_bot,
+        "contributor_count_without_bot": contributor_count_without_bot,
     }
     return result
 
@@ -36,77 +29,94 @@ def code_contributor_count(client, contributors_index, date, repo_list):
     """  Determine how many active pr creators, code reviewers, commit authors there are in the past 90 days. """
     from_date = date - timedelta(days=90)
     to_date = date
-    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
-    pr_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                               "pr_creation_date_list")
-    pr_comment_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                       "pr_comments_date_list")
-    contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
+    date_field_list = ["code_commit_date_list", "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False) 
     result = {
-        "code_contributor_count": get_contributor_count(contributor_list),
-        "code_contributor_count_bot": get_contributor_count(contributor_list, is_bot=True),
-        "code_contributor_count_without_bot": get_contributor_count(contributor_list, is_bot=False)
+        "code_contributor_count": contributor_count,
+        "code_contributor_count_bot": contributor_count_bot,
+        "code_contributor_count_without_bot": contributor_count_without_bot
     }
     return result
 
 
 def commit_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active code commit authors participants there are in the past 90 days """
-    commit_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date,
-                                                   repo_list, "code_commit_date_list")
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["code_commit_date_list"]                                                   
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                                 
     result = {
-        "commit_contributor_count": get_contributor_count(commit_contributor_list),
-        "commit_contributor_count_bot": get_contributor_count(commit_contributor_list, is_bot=True),
-        "commit_contributor_count_without_bot": get_contributor_count(commit_contributor_list, is_bot=False)
+        "commit_contributor_count": contributor_count,
+        "commit_contributor_count_bot": contributor_count_bot,
+        "commit_contributor_count_without_bot": contributor_count_without_bot
     }
     return result
 
 
 def pr_authors_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active pr authors participants there are in the past 90 days """
-    pr_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date, repo_list,
-                                               "pr_creation_date_list")
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["pr_creation_date_list"]                                                   
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                               
     result = {
-        "pr_authors_contributor_count": get_contributor_count(pr_contributor_list),
-        "pr_authors_contributor_count_bot": get_contributor_count(pr_contributor_list, is_bot=True),
-        "pr_authors_contributor_count_without_bot": get_contributor_count(pr_contributor_list, is_bot=False)
+        "pr_authors_contributor_count": contributor_count,
+        "pr_authors_contributor_count_bot": contributor_count_bot,
+        "pr_authors_contributor_count_without_bot": contributor_count_without_bot
     }
     return result
 
 
 def pr_review_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active pr review participants there are in the past 90 days """
-    pr_comment_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date,
-                                                       repo_list, "pr_comments_date_list")
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["pr_comments_date_list"]                                                   
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                                        
     result = {
-        "pr_review_contributor_count": get_contributor_count(pr_comment_contributor_list),
-        "pr_review_contributor_count_bot": get_contributor_count(pr_comment_contributor_list, is_bot=True),
-        "pr_review_contributor_count_bot": get_contributor_count(pr_comment_contributor_list, is_bot=True)
+        "pr_review_contributor_count": contributor_count,
+        "pr_review_contributor_count_bot": contributor_count_bot,
+        "pr_review_contributor_count_bot": contributor_count_without_bot
     }
     return result
 
 
 def issue_authors_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active issue authors participants there are in the past 90 days """
-    issue_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date,
-                                                  repo_list, "issue_creation_date_list")
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["issue_creation_date_list"]                                                   
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                                   
     result = {
-        "issue_authors_contributor_count": get_contributor_count(issue_contributor_list),
-        "issue_authors_contributor_count_bot": get_contributor_count(issue_contributor_list, is_bot=True),
-        "issue_authors_contributor_count_without_bot": get_contributor_count(issue_contributor_list, is_bot=False)
+        "issue_authors_contributor_count": contributor_count,
+        "issue_authors_contributor_count_bot": contributor_count_bot,
+        "issue_authors_contributor_count_without_bot":contributor_count_without_bot
     }
     return result
 
 
 def issue_comments_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active issue comments participants there are in the past 90 days """
-    issue_comment_contributor_list = get_contributor_list(client, contributors_index, date - timedelta(days=90), date,
-                                                          repo_list, "issue_comments_date_list")
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["issue_comments_date_list"]                                                   
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                                           
     result = {
-        "issue_comments_contributor_count": get_contributor_count(issue_comment_contributor_list),
-        "issue_comments_contributor_count_bot": get_contributor_count(issue_comment_contributor_list, is_bot=True),
-        "issue_comments_contributor_count_without_bot": get_contributor_count(issue_comment_contributor_list, is_bot=False)
+        "issue_comments_contributor_count": contributor_count,
+        "issue_comments_contributor_count_bot": contributor_count_bot,
+        "issue_comments_contributor_count_without_bot": contributor_count_without_bot
     }
     return result
 
@@ -199,25 +209,39 @@ def get_contributor_list(client, contributors_index, from_date, to_date, repo_li
         date_field_list = [date_field]
     elif isinstance(date_field, list):
         date_field_list = date_field
-    for repo in repo_list:
-        query = get_contributor_query(repo, date_field_list, from_date, to_date, page_size)
-        contributor_list = get_all_index_data(client, index=contributors_index, body=query)
-        if len(contributor_list) == 0:
-            continue
+    query = get_contributor_query(repo_list, date_field_list, from_date, to_date, page_size)
+    contributor_list = get_all_index_data(client, index=contributors_index, body=query)
+    if len(contributor_list) > 0:
         result_list = result_list + [contributor["_source"] for contributor in contributor_list]
     return result_list
 
 
-def get_contributor_count(contributor_list, is_bot=None):
-        contributor_set = set()
-        for contributor in contributor_list:
-            if is_bot is None or contributor["is_bot"] == is_bot:
-                if contributor.get("id_platform_login_name_list") and len(
-                        contributor.get("id_platform_login_name_list")) > 0:
-                    contributor_set.add(contributor["id_platform_login_name_list"][0])
-                elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
-                    contributor_set.add(contributor["id_git_author_name_list"][0])
-        return len(contributor_set)
+def get_contributor_count(client, contributors_index, from_date, to_date, repos_list, date_field, is_bot=None):
+    if isinstance(date_field, str):
+        date_field_list = [date_field]
+    elif isinstance(date_field, list):
+        date_field_list = date_field
+    query = get_contributor_query(repos_list, date_field_list, from_date, to_date, 0)
+    query["aggs"] = {
+        "contributor_count": {
+            "cardinality": {
+                "script": {
+                    "source": "if(doc['id_platform_login_name_list.keyword'].size() > 0) {doc['id_platform_login_name_list.keyword'][0]} else {doc['id_git_author_name_list.keyword'][0]}"
+                },
+                "precision_threshold": 100000
+            }
+        }
+    }
+    if is_bot is not None:
+        query["query"]["bool"]["must"].append(
+            {
+                "match_phrase": {
+                    "is_bot": "true" if is_bot else "false"
+                }
+            }
+        )
+    contributor_count = client.search(index=contributors_index, body=query)["aggregations"]["contributor_count"]["value"]
+    return contributor_count
 
 
 def contributor_eco_type_list(client, contributors_index, from_date, to_date, repo_list):

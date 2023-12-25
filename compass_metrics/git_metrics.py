@@ -3,13 +3,15 @@
 from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_uuid_count_query,
                                     get_message_list_query,
-                                    get_repo_message_query)
+                                    get_pr_query_by_commit_hash)
 from compass_metrics.contributor_metrics import get_contributor_list
+from compass_metrics.repo_metrics import get_activity_repo_list
 from compass_common.datetime import (get_time_diff_months,
                                      check_times_has_overlap,
                                      get_oldest_date,
                                      get_latest_date,
                                      get_date_list)
+from compass_common.list_utils import split_list                                     
 from datetime import timedelta
 from compass_common.opensearch_utils import get_all_index_data
 import numpy as np
@@ -19,14 +21,14 @@ import math
 def created_since(client, git_index, date, repo_list):
     """ Determine how long a repository has existed since it was created (in months). """
     created_since_list = []
-    for repo in repo_list:
-        query_first_commit_since = get_updated_since_query(
-            [repo], date_field='grimoire_creation_date', to_date=date, order="asc")
-        first_commit_since = client.search(index=git_index, body=query_first_commit_since)['hits']['hits']
-        if len(first_commit_since) > 0:
-            creation_since = first_commit_since[0]['_source']["grimoire_creation_date"]
-            created_since_list.append(
-                get_time_diff_months(creation_since, str(date)))
+    repos_git_list = [repo + ".git" for repo in repo_list]
+    query_first_commit_since = get_updated_since_query(
+        repos_git_list, date_field='grimoire_creation_date', to_date=date, operation="min")
+    buckets = client.search(
+        index=git_index, body=query_first_commit_since)['aggregations']['group_by_origin']['buckets']
+    if buckets:
+        for bucket in buckets:
+            created_since_list.append(get_time_diff_months(bucket['grimoire_creation_date']['value_as_string'], str(date)))
 
     result = {
         "created_since": round(sum(created_since_list), 4) if created_since_list else None
@@ -34,27 +36,24 @@ def created_since(client, git_index, date, repo_list):
     return result
 
 
-def updated_since(client, git_index, repo_index, date, repo_list, level):
+def updated_since(client, git_index, contributors_index, date, repo_list, level):
     """ Determine the average time per repository since the repository was last updated (in months). """
+    active_repo_list = repo_list
+    if level in ["community", "project"]:
+        repo_name_list = get_activity_repo_list(client, contributors_index, date, repo_list)
+        if len(repo_name_list) > 0:
+            active_repo_list = repo_name_list
     updated_since_list = []
-    for repo in repo_list:
-        if level in ["project", "community"]:
-            repo_message_query = get_repo_message_query(repo)
-            repo_message_list = client.search(index=repo_index, body=repo_message_query)['hits']['hits']
-            if len(repo_message_list) > 0:
-                repo_message = repo_message_list[0]['_source']
-                archived_at = repo_message.get('archivedAt')
-                if archived_at is not None and archived_at < date.strftime("%Y-%m-%d"):
-                    continue
-
-        query_updated_since = get_updated_since_query(
-            [repo], date_field='metadata__updated_on', to_date=date)
-        updated_since = client.search(index=git_index, body=query_updated_since)['hits']['hits']
-        if updated_since:
-            updated_since_list.append(get_time_diff_months(
-                updated_since[0]['_source']["metadata__updated_on"], str(date)))
+    active_repo_git_list = [repo + ".git" for repo in active_repo_list]
+    query_updated_since = get_updated_since_query(
+        active_repo_git_list, date_field='metadata__updated_on', to_date=date)
+    buckets = client.search(
+        index=git_index, body=query_updated_since)['aggregations']['group_by_origin']['buckets']
+    if buckets:
+        for bucket in buckets:
+            updated_since_list.append(get_time_diff_months(bucket['metadata__updated_on']['value_as_string'], str(date)))
     result = {
-        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if len(updated_since_list) > 0 else None
+        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if len(updated_since_list) > 0 else 0
     }
     return result
 

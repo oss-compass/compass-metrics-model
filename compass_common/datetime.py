@@ -176,9 +176,9 @@ def get_time_diff_date(start, end, date_type="day"):
         return None
 
     if type(start) is not datetime.datetime:
-        start = str_to_datetime(start).replace(tzinfo=None)
+        start = parse(start)
     if type(end) is not datetime.datetime:
-        end = str_to_datetime(end).replace(tzinfo=None)
+        end = parse(end)
 
     if date_type == "minute":
         seconds_date = float(60)
@@ -214,3 +214,11 @@ def get_date_list(begin_date, end_date, freq='W-MON'):
     date_list = [x for x in list(pd.date_range(freq=freq, start=datetime_to_utc(
         str_to_datetime(begin_date)), end=datetime_to_utc(str_to_datetime(end_date))))]
     return date_list
+
+def parse(date_str):
+    try:
+        time_format = "%Y-%m-%dT%H:%M:%S"
+        date = datetime.datetime.strptime(date_str[:19], time_format)
+    except Exception:
+        date = str_to_datetime(date_str).replace(tzinfo=None)
+    return date
