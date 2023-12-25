@@ -823,11 +823,22 @@ def activity_organization_contributor_count(client, contributors_enriched_index,
     """ Define the number of active contributors in the last 90 days, counting the number of contributors who are organizations.
     """
     from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = contributor_data["contributor_detail_list"]
-    organization_contributor_list = [item for item in contributor_list \
-        if item["ecological_type"] in ["organization manager","organization participant"]]
-    return {"activity_organization_contributor_count": len(organization_contributor_list)}
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "ecological_type.keyword": ["organization manager","organization participant"]
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"activity_organization_contributor_count": contributor_count}
 
 
 def activity_organization_contribution_per_person(client, contributors_enriched_index, date, repo_list):
@@ -835,13 +846,22 @@ def activity_organization_contribution_per_person(client, contributors_enriched_
     """
     contribution_per_person = 0
     from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = [item for item in contributor_data["contributor_detail_list"] \
-        if item["ecological_type"] in ["organization manager","organization participant"]]
-    contributor_count = len(contributor_list)
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "ecological_type.keyword": ["organization manager","organization participant"]
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    contributor_count = activity_organization_contributor_count(client, contributors_enriched_index, date, repo_list)["activity_organization_contributor_count"]
     if contributor_count > 0:
-        contribution_count_list = [contributor_item["contribution"] for contributor_item in contributor_list]
-        contribution_count = sum(contribution_count_list)
         contribution_per_person = contribution_count / contributor_count
     return {"activity_organization_contribution_per_person": contribution_per_person}
 
@@ -850,24 +870,44 @@ def activity_individual_contributor_count(client, contributors_enriched_index, d
     """ Define the number of active contributors in the past 90 days, counting those who are individuals.
     """
     from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = contributor_data["contributor_detail_list"]
-    individual_contributor_list = [item for item in contributor_list \
-        if item["ecological_type"] in ["individual manager","individual participant"]]
-    return {"activity_individual_contributor_count": len(individual_contributor_list)}
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "ecological_type.keyword": ["individual manager","individual participant"]
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"activity_individual_contributor_count": contributor_count}
 
 def activity_individual_contribution_per_person(client, contributors_enriched_index, date, repo_list):
     """ Defines the number of contributions per active individual contributor in the last 90 days.
     """
     contribution_per_person = 0
     from_date = (date - timedelta(days=90))
-    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
-    contributor_list = [item for item in contributor_data["contributor_detail_list"] \
-        if item["ecological_type"] in ["individual manager","individual participant"]]
-    contributor_count = len(contributor_list)
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution", 
+        date_field="grimoire_creation_date",size=0, from_date=from_date, to_date=date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+          "terms": {
+            "ecological_type.keyword": ["individual manager","individual participant"]
+          }
+        })
+    query["query"]["bool"]["must"].append({
+          "match_phrase": {
+            "is_bot": "false"
+          }
+        })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    contributor_count = activity_individual_contributor_count(client, contributors_enriched_index, date, repo_list)["activity_individual_contributor_count"]
     if contributor_count > 0:
-        contribution_count_list = [contributor_item["contribution"] for contributor_item in contributor_list]
-        contribution_count = sum(contribution_count_list)
         contribution_per_person = contribution_count / contributor_count
     return {"activity_individual_contribution_per_person": contribution_per_person}
 

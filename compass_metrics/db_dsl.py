@@ -209,7 +209,7 @@ def get_contributor_query(repo_list, date_field_list, from_date, to_date, page_s
                 "range": {
                     date_field: {
                         "gte": from_date.strftime("%Y-%m-%d"),
-                        "lte": to_date.strftime("%Y-%m-%d")
+                        "lt": to_date.strftime("%Y-%m-%d")
                     }
                 }
             } for date_field in date_field_list]
