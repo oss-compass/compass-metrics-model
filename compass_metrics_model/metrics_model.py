@@ -307,7 +307,6 @@ class MetricsModel:
             software_artifact_repos_list = list(set(software_artifact_repos_list))
             governance_repos_list = list(set(governance_repos_list))
             all_repo_list = software_artifact_repos_list + governance_repos_list
-            all_repo_list = []
             if len(all_repo_list) > 0:
                 for repo in all_repo_list:
                     last_time = self.last_metrics_model_time(repo, self.model_name, "repo")
@@ -1649,14 +1648,10 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            active_repo_list = repos_list
-            if level in ["community", "project"]:
-                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
-                if len(active_repo_list) == 0:
-                    active_repo_list = repos_list 
+            
             from_date = date - timedelta(days=90)
             to_date = date
-            contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "code_commit_date_list")
+            contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
             if len(contributor_list) == 0:
                 continue
             self.add_org_name(contributor_list)
