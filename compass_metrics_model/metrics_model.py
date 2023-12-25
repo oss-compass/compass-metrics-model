@@ -1162,7 +1162,6 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.company = None if company == None or company == 'None' else company
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
-        self.commit_message_dict = {}
 
     def get_pr_message_count(self, repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
         query = {
@@ -1287,10 +1286,10 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                     is_maintained_list.append("False")
 
         elif level in ["project", "community"]:
-            for repo in git_repos_list:
-                query_git_commit_i = self.get_uuid_count_query("cardinality",[repo], "hash",from_date=date-timedelta(days=30), to_date=date)
-                commit_frequency_i = self.es_in.search(index=self.git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
-                if commit_frequency_i > 0:
+            active_repo_list = self.get_activity_repo_list(date, repos_list, from_date=date-timedelta(days=30), \
+                    date_field_list=["code_commit_date_list"])
+            for repo in repos_list:
+                if repo in active_repo_list:
                     is_maintained_list.append("True")
                 else:
                     is_maintained_list.append("False")
@@ -1323,41 +1322,82 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
 
     def git_pr_linked_ratio(self, date, repos_list):
-        git_repos_list = [repo_url + ".git" for repo_url in repos_list]
-        commit_frequency = self.get_uuid_count_query("cardinality", git_repos_list, "hash", "grimoire_creation_date", size=10000, from_date=date - timedelta(days=90), to_date=date)
-        commits_without_merge_pr = {
-            "bool": {
-                "should": [{"script": {
-                    "script": "if (doc.containsKey('message') && doc['message'].size()>0 &&doc['message'].value.indexOf('Merge pull request') == -1){return true}"
-                }
-                }],
-                "minimum_should_match": 1}
-        }
-        commit_frequency["query"]["bool"]["must"].append(commits_without_merge_pr)
-        commit_message = self.es_in.search(index=self.git_index, body=commit_frequency, request_timeout=100)
-        commit_count = commit_message['aggregations']["count_of_uuid"]['value']
-        commit_pr_cout = 0
-        commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message['hits']['hits']]
-
-        for commit_message_i in set(commit_all_message):
-            commit_hash = commit_message_i
-            if commit_hash in self.commit_message_dict:
-                commit_pr_cout += self.commit_message_dict[commit_hash]
-            else:
-                pr_message = self.get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0)
-                commit_hash_query = { "bool": {"should": [ {"match_phrase": {"commits_data": commit_hash} }],
-                                        "minimum_should_match": 1
+        def get_pr_list_by_commit_hash(repo_list, hash_list):
+            """ Get PR list based on commit hash value """
+            def pr_query(hash_l):
+                return {
+                    "size": 10000,
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {
+                                    "terms": {
+                                        "origin": repo_list
                                     }
                                 }
-                pr_message["query"]["bool"]["must"].append(commit_hash_query)
-                prs = self.es_in.search(index=self.pr_index, body=pr_message)
-                if prs['aggregations']["count_of_uuid"]['value']>0:
-                    self.commit_message_dict[commit_hash] = 1
-                    commit_pr_cout += 1
-                else:
-                    self.commit_message_dict[commit_hash] = 0
-        if commit_count>0:
-            return len(commit_all_message), commit_pr_cout, commit_pr_cout/len(commit_all_message)
+                            ],
+                            "should": [
+                                {
+                                    "terms": {
+                                        "merge_commit_sha": hash_l
+                                    }
+                                },
+                                {
+                                    "terms": {
+                                        "commits_data": hash_l
+                                    }
+                                }
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    }
+                }
+            pr_hits = []
+            hash_list_group = split_list(hash_list)
+            for hash_l in hash_list_group:
+                pr_hit = self.es_in.search(index=self.pr_index, body=pr_query(hash_l))["hits"]["hits"]
+                pr_hits = pr_hits + pr_hit
+            return pr_hits
+
+        git_repos_list = [repo_url + ".git" for repo_url in repos_list]
+
+        commit_pr_linked_dict = {}
+        day_date_list = get_date_list(begin_date=str(date-timedelta(days=90)), end_date=str(date), freq='1D')
+        for index, day in enumerate(day_date_list):
+            if index == 0:
+                continue
+            day_str = day.isoformat()
+            if len(self.commit_pr_linked_deque) > index+6:
+                commit_pr_linked_dict.update(self.commit_pr_linked_deque[index+6].get(day_str))  
+            else:
+                commit_frequency = self.get_uuid_count_query("cardinality", git_repos_list, "hash", "grimoire_creation_date", size=1000, from_date=day - timedelta(days=1), to_date=day)
+                commit_message = get_all_index_data(self.es_in, self.git_index, commit_frequency)
+                commit_all_message = [commit_message_i['_source']['hash']  for commit_message_i in commit_message]
+                commit_all_message = list(set(commit_all_message))
+
+                pr_all_message = get_pr_list_by_commit_hash(repos_list, commit_all_message)
+
+                pr_commit_hash = set()
+                for pr_item in pr_all_message:
+                    for commit_data in pr_item["_source"].get("commits_data", []):
+                        pr_commit_hash.add(commit_data)
+                    merge_commit_sha = pr_item["_source"].get("merge_commit_sha", None)
+                    if merge_commit_sha:
+                        pr_commit_hash.add(merge_commit_sha)
+                day_commit_pr_linked_dict = {}
+                for hash_item in commit_all_message:
+                    if hash_item in pr_commit_hash:
+                        day_commit_pr_linked_dict[hash_item] = 1
+                    else:
+                        day_commit_pr_linked_dict[hash_item] = 0
+                self.commit_pr_linked_deque.append({day_str: day_commit_pr_linked_dict})
+                commit_pr_linked_dict.update(day_commit_pr_linked_dict)
+        
+        commit_count = len(commit_pr_linked_dict)
+        commit_pr_cout = sum(commit_pr_linked_dict.values())
+
+        if commit_count > 0:
+            return commit_count, commit_pr_cout, commit_pr_cout/commit_count
         else:
             return 0, None, None
 
@@ -1402,27 +1442,29 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         date_list = date_list if date_list != None else self.date_list
         item_datas = []
         last_metrics_data = {}
-        self.commit_message_dict = {}
+        self.commit_pr_linked_deque = deque(maxlen=90)
         for date in date_list:
             logger.info(str(date)+"--"+self.model_name+"--"+label)
             created_since = self.created_since(date, repos_list)
             if created_since is None:
                 continue
-            active_repo_list = repos_list
-            if level in ["community", "project"]:
-                active_repo_list = [repo_url for repo_url in repos_list if check_repo_active(self.es_in, self.contributors_index , repo_url, date)]
-                if len(active_repo_list) == 0:
-                    active_repo_list = repos_list 
+            
             from_date = date - timedelta(days=90)
             to_date = date
-            commit_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "code_commit_date_list")
-            pr_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_creation_date_list")
-            pr_comment_contributor_list = self.get_contributor_list(from_date, to_date, active_repo_list, "pr_comments_date_list")
-            D2_C1_pr_contributor_list = commit_contributor_list + pr_contributor_list + pr_comment_contributor_list
 
-            git_pr_linked_ratio = self.git_pr_linked_ratio(date, active_repo_list)
-            code_review_ratio, pr_count = self.code_review_ratio(date, active_repo_list)
-            code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, active_repo_list)
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            date_field_list = ["code_commit_date_list","pr_creation_date_list","pr_comments_date_list"]
+            contributor_count = self.get_contributor_count(from_date, to_date, repos_list, date_field_list)
+            contributor_count_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=True)
+            contributor_count_without_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=False)
+            active_C2_contributor_count = self.get_contributor_count(from_date, to_date, repos_list, "code_commit_date_list")
+            active_C1_pr_create_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_creation_date_list")
+            active_C1_pr_comments_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_comments_date_list")
+
+
+            git_pr_linked_ratio = self.git_pr_linked_ratio(date, repos_list)
+            code_review_ratio, pr_count = self.code_review_ratio(date, repos_list)
+            code_merge_ratio, pr_merged_count = self.code_merge_ratio(date, repos_list)
             basic_args = [str(date), self.community, level, label, self.model_name, type]
             if self.weights_hash:
                 basic_args.append(self.weights_hash)
@@ -1434,23 +1476,23 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
                 'type': type,
                 'label': label,
                 'model_name': self.model_name,
-                'contributor_count': self.contributor_count(D2_C1_pr_contributor_list),
-                'contributor_count_bot': self.contributor_count(D2_C1_pr_contributor_list, is_bot=True),
-                'contributor_count_without_bot': self.contributor_count(D2_C1_pr_contributor_list, is_bot=False),
-                'active_C2_contributor_count': self.contributor_count(commit_contributor_list),
-                'active_C1_pr_create_contributor': self.contributor_count(pr_contributor_list),
-                'active_C1_pr_comments_contributor': self.contributor_count(pr_comment_contributor_list),
+                'contributor_count': contributor_count,
+                'contributor_count_bot': contributor_count_bot,
+                'contributor_count_without_bot': contributor_count_without_bot,
+                'active_C2_contributor_count': active_C2_contributor_count,
+                'active_C1_pr_create_contributor': active_C1_pr_create_contributor,
+                'active_C1_pr_comments_contributor': active_C1_pr_comments_contributor,
                 'commit_frequency': self.commit_frequency(from_date, to_date, commit_contributor_list),
                 'commit_frequency_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=True),
                 'commit_frequency_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, is_bot=False),
                 'commit_frequency_inside': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company) if self.company else 0,
                 'commit_frequency_inside_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=True) if self.company else 0,
                 'commit_frequency_inside_without_bot': self.commit_frequency(from_date, to_date, commit_contributor_list, company=self.company, is_bot=False) if self.company else 0,
-                'is_maintained': round(self.is_maintained(date, active_repo_list, level), 4),
-                'LOC_frequency': self.LOC_frequency(date, active_repo_list),
-                'lines_added_frequency': self.LOC_frequency(date, active_repo_list, 'lines_added'),
-                'lines_removed_frequency': self.LOC_frequency(date, active_repo_list, 'lines_removed'),
-                'pr_issue_linked_ratio': self.pr_issue_linked(date, active_repo_list),
+                'is_maintained': round(self.is_maintained(date, repos_list, level), 4),
+                'LOC_frequency': self.LOC_frequency(date, repos_list),
+                'lines_added_frequency': self.LOC_frequency(date, repos_list, 'lines_added'),
+                'lines_removed_frequency': self.LOC_frequency(date, repos_list, 'lines_removed'),
+                'pr_issue_linked_ratio': self.pr_issue_linked(date, repos_list),
                 'code_review_ratio': code_review_ratio,
                 'code_merge_ratio': code_merge_ratio,
                 'pr_count': pr_count,

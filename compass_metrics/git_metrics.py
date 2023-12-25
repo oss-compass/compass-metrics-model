@@ -189,7 +189,7 @@ def org_contribution_last(client, contributors_index, date, repo_list):
     return result
 
 
-def is_maintained(client, git_index, date, repos_list, level):
+def is_maintained(client, git_index, contributors_index, date, repos_list, level):
     is_maintained_list = []
     git_repos_list = [repo_url+'.git' for repo_url in repos_list]
     if level == "repo":
@@ -206,10 +206,10 @@ def is_maintained(client, git_index, date, repos_list, level):
                 is_maintained_list.append("False")
 
     elif level in ["project", "community"]:
-        for repo in git_repos_list:
-            query_git_commit_i = get_uuid_count_query("cardinality", [repo], "hash",from_date=date-timedelta(days=30), to_date=date)
-            commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
-            if commit_frequency_i > 0:
+        active_repo_list = get_activity_repo_list(client, contributors_index, date, repos_list, from_date=date-timedelta(days=30), \
+                    date_field_list=["code_commit_date_list"])
+        for repo in repos_list:
+            if repo in active_repo_list:
                 is_maintained_list.append("True")
             else:
                 is_maintained_list.append("False")
@@ -252,20 +252,30 @@ def commit_count(client, contributors_index, date, repo_list, from_date=None):
 
 def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
     """ Determine the numbers of new code commit link pull request in the last 90 days. """
+    def get_pr_list_by_commit_hash(hash_list):
+        pr_hits = []
+        hash_list_group = split_list(hash_list)
+        for hash_l in hash_list_group:
+            pr_hit = client.search(index=pr_index, body=get_pr_query_by_commit_hash(repos_list, hash_l))["hits"]["hits"]
+            pr_hits = pr_hits + pr_hit
+        return pr_hits
+    
     repo_git_list = [repo+".git" for repo in repos_list]
     commit_message_list = get_message_list(client, git_index, date - timedelta(days=90), date, repo_git_list)
     commit_hash_set = {message["hash"] for message in commit_message_list}
     commit_hash_list = list(commit_hash_set)
     if len(commit_hash_list) == 0:
         return {'commit_pr_linked_count': 0}
-    sub_commit_hash_list = np.array_split(commit_hash_list, math.ceil(len(commit_hash_list) / 100))
-    pr_commits_data_set = set()
-    for sublist in sub_commit_hash_list:
-        pr_message_query = get_message_list_query(field="commits_data", field_values=list(sublist), size=100)
-        pr_message_list = client.search(index=pr_index, body=pr_message_query)['hits']['hits']
-        for pr_message in pr_message_list:
-            pr_commits_data_set = pr_commits_data_set.union(set(pr_message['_source']['commits_data']))
-    linked_count = commit_hash_set & pr_commits_data_set
+    
+    pr_all_message = get_pr_list_by_commit_hash(commit_hash_list)
+    pr_commit_hash = set()
+    for pr_item in pr_all_message:
+        for commit_data in pr_item["_source"].get("commits_data", []):
+            pr_commit_hash.add(commit_data)
+        merge_commit_sha = pr_item["_source"].get("merge_commit_sha", None)
+        if merge_commit_sha:
+            pr_commit_hash.add(merge_commit_sha)
+    linked_count = commit_hash_set & pr_commit_hash
 
     result = {
         'commit_pr_linked_count': len(linked_count)
