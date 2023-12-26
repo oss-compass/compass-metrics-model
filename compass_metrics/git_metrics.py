@@ -3,13 +3,15 @@
 from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_uuid_count_query,
                                     get_message_list_query,
-                                    get_repo_message_query)
+                                    get_pr_query_by_commit_hash)
 from compass_metrics.contributor_metrics import get_contributor_list
+from compass_metrics.repo_metrics import get_activity_repo_list
 from compass_common.datetime import (get_time_diff_months,
                                      check_times_has_overlap,
                                      get_oldest_date,
                                      get_latest_date,
                                      get_date_list)
+from compass_common.list_utils import split_list                                     
 from datetime import timedelta
 from compass_common.opensearch_utils import get_all_index_data
 import numpy as np
@@ -19,14 +21,14 @@ import math
 def created_since(client, git_index, date, repo_list):
     """ Determine how long a repository has existed since it was created (in months). """
     created_since_list = []
-    for repo in repo_list:
-        query_first_commit_since = get_updated_since_query(
-            [repo], date_field='grimoire_creation_date', to_date=date, order="asc")
-        first_commit_since = client.search(index=git_index, body=query_first_commit_since)['hits']['hits']
-        if len(first_commit_since) > 0:
-            creation_since = first_commit_since[0]['_source']["grimoire_creation_date"]
-            created_since_list.append(
-                get_time_diff_months(creation_since, str(date)))
+    repos_git_list = [repo + ".git" for repo in repo_list]
+    query_first_commit_since = get_updated_since_query(
+        repos_git_list, date_field='grimoire_creation_date', to_date=date, operation="min")
+    buckets = client.search(
+        index=git_index, body=query_first_commit_since)['aggregations']['group_by_origin']['buckets']
+    if buckets:
+        for bucket in buckets:
+            created_since_list.append(get_time_diff_months(bucket['grimoire_creation_date']['value_as_string'], str(date)))
 
     result = {
         "created_since": round(sum(created_since_list), 4) if created_since_list else None
@@ -34,27 +36,24 @@ def created_since(client, git_index, date, repo_list):
     return result
 
 
-def updated_since(client, git_index, repo_index, date, repo_list, level):
+def updated_since(client, git_index, contributors_index, date, repo_list, level):
     """ Determine the average time per repository since the repository was last updated (in months). """
+    active_repo_list = repo_list
+    if level in ["community", "project"]:
+        repo_name_list = get_activity_repo_list(client, contributors_index, date, repo_list)
+        if len(repo_name_list) > 0:
+            active_repo_list = repo_name_list
     updated_since_list = []
-    for repo in repo_list:
-        if level in ["project", "community"]:
-            repo_message_query = get_repo_message_query(repo)
-            repo_message_list = client.search(index=repo_index, body=repo_message_query)['hits']['hits']
-            if len(repo_message_list) > 0:
-                repo_message = repo_message_list[0]['_source']
-                archived_at = repo_message.get('archivedAt')
-                if archived_at is not None and archived_at < date.strftime("%Y-%m-%d"):
-                    continue
-
-        query_updated_since = get_updated_since_query(
-            [repo], date_field='metadata__updated_on', to_date=date)
-        updated_since = client.search(index=git_index, body=query_updated_since)['hits']['hits']
-        if updated_since:
-            updated_since_list.append(get_time_diff_months(
-                updated_since[0]['_source']["metadata__updated_on"], str(date)))
+    active_repo_git_list = [repo + ".git" for repo in active_repo_list]
+    query_updated_since = get_updated_since_query(
+        active_repo_git_list, date_field='metadata__updated_on', to_date=date)
+    buckets = client.search(
+        index=git_index, body=query_updated_since)['aggregations']['group_by_origin']['buckets']
+    if buckets:
+        for bucket in buckets:
+            updated_since_list.append(get_time_diff_months(bucket['metadata__updated_on']['value_as_string'], str(date)))
     result = {
-        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if len(updated_since_list) > 0 else None
+        "updated_since": float(round(sum(updated_since_list) / len(updated_since_list), 4)) if len(updated_since_list) > 0 else 0
     }
     return result
 
@@ -190,7 +189,7 @@ def org_contribution_last(client, contributors_index, date, repo_list):
     return result
 
 
-def is_maintained(client, git_index, date, repos_list, level):
+def is_maintained(client, git_index, contributors_index, date, repos_list, level):
     is_maintained_list = []
     git_repos_list = [repo_url+'.git' for repo_url in repos_list]
     if level == "repo":
@@ -207,10 +206,10 @@ def is_maintained(client, git_index, date, repos_list, level):
                 is_maintained_list.append("False")
 
     elif level in ["project", "community"]:
-        for repo in git_repos_list:
-            query_git_commit_i = get_uuid_count_query("cardinality", [repo], "hash",from_date=date-timedelta(days=30), to_date=date)
-            commit_frequency_i = client.search(index=git_index, body=query_git_commit_i)['aggregations']["count_of_uuid"]['value']
-            if commit_frequency_i > 0:
+        active_repo_list = get_activity_repo_list(client, contributors_index, date, repos_list, from_date=date-timedelta(days=30), \
+                    date_field_list=["code_commit_date_list"])
+        for repo in repos_list:
+            if repo in active_repo_list:
                 is_maintained_list.append("True")
             else:
                 is_maintained_list.append("False")
@@ -253,20 +252,30 @@ def commit_count(client, contributors_index, date, repo_list, from_date=None):
 
 def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
     """ Determine the numbers of new code commit link pull request in the last 90 days. """
+    def get_pr_list_by_commit_hash(hash_list):
+        pr_hits = []
+        hash_list_group = split_list(hash_list)
+        for hash_l in hash_list_group:
+            pr_hit = client.search(index=pr_index, body=get_pr_query_by_commit_hash(repos_list, hash_l))["hits"]["hits"]
+            pr_hits = pr_hits + pr_hit
+        return pr_hits
+    
     repo_git_list = [repo+".git" for repo in repos_list]
     commit_message_list = get_message_list(client, git_index, date - timedelta(days=90), date, repo_git_list)
     commit_hash_set = {message["hash"] for message in commit_message_list}
     commit_hash_list = list(commit_hash_set)
     if len(commit_hash_list) == 0:
         return {'commit_pr_linked_count': 0}
-    sub_commit_hash_list = np.array_split(commit_hash_list, math.ceil(len(commit_hash_list) / 100))
-    pr_commits_data_set = set()
-    for sublist in sub_commit_hash_list:
-        pr_message_query = get_message_list_query(field="commits_data", field_values=list(sublist), size=100)
-        pr_message_list = client.search(index=pr_index, body=pr_message_query)['hits']['hits']
-        for pr_message in pr_message_list:
-            pr_commits_data_set = pr_commits_data_set.union(set(pr_message['_source']['commits_data']))
-    linked_count = commit_hash_set & pr_commits_data_set
+    
+    pr_all_message = get_pr_list_by_commit_hash(commit_hash_list)
+    pr_commit_hash = set()
+    for pr_item in pr_all_message:
+        for commit_data in pr_item["_source"].get("commits_data", []):
+            pr_commit_hash.add(commit_data)
+        merge_commit_sha = pr_item["_source"].get("merge_commit_sha", None)
+        if merge_commit_sha:
+            pr_commit_hash.add(merge_commit_sha)
+    linked_count = commit_hash_set & pr_commit_hash
 
     result = {
         'commit_pr_linked_count': len(linked_count)

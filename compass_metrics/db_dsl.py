@@ -3,35 +3,47 @@
 from compass_common.datetime import datetime_utcnow, str_to_datetime
 
 
-def get_updated_since_query(repo_list, date_field="grimoire_creation_date", order="desc", to_date=datetime_utcnow()):
+def get_updated_since_query(repos_list, date_field="grimoire_creation_date", operation="max", to_date=datetime_utcnow()):
     """ Query statement to get the code commit data of the repository """
     query = {
-        "query": {
-            "bool": {
-                "must": [
-                    {
-                        "terms": {
-                            "tag": [repo + ".git" for repo in repo_list]
-                        }
-                    }
-                ],
-                "filter": {
-                    "range": {
-                        date_field: {
-                            "lt": to_date.strftime("%Y-%m-%d")
+        "size": 0,
+        "aggs": {
+            "group_by_origin": {
+                "terms": {
+                    "field": "origin",
+                    "size": 10000
+                },
+                "aggs": {
+                    date_field: {
+                        operation: {
+                            "field": date_field
                         }
                     }
                 }
             }
         },
-        "sort": [
-            {
-                date_field: {"order": order}
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "origin": repos_list
+                        }
+                    }
+                ],
+                "filter": [
+                    {
+                        "range": {
+                            date_field: {
+                                "lt": to_date.strftime("%Y-%m-%d")
+                            }
+                        }
+                    }
+                ]
             }
-        ]
+        }
     }
     return query
-
 
 def get_release_index_mapping():
     """ Defining field mappings for release index """
@@ -176,7 +188,7 @@ def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01
     return query
 
 
-def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=100):
+def get_contributor_query(repo_list, date_field_list, from_date, to_date, page_size=100):
     """ Query statement to get the contributors who have contributed in the from_date,to_date time period. """
     query = {
         "size": page_size,
@@ -184,8 +196,8 @@ def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=1
             "bool": {
                 "must": [
                     {
-                        "match_phrase": {
-                            "repo_name.keyword": repo
+                        "terms": {
+                            "repo_name.keyword": repo_list
                         }
                     }
                 ]
@@ -197,7 +209,7 @@ def get_contributor_query(repo, date_field_list, from_date, to_date, page_size=1
                 "range": {
                     date_field: {
                         "gte": from_date.strftime("%Y-%m-%d"),
-                        "lte": to_date.strftime("%Y-%m-%d")
+                        "lt": to_date.strftime("%Y-%m-%d")
                     }
                 }
             } for date_field in date_field_list]
@@ -476,3 +488,33 @@ def get_updated_issues_count_query(repo_list, from_date=str_to_datetime("1970-01
         }
     }
     return query
+
+
+def get_pr_query_by_commit_hash(repo_list, hash_list):
+    return {
+        "size": 10000,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "origin": repo_list
+                        }
+                    }
+                ],
+                "should": [
+                    {
+                        "terms": {
+                            "merge_commit_sha": hash_list
+                        }
+                    },
+                    {
+                        "terms": {
+                            "commits_data": hash_list
+                        }
+                    }
+                ],
+                "minimum_should_match": 1
+            }
+        }
+    }

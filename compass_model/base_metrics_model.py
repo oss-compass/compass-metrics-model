@@ -1,13 +1,10 @@
 import json
 import logging
 import hashlib
-import math
 import pendulum
-import pandas as pd
 import urllib3
 import pkg_resources
 import yaml
-from datetime import timedelta
 
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,
@@ -146,6 +143,8 @@ def get_community_repo_list(json_file, source):
             if key == origin_governance:
                 for j in all_repo_json[project].get(key):
                     governance_repo.append(j)
+    software_artifact_repo = list(set(software_artifact_repo))
+    governance_repo = list(set(governance_repo))
     return software_artifact_repo, governance_repo
 
 
@@ -313,12 +312,7 @@ class BaseMetricsModel:
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
             if created_since_metric is None:
                 continue
-            active_repo_list = repo_list
-            if level == "community":
-                active_repo_list = [repo_url for repo_url in repo_list if self.check_repo_active(repo_url, date)]
-                if len(active_repo_list) == 0:
-                    active_repo_list = repo_list 
-            metrics = self.get_metrics(date, active_repo_list)
+            metrics = self.get_metrics(date, repo_list)
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
                                     self.custom_fields_hash)
             metrics_data = {
@@ -351,12 +345,12 @@ class BaseMetricsModel:
             # git metadata
             "commit_frequency": lambda: commit_frequency(self.client, self.contributors_index, date, repo_list),
             "created_since": lambda: created_since(self.client, self.git_index, date, repo_list),
-            "updated_since": lambda: updated_since(self.client, self.git_index, self.repo_index, date, repo_list, self.level),
+            "updated_since": lambda: updated_since(self.client, self.git_index, self.contributors_index, date, repo_list, self.level),
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_remove_of_code_frequency": lambda: lines_remove_of_code_frequency(self.client, self.git_index, date, repo_list),
-            "is_maintained": lambda: is_maintained(self.client, self.git_index, date, repo_list, self.level),
+            "is_maintained": lambda: is_maintained(self.client, self.git_index, self.contributors_index, date, repo_list, self.level),
             "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.contributors_index, self.git_index, self.pr_index, date, repo_list),
             "commit_count": lambda: commit_count(self.client, self.contributors_index, date, repo_list),
             "commit_pr_linked_count": lambda: commit_pr_linked_count(self.client, self.git_index, self.pr_index, date, repo_list),
@@ -369,8 +363,8 @@ class BaseMetricsModel:
             "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
             "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_comments_index, date, repo_list),
             # pr
-            "pr_open_time": lambda: pr_open_time(self.client, self.issue_index, date, repo_list),
-            "close_pr_count": lambda: close_pr_count(self.client, self.issue_index, date, repo_list),
+            "pr_open_time": lambda: pr_open_time(self.client, self.pr_index, date, repo_list),
+            "close_pr_count": lambda: close_pr_count(self.client, self.pr_index, date, repo_list),
             "code_review_count": lambda: code_review_count(self.client, self.pr_index, date, repo_list),
             "code_review_ratio": lambda: code_review_ratio(self.client, self.pr_index, date, repo_list),
             "pr_count": lambda: pr_count(self.client, self.pr_index, date, repo_list),
@@ -479,10 +473,3 @@ class BaseMetricsModel:
                     pendulum.parse(last_data[key][1])).days
                 decay_metrics_data[key] = round(decrease_decay(last_data[key][0], value, days), 4)
         return decay_metrics_data
-
-    def check_repo_active(self, repo, date):
-        """ By checking if there are active contributors for half a year, 
-        if not, the repository is judged to be inactive. """
-        from_date = date - timedelta(days=180)
-        contributor_c = contributor_count(self.client, self.contributors_index, date, [repo], from_date)["contributor_count"]
-        return contributor_c > 0
