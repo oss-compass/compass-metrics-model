@@ -1,41 +1,90 @@
 {
-	"common": {
-		"pattern": [
-			"*bot"
-		]
-	},
-	"community": {
-		"https://gitee.com/mindspore": {
-			"author_name": [
-				"i-robot",
-				"mindspore-ci-bot"
-			]
-		},
-		"https://github.com/pytorch": {
-			"author_name": [
-				"pytorchbot",
-				"Website Deployment Script",
-				"chronos_secgrp_pytorch_oss_ci_oncall",
-				"Pytorch Test Infra"
-			]
-		},
-		"https://github.com/tensorflow": {
-			"author_name": [
-				"A. Unique TensorFlower",
-				"TensorFlower Gardener",
-				"tfdocsbot"
-			]
-		},
-		"https://github.com/kubernetes": {
-			"author_name": [],
-			"repo": {
-				"https://github.com/kubernetes/kubernetes": {
-					"author_name": [
-						"Kubernetes Prow Robot",
-						"Kubernetes Submit Queue",
-						"k8s-merge-robot"
-					]
+	"github":{
+		"contributor": [
+			"^.*bot$",
+			"^.*Bot$",
+			"^.*\\[bot\\]$",
+			"Arc-Jung",
+			"ByteAlex",
+			"CNCF-Bot",
+			"CodeLingoBot",
+			"Hibernate-CI",
+			"ImgBotApp",
+			"LetsUseGerrit",
+			"Mozilla-GitHub-Standards",
+			"TravisBuddy",
+			"alifpay",
+			"asellappen",
+			"aws-cdk-automation",
+			"bmgeek",
+			"claassistantio",
+			"covbot",
+			"cvp-ops",
+			"d6e-automaton",
+			"dependabot-bot",
+			"docker-jenkins",
+			"eg-bot",
+			"facebook-github-whois-bot-0",
+			"fluxcdbot",
+			"fossabot",
+			"goreleaserbot",
+			"intellij-rainbow-brackets",
+			"istio-testing",
+			"jenkins-rook",
+			"k8s-ci-robot",
+			"k8s-publishing-bot",
+			"krisdevopsbot",
+			"maxio",
+			"msftclas",
+			"msftgits",
+			"nodejs-github-bot",
+			"nsmbot",
+			"ovirt-infra",
+			"phlegx",
+			"poiana",
+			"prombot",
+			"pyup-bot",
+			"snyk-bot",
+			"snyksec",
+			"spinnaker-release",
+			"testingbot",
+			"thelinuxfoundation",
+			"twbs-grunt",
+			"vmwghbot",
+			"vsxen",
+			"yahoocla"
+		],
+		"community":{
+			"https://github.com/pytorch": {
+				"contributor": [
+					"Website Deployment Script",
+					"chronos_secgrp_pytorch_oss_ci_oncall",
+					"Pytorch Test Infra"
+				]
+			},
+			"https://github.com/kubernetes": {
+				"contributor": [],
+				"repo": {
+					"https://github.com/kubernetes/kubernetes": {
+						"contributor": [
+							"Kubernetes Submit Queue"
+						]
+					}
 				}
+			}
+		}
+	},
+	"gitee":{
+		"contributor": [
+			"^.*bot$",
+			"^.*Bot$",
+			"^.*\\[bot\\]$"
+		],
+		"community":{
+			"https://gitee.com/openharmony": {
+				"contributor": [
+					"openharmony_ci"
+				]
 			}
 		}
 	}
