@@ -518,3 +518,23 @@ def get_pr_query_by_commit_hash(repo_list, hash_list):
             }
         }
     }
+
+
+def get_base_index_mapping():
+    """ Get Elasticsearch mapping. """
+    mapping = {
+        "mappings": {
+            "properties": {
+                "uuid": {
+                    "type": "text",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return mapping

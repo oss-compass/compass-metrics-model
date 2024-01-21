@@ -10,13 +10,12 @@ params:
     'issue_comments_index':'github2-issues_enriched',
     'pr_comments_index':'github2-pull_enriched',
     'contributors_index':'github_contributors_org_repo',
+    'contributors_enriched_index':'github-contributors_org_repo_enriched',
     'release_index': 'github-repo_release_enriched',
     'stargazer_index': 'github-stargazer_enriched',
     'fork_index': 'github-fork_enriched',
     'event_index': 'github-event_enriched',
-    'contributors_enriched_index':'github-contributors_org_repo_enriched',
     'out_index': 'pytorch_metric_model_test',
-#    'from_date': '2012-01-01',
     'from_date': '2020-01-01',
     'end_date': '2023-04-15',
     'level': 'repo',
@@ -24,7 +23,7 @@ params:
     'company': 'Facebook',
     'source': 'github',
     'json_file': '/root/lsb_metric_model_lab/compass-metrics-model/projects-github-pytorch.json',
-    'identities_config_file' : '/root/lsb_metric_model/compass-metrics-model/identities.yml',
-    'organizations_config_file': '/root/lsb_metric_model/compass-metrics-model/organizations.json',
-    'bots_config_file': '/root/lsb_metric_model/compass-metrics-model/bots.json'
+    'contributors_org_index':'github-contributors_org',
+    'organizations_index': 'organizations',
+    'bots_index': 'bots'
   }
