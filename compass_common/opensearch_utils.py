@@ -10,11 +10,15 @@ import urllib3
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
-
+client = None
 
 def get_client(url):
     """ Get default client by url """
-    return get_elasticsearch_client(url)
+    global client
+    if client:
+        return client
+    client = get_elasticsearch_client(url)
+    return client
 
 def get_helpers():
     """ Collection of simple helper functions that abstract some specifics of the raw API """
