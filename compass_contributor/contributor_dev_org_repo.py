@@ -4,13 +4,18 @@ import re
 import logging
 from datetime import datetime, timedelta
 import urllib3
-from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc, get_date_list)
-from compass_common.uuid_utils import get_uuid 
+from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc, get_date_list, check_times_has_overlap)
+from compass_common.uuid_utils import get_uuid
 from compass_common.opensearch_utils import get_all_index_data, get_client, get_helpers as helpers
-from compass_common.datetime import get_latest_date, get_oldest_date  
+from compass_common.datetime import get_latest_date, get_oldest_date
 from compass_common.list_utils import split_list
 from compass_metrics.contributor_metrics import contributor_eco_type_list
 from compass_metrics.git_metrics import created_since
+from compass_metrics.db_dsl import get_base_index_mapping
+from compass_contributor.contributor_org import ContributorOrgService
+from compass_contributor.organization import OrganizationService
+from compass_contributor.bot import BotService
+from collections import deque
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -23,70 +28,6 @@ def exclude_special_str(str):
     """ For strings of author names, exclude special characters. """
     regEx = "[`~!#$%^&*()+=|{}':;',\\[\\]<>/?~！#￥%……&*（）——+|{}【】‘；：”“’\"\"。 ，、？]"
     return re.sub(regEx, "",str)
-
-def get_organizations_info(file_path):
-    """ Get profile data to determine which organization a contributor belongs to. """
-    organizations_dict = {}
-    organizations_config = json.load(open(file_path))
-    for org_name in organizations_config["organizations"].keys():
-        for domain in organizations_config["organizations"][org_name]:
-            organizations_dict[domain["domain"]] = org_name
-    return organizations_dict
-
-def get_identities_info(file_path):
-    """ Get profile data to identify the contributors """
-    identities_dict = {}
-    identities_config = yaml.safe_load(open(file_path))
-    for identities in identities_config:
-        for email in identities["email"]:
-            enrollments = identities.get("enrollments")
-            if enrollments is not None:
-                identities_dict[email] = enrollments[0]["organization"]
-    return identities_dict
-
-def get_bots_info(file_path):
-    """ Get the profile data to determine if a contributor is a bot. """
-    bots_config = json.load(open(file_path))
-    common = []
-    community_dict = {}
-    repo_dict = {}
-    if bots_config.get("common") and bots_config["common"].get("pattern") and len(bots_config["common"].get("pattern")):
-        common = bots_config["common"]["pattern"]
-    for community, community_values in bots_config["community"].items():
-        if community_values.get("author_name") and len(community_values.get("author_name")) > 0:
-            community_dict[community] = community_values["author_name"]
-        if community_values.get("repo"):
-            for repo, repo_values in community_values["repo"].items():
-                if repo_values.get("author_name") and len(repo_values.get("author_name")) > 0:
-                    repo_dict[repo] = repo_values["author_name"]
-
-    bots_dict = {
-        "common": common,
-        "community": community_dict,
-        "repo": repo_dict
-    }
-    return bots_dict
-
-def is_bot_by_author_name(bots_dict, repo, author_name_list):
-    """ Determine if a contributor is a bot by author name """
-    for author_name in author_name_list:
-        common_list = bots_dict["common"]
-        if len(common_list) > 0:
-            for common in common_list:
-                pattern = f"^{common.replace('*', '.*')}$"
-                regex = re.compile(pattern)
-                if regex.match(author_name):
-                    return True
-        community_dict = bots_dict["community"]
-        if len(community_dict) > 0:
-            for community, community_values in community_dict.items():
-                if community in repo and author_name in community_values:
-                    return True
-        repo_dict = bots_dict["repo"]
-        if len(repo_dict) > 0:
-            if repo_dict.get(repo) and author_name in repo_dict.get(repo):
-                return True
-    return False
 
 def get_all_repo(json_file, origin):
     all_repo = []
@@ -113,14 +54,15 @@ def get_email_prefix_domain(email):
 
 
 class ContributorDevOrgRepo:
-    def __init__(self, json_file, identities_config_file, organizations_config_file, bots_config_file, issue_index,
-                 pr_index, issue_comments_index, pr_comments_index, git_index, contributors_index, contributors_enriched_index, 
-                 from_date, end_date, repo_index, event_index=None, company=None, stargazer_index=None, fork_index=None):
+    def __init__(self, json_file, organizations_index, bots_index, issue_index, pr_index, issue_comments_index,
+                 pr_comments_index, git_index, contributors_index, contributors_enriched_index,
+                 from_date, end_date, repo_index, event_index=None, company=None, stargazer_index=None,
+                 fork_index=None, level=None, community=None, contributors_org_index=None):
         """ Build a contributor profile of the repository, including issues, pr, commit, organization, etc.
         :param json_file: the path of json file containing repository message.
         :param identities_config_file: the path of json file containing contributor identity message.
-        :param organizations_config_file: the path of json file containing contributor organization message.
-        :param bots_config_file: the path of json file containing contributor is not a robot message
+        :param organizations_index: organizations index.
+        :param bots_index: bots index
         :param issue_index: Issue index
         :param pr_index: pr index
         :param issue_comments_index: issue comment index
@@ -135,7 +77,10 @@ class ContributorDevOrgRepo:
         :param company: the company this warehouse belongs to
         :param stargazer_index: stargazer index
         :param fork_index: fork index
-        """         
+        :param contributors_org_index: contributors org index
+        :param level: choose from repo, community.
+        :param community: used to mark the repo belongs to which community.
+        """
         self.issue_index = issue_index
         self.pr_index = pr_index
         self.issue_comments_index = issue_comments_index
@@ -146,13 +91,15 @@ class ContributorDevOrgRepo:
         self.contributors_enriched_index = contributors_enriched_index
         self.from_date = from_date
         self.end_date = end_date
-        self.organizations_dict = get_organizations_info(organizations_config_file)
-        self.identities_dict = get_identities_info(identities_config_file)
-        self.bots_dict = get_bots_info(bots_config_file)
+        self.organizations_index = organizations_index
+        self.bots_index = bots_index
         self.company = None if company or company == 'None' else company
         self.event_index = event_index
         self.stargazer_index = stargazer_index
         self.fork_index = fork_index
+        self.contributors_org_index = contributors_org_index
+        self.level = level
+        self.community = community
         self.client = None
         self.source = 'gitee' if 'gitee' in issue_index else 'github'
         self.all_repo = get_all_repo(json_file, self.source)
@@ -165,10 +112,13 @@ class ContributorDevOrgRepo:
 
     def run(self, elastic_url):
         """Run tasks"""
+        self.elastic_url = elastic_url
         self.client = get_client(elastic_url)
         exist = self.client.indices.exists(index=self.contributors_index)
         if not exist:
-            self.client.indices.create(index=self.contributors_index, body=self.get_contributor_index_mapping())
+            self.client.indices.create(index=self.contributors_index, body=get_base_index_mapping())
+        self.organizations_dict = OrganizationService(self.elastic_url, self.organizations_index).get_dict_domain_exist()
+        self.bots_dict = BotService(self.elastic_url, self.bots_index).get_dict_by_source(self.source)
         for repo in self.all_repo:
             self.processing_data(repo)
             self.client.indices.flush(index=self.contributors_index) #Ensure that data has been saved to ES
@@ -260,6 +210,12 @@ class ContributorDevOrgRepo:
             return
 
         all_items_dict = self.get_merge_platform_git_contributor_data(repo, self.git_item_id_dict, self.platform_item_id_dict)
+        contributor_org_service = ContributorOrgService(self.elastic_url, self.contributors_org_index, self.source)
+        contributor_org_dict = contributor_org_service.get_dict_by_contributor_name(
+            contributor_name_list=self.get_contributor_name_list(all_items_dict),
+            level=self.level,
+            label=self.community if self.level == 'community' else repo
+        )
         self.delete_contributor(repo, self.contributors_index)
         logger.info(repo + "  save data...")
         all_bulk_data = []
@@ -287,12 +243,7 @@ class ContributorDevOrgRepo:
                 contribution_date_field_dict[date_field] = contribution_date_list
                 contribution_date_field_dict["first_" + date_field.replace("_list", "")] = contribution_first_date
 
-            org_change_date_list = list(item.get("org_change_date_list", []))
-            if len(org_change_date_list) > 0:
-                sorted(org_change_date_list, key=lambda x: x["first_date"])
-            is_bot = self.is_bot_by_author_name(repo, list(item.get("id_git_author_name_list", []))
-                                                + list(item.get("id_platform_login_name_list", []))
-                                                + list(item.get("id_platform_author_name_list", [])))
+            org_change_date_list, email_org_list, is_bot = self.get_org_change_date_list_and_bot(repo, item, contributor_org_dict)
             admin_date_list = []
             min_admin_date, max_admin_date = self.get_admin_date(contribution_date_field_dict)
             if min_admin_date:
@@ -317,6 +268,7 @@ class ContributorDevOrgRepo:
                     **contribution_date_field_dict,
                     "last_contributor_date": item["last_contributor_date"],
                     "org_change_date_list": org_change_date_list,
+                    "email_org_change_date_list": email_org_list,
                     "admin_date_list": admin_date_list,
                     "platform_type": platform_type,
                     "domain": org_change_date_list[len(org_change_date_list)-1]["domain"] if len(org_change_date_list) > 0 else None,
@@ -497,21 +449,30 @@ class ContributorDevOrgRepo:
         result_data_list = []
         old_data_dict = {}
         for old_data in old_data_list:
-            old_key = f"{old_data['domain']}:{old_data['org_name']}"
-            old_data_dict[old_key] = old_data
+            if old_data.get('org_name'):
+                old_data_dict[old_data.get('org_name')] = old_data
+            elif old_data.get('domain'):
+                old_data_dict[old_data.get('domain')] = old_data
         for new_data in new_data_list:
-            new_key = f"{new_data['domain']}:{new_data['org_name']}"
-            if new_key in old_data_dict.keys():
-                old_data = old_data_dict.pop(new_key)
+            data_dict = new_data.copy()
+            old_data = {}
+            if new_data.get('org_name') and new_data.get('org_name') in old_data_dict:
+                old_data = old_data_dict.pop(new_data.get('org_name'))
                 data_dict = {
-                    "domain": new_data["domain"],
-                    "org_name": new_data["org_name"],
-                    "first_date": get_oldest_date(new_data["first_date"], old_data["first_date"]),
-                    "last_date": get_latest_date(new_data["last_date"], old_data["last_date"])
+                    "domain": data_dict["domain"] if data_dict.get("domain") else old_data.get("domain"),
+                    "org_name": data_dict["org_name"] if data_dict.get("org_name") else old_data.get("org_name"),
+                    "first_date": get_oldest_date(data_dict["first_date"], old_data["first_date"]),
+                    "last_date": get_latest_date(data_dict["last_date"], old_data["last_date"])
                 }
-                result_data_list.append(data_dict)
-                continue
-            result_data_list.append(new_data)
+            if new_data.get('domain') and new_data.get('domain') in old_data_dict:
+                old_data = old_data_dict.pop(new_data.get('domain'))
+                data_dict = {
+                    "domain": data_dict["domain"] if data_dict.get("domain") else old_data.get("domain"),
+                    "org_name": data_dict["org_name"] if data_dict.get("org_name") else old_data.get("org_name"),
+                    "first_date": get_oldest_date(data_dict["first_date"], old_data["first_date"]),
+                    "last_date": get_latest_date(data_dict["last_date"], old_data["last_date"])
+                }
+            result_data_list.append(data_dict)
         if len(old_data_dict) > 0:
             for old_data in old_data_dict.values():
                 result_data_list.append(old_data)
@@ -799,56 +760,36 @@ class ContributorDevOrgRepo:
         results = get_all_index_data(self.client, index=index, body=query_dsl)
         return results
 
-    def get_contributor_index_mapping(self):
-        """ Get Elasticsearch mapping. """
-        mapping = {
-            "mappings": {
-                "properties": {
-                    "uuid": {
-                        "type": "text",
-                        "fields": {
-                            "keyword": {
-                                "type": "keyword",
-                                "ignore_above": 256
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return mapping
-
     def get_org_name_by_email(self, email):
         """ Return organization name based on email """
         domain = get_email_prefix_domain(email)[1]
         if domain is None:
             return None
-        org_name = self.identities_dict[email] if self.identities_dict.get(email) else self.organizations_dict.get(domain)
+        org_name = self.organizations_dict.get(domain)
         if "facebook.com" in domain:
             org_name = "Facebook"
         if ("noreply.gitee.com" in domain or "noreply.github.com" in domain) and self.company is not None:
             org_name = self.company
         return org_name
 
-    def is_bot_by_author_name(self, repo, author_name_list):
+    def is_bot_by_author_name(self, repo, author_name):
         """ Determine if a bot is a bot by author name """
-        for author_name in author_name_list:
-            common_list = self.bots_dict["common"]
-            if len(common_list) > 0:
-                for common in common_list:
-                    pattern = f"^{common.replace('*', '.*')}$"
-                    regex = re.compile(pattern)
-                    if regex.match(author_name):
-                        return True
-            community_dict = self.bots_dict["community"]
-            if len(community_dict) > 0:
-                for community, community_values in community_dict.items():
-                    if community in repo and author_name in community_values:
-                        return True
-            repo_dict = self.bots_dict["repo"]
-            if len(repo_dict) > 0:
-                if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+        common_list = self.bots_dict["common"]
+        if len(common_list) > 0:
+            for common in common_list:
+                pattern = f"^{common.replace('*', '.*')}$"
+                regex = re.compile(pattern)
+                if regex.match(author_name):
                     return True
+        community_dict = self.bots_dict["community"]
+        if len(community_dict) > 0:
+            for community, community_values in community_dict.items():
+                if community in repo and author_name in community_values:
+                    return True
+        repo_dict = self.bots_dict["repo"]
+        if len(repo_dict) > 0:
+            if repo_dict.get(repo) and author_name in repo_dict.get(repo):
+                return True
         return False
 
     def get_admin_date(self, contributor_data):
@@ -944,7 +885,7 @@ class ContributorDevOrgRepo:
         start_time = datetime.now()
         es_exist = self.client.indices.exists(index=self.contributors_enriched_index)
         if not es_exist:
-            self.client.indices.create(index=self.contributors_enriched_index, body=self.get_contributor_index_mapping())
+            self.client.indices.create(index=self.contributors_enriched_index, body=get_base_index_mapping())
         date_list = get_date_list(self.from_date, self.end_date)
         count = 0
         item_datas = []
@@ -981,3 +922,88 @@ class ContributorDevOrgRepo:
                     item_datas = []
         helpers().bulk(client=self.client, actions=item_datas)
         logger.info(repo + " contributor enrich data save finish count:" + str(count) + " " + str(datetime.now() - start_time))
+
+
+    def find_non_overlap_ranges(self, start_time1, end_time1, start_time2, end_time2):
+        non_overlap = []
+        if check_times_has_overlap(start_time1, end_time1, start_time2, end_time2):
+            if start_time2 < start_time1:
+                non_overlap.append([start_time2, start_time1])
+            if end_time2 > end_time1:
+                non_overlap.append([end_time1, end_time2])
+        else:
+            non_overlap.append([start_time2, end_time2])
+        return non_overlap
+
+    def org_change_data_priority_processing(self, original_org_change_date_list):
+        new_org_change_date_list = []
+        for org_item in original_org_change_date_list:
+            first_date, last_date = org_item["first_date"], org_item["last_date"]
+            org_item_date_deque = deque()
+            org_item_date_deque.append([first_date, last_date])
+            for new_org_item in new_org_change_date_list:
+                org_item_date_deque_tmp = deque()
+                while org_item_date_deque:
+                    date_item = org_item_date_deque.popleft()
+                    non_overlap_date_list = self.find_non_overlap_ranges(
+                        new_org_item["first_date"], new_org_item["last_date"], date_item[0], date_item[1])
+                    for non_overlap_date_item in non_overlap_date_list:
+                        org_item_date_deque_tmp.append(non_overlap_date_item)
+                org_item_date_deque = org_item_date_deque_tmp
+            for org_item_date in org_item_date_deque:
+                new_org_change_date_list.append({
+                    "domain": org_item.get("domain"),
+                    "org_name": org_item.get("org_name"),
+                    "first_date": org_item_date[0],
+                    "last_date": org_item_date[1]
+                })
+        if new_org_change_date_list:
+            return sorted(new_org_change_date_list, key=lambda x: x["first_date"])
+        return new_org_change_date_list
+
+    def get_org_change_date_list_and_bot(self, repo, item, contributor_org_dict):
+        contributor_name = self.get_contributor_name(item)
+        contributor_name_key_list = [
+            f"User Individual&&{contributor_name}",
+            f"Repo Admin&&{contributor_name}",
+            f"URL&&{contributor_name}",
+        ]
+        org_change_date_list = []
+        bot_list = []
+        for contributor_name_key in contributor_name_key_list:
+            if contributor_name_key in contributor_org_dict:
+                contributor_org_info = contributor_org_dict[contributor_name_key]
+                org_change_date_list.extend(contributor_org_info["org_change_date_list"])
+                bot_list.append(contributor_org_info["is_bot"])
+        email_org_list = list(item.get("org_change_date_list", []))
+        if len(email_org_list) > 0:
+            filtered_org_list = [org_item for org_item in email_org_list if org_item["org_name"]]
+            if filtered_org_list:
+                max_last_date_org = max(filtered_org_list, key=lambda obj: obj["last_date"])
+                max_last_date_org["last_date"] = item["last_contributor_date"]
+            email_org_list = sorted(email_org_list, key=lambda x: (x["org_name"] is None, x["org_name"]))
+            org_change_date_list.extend(email_org_list)
+        bot_list.append(self.is_bot_by_author_name(repo, contributor_name))
+        result_org_change_date_list = self.org_change_data_priority_processing(org_change_date_list)
+        return result_org_change_date_list, email_org_list, any(bot_list)
+
+    def get_contributor_name_list(self, contributor_items):
+        contributor_name_list = []
+        for item in contributor_items.values():
+            contributor_name = self.get_contributor_name(item)
+            if contributor_name:
+                contributor_name_list.append(contributor_name)
+        return contributor_name_list
+
+    def get_contributor_name(self, contributor_item):
+        contributor_name = None
+        id_git_author_name_list = list(contributor_item.get("id_git_author_name_list", []))
+        id_platform_login_name_list = list(contributor_item.get("id_platform_login_name_list", []))
+        id_git_author_name_list.sort()
+        id_platform_login_name_list.sort()
+        if len(id_platform_login_name_list) > 0:
+            contributor_name = id_platform_login_name_list[0]
+        elif len(id_git_author_name_list) > 0:
+            contributor_name = id_git_author_name_list[0]
+        return contributor_name
+

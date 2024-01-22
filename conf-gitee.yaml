@@ -23,7 +23,7 @@ params:
       'event_index': 'gitee_event_enriched',
       'contributors_index':'gitee_contributors_org_repo',
       'contributors_enriched_index':'gitee_contributors_org_repo_enriched',
-      'identities_config_file': './compass_contributor/conf_utils/identities.yml',
-      'organizations_config_file': './compass_contributor/conf_utils/organizations.json',
-      'bots_config_file': './compass_contributor/conf_utils/bots.json',
+      'contributors_org_index':'gitee-contributors_org',
+      'organizations_index': 'organizations',
+      'bots_index': 'bots'
   }
