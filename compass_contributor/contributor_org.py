@@ -50,11 +50,24 @@ class ContributorOrgService:
                                          plateform_type, is_bot)
         self.save(contributor_org)
 
-    def save_by_repo_admin(self, contributor, org_change_date_list, level, label, operator_id):
+
+    def save_by_system_admin(self, contributor, org_change_date_list, level, label, operator_id):
+        contributor = contributor
+        org_change_date_list = org_change_date_list
+        modify_type = "System Admin"
+        modify_by = operator_id
+        plateform_type = self.source
+        is_bot = False
+        contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type, modify_by,
+                                            plateform_type, is_bot)
+        self.save(contributor_org)
+
+
+    def save_by_repo_admin(self, contributor, org_change_date_list, level, label, pr_url):
         contributor = contributor
         org_change_date_list = org_change_date_list
         modify_type = "Repo Admin"
-        modify_by = operator_id
+        modify_by = pr_url
         plateform_type = self.source
         is_bot = False
         contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type, modify_by,
@@ -241,8 +254,8 @@ class ContributorOrgService:
                                 "bool": {
                                     "must": [
                                         {
-                                            "match_phrase": {
-                                                "modify_type.keyword": "Repo Admin"
+                                            "terms": {
+                                                "modify_type.keyword": ["System Admin", "Repo Admin"]
                                             }
                                         },
                                         {
@@ -291,7 +304,7 @@ class ContributorOrg:
             org_change_date_list (list[Dict[str, Any]]): List of organization changes, list with org_name, first_date, last_date
             level: choose from repo, community
             label: repo corresponds to the repository url, community corresponds to the community name.
-            modify_type (str): The modify type contains 'User Individual', 'Repo Admin', 'URL'
+            modify_type (str): The modify type contains 'User Individual', 'System Admin', 'Repo Admin', 'URL'
             modify_by (str): What has been modified, if the modify type is 'User Individual' and 'Repo Admin' then save operator user id, 
                 if the modifYtype is 'URl' then save url address. 
             plateform_type (str): Is the contributor data source gitee or github

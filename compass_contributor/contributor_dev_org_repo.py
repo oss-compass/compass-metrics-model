@@ -16,6 +16,7 @@ from compass_contributor.contributor_org import ContributorOrgService
 from compass_contributor.organization import OrganizationService
 from compass_contributor.bot import BotService
 from collections import deque
+import pkg_resources
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -28,6 +29,41 @@ def exclude_special_str(str):
     """ For strings of author names, exclude special characters. """
     regEx = "[`~!#$%^&*()+=|{}':;',\\[\\]<>/?~！#￥%……&*（）——+|{}【】‘；：”“’\"\"。 ，、？]"
     return re.sub(regEx, "",str)
+
+def get_organizations_info():
+    """ Get profile data to determine which organization a contributor belongs to. """
+    organizations_dict = {}
+    organizations_json_data = pkg_resources.resource_string('compass_contributor', 'conf_utils/organizations.json')
+    organizations_config = json.loads(organizations_json_data.decode('utf-8'))
+    for org_name in organizations_config["organizations"].keys():
+        for domain in organizations_config["organizations"][org_name]:
+            organizations_dict[domain["domain"]] = org_name
+    return organizations_dict
+
+def get_bots_info(source):
+    """ Get the profile data to determine if a contributor is a bot. """
+    common = []
+    community_dict = {}
+    repo_dict = {}
+    
+    bots_json_data = pkg_resources.resource_string('compass_contributor', 'conf_utils/bots.json')
+    bots_config = json.loads(bots_json_data.decode('utf-8'))
+    source_data = bots_config[source]
+    if source_data.get("contributor") and len(source_data.get("contributor")) > 0:
+        common = source_data.get("contributor")
+    for community, community_values in source_data["community"].items():
+        if community_values.get("contributor") and len(community_values.get("contributor")) > 0:
+            community_dict[community] = community_values.get("contributor")
+        if community_values.get("repo"):
+            for repo, repo_values in community_values["repo"].items():
+                if repo_values.get("contributor") and len(repo_values.get("contributor")) > 0:
+                    repo_dict[repo] = repo_values.get("contributor")
+    bots_dict = {
+        "common": common,
+        "community": community_dict,
+        "repo": repo_dict
+    }
+    return bots_dict
 
 def get_all_repo(json_file, origin):
     all_repo = []
@@ -54,10 +90,10 @@ def get_email_prefix_domain(email):
 
 
 class ContributorDevOrgRepo:
-    def __init__(self, json_file, organizations_index, bots_index, issue_index, pr_index, issue_comments_index,
-                 pr_comments_index, git_index, contributors_index, contributors_enriched_index,
-                 from_date, end_date, repo_index, event_index=None, company=None, stargazer_index=None,
-                 fork_index=None, level=None, community=None, contributors_org_index=None):
+    def __init__(self, json_file, issue_index, pr_index, issue_comments_index, pr_comments_index, git_index, 
+                contributors_index, contributors_enriched_index, from_date, end_date, repo_index, event_index=None, 
+                company=None, stargazer_index=None, fork_index=None, level=None, community=None, contributors_org_index=None,
+                organizations_index=None, bots_index=None):
         """ Build a contributor profile of the repository, including issues, pr, commit, organization, etc.
         :param json_file: the path of json file containing repository message.
         :param identities_config_file: the path of json file containing contributor identity message.
@@ -117,8 +153,10 @@ class ContributorDevOrgRepo:
         exist = self.client.indices.exists(index=self.contributors_index)
         if not exist:
             self.client.indices.create(index=self.contributors_index, body=get_base_index_mapping())
-        self.organizations_dict = OrganizationService(self.elastic_url, self.organizations_index).get_dict_domain_exist()
-        self.bots_dict = BotService(self.elastic_url, self.bots_index).get_dict_by_source(self.source)
+        self.organizations_dict = OrganizationService(self.elastic_url, self.organizations_index).get_dict_domain_exist() \
+            if self.organizations_index else get_organizations_info()
+        self.bots_dict = BotService(self.elastic_url, self.bots_index).get_dict_by_source(self.source) \
+            if self.bots_index else get_bots_info(self.source)
         for repo in self.all_repo:
             self.processing_data(repo)
             self.client.indices.flush(index=self.contributors_index) #Ensure that data has been saved to ES
@@ -210,12 +248,14 @@ class ContributorDevOrgRepo:
             return
 
         all_items_dict = self.get_merge_platform_git_contributor_data(repo, self.git_item_id_dict, self.platform_item_id_dict)
-        contributor_org_service = ContributorOrgService(self.elastic_url, self.contributors_org_index, self.source)
-        contributor_org_dict = contributor_org_service.get_dict_by_contributor_name(
-            contributor_name_list=self.get_contributor_name_list(all_items_dict),
-            level=self.level,
-            label=self.community if self.level == 'community' else repo
-        )
+        contributor_org_dict = {}
+        if self.contributors_org_index:
+            contributor_org_service = ContributorOrgService(self.elastic_url, self.contributors_org_index, self.source)
+            contributor_org_dict = contributor_org_service.get_dict_by_contributor_name(
+                contributor_name_list=self.get_contributor_name_list(all_items_dict),
+                level=self.level,
+                label=self.community if self.level == 'community' else repo
+            )
         self.delete_contributor(repo, self.contributors_index)
         logger.info(repo + "  save data...")
         all_bulk_data = []
@@ -777,8 +817,7 @@ class ContributorDevOrgRepo:
         common_list = self.bots_dict["common"]
         if len(common_list) > 0:
             for common in common_list:
-                pattern = f"^{common.replace('*', '.*')}$"
-                regex = re.compile(pattern)
+                regex = re.compile(common)
                 if regex.match(author_name):
                     return True
         community_dict = self.bots_dict["community"]
@@ -965,6 +1004,7 @@ class ContributorDevOrgRepo:
         contributor_name = self.get_contributor_name(item)
         contributor_name_key_list = [
             f"User Individual&&{contributor_name}",
+            f"System Admin&&{contributor_name}",
             f"Repo Admin&&{contributor_name}",
             f"URL&&{contributor_name}",
         ]

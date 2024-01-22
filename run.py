@@ -23,10 +23,10 @@ if __name__ == '__main__':
    params = CONF['params']
 
    kwargs = {}
-   for item in ['json_file', 'identities_config_file', 'organizations_config_file', 'issue_index', 'pr_index',
-                'issue_comments_index', 'pr_comments_index', 'git_index', 'contributors_index', 'from_date',
-                'end_date', 'company', 'bots_config_file', 'repo_index', 'event_index', 'stargazer_index', 
-                'fork_index', 'contributors_enriched_index']:
+   for item in ['json_file', 'issue_index', 
+                 'pr_index', 'issue_comments_index', 'pr_comments_index', 'git_index', 'contributors_index', 'contributors_enriched_index',
+                 'from_date', 'end_date', 'repo_index', 'event_index', 'company', 'stargazer_index',
+                 'fork_index', 'level', 'community', 'contributors_org_index', 'organizations_index', 'bots_index']:
       kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
    contributor = ContributorDevOrgRepo(**kwargs)
    contributor.run(elastic_url)
