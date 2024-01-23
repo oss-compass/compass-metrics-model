@@ -44,10 +44,10 @@ class ContributorOrgService:
         label = None
         modify_type = "User Individual"
         modify_by = operator_id
-        plateform_type = self.source
+        platform_type = self.source
         is_bot = False
         contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type, modify_by,
-                                         plateform_type, is_bot)
+                                         platform_type, is_bot)
         self.save(contributor_org)
 
 
@@ -56,10 +56,10 @@ class ContributorOrgService:
         org_change_date_list = org_change_date_list
         modify_type = "System Admin"
         modify_by = operator_id
-        plateform_type = self.source
+        platform_type = self.source
         is_bot = False
         contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type, modify_by,
-                                            plateform_type, is_bot)
+                                            platform_type, is_bot)
         self.save(contributor_org)
 
 
@@ -68,10 +68,10 @@ class ContributorOrgService:
         org_change_date_list = org_change_date_list
         modify_type = "Repo Admin"
         modify_by = pr_url
-        plateform_type = self.source
+        platform_type = self.source
         is_bot = False
         contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type, modify_by,
-                                         plateform_type, is_bot)
+                                         platform_type, is_bot)
         self.save(contributor_org)
 
 
@@ -188,10 +188,10 @@ class ContributorOrgService:
             label = None
             modify_type = "URL"
             modify_by = cncf_gitdm_url
-            plateform_type = self.source
+            platform_type = self.source
             is_bot = "(Robots)" in {org_item["org_name"] for org_item in org_info_list}
             contributor_org = ContributorOrg(contributor, org_change_date_list, level, label, modify_type,
-                                             modify_by, plateform_type, is_bot)
+                                             modify_by, platform_type, is_bot)
             contributor_org_dao_list.append(contributor_org)
         logger.info(f"{cncf_gitdm_url} save contributor: {len(contributor_org_dao_list)}")
         self.batch_save(contributor_org_dao_list)
@@ -240,7 +240,7 @@ class ContributorOrgService:
                         "must": [
                             {
                                 "match_phrase": {
-                                    "plateform_type.keyword": self.source
+                                    "platform_type.keyword": self.source
                                 }
                             },
                             {
@@ -296,7 +296,7 @@ class ContributorOrgService:
 
 class ContributorOrg:
     def __init__(self, contributor, org_change_date_list, level, label, modify_type, modify_by,
-                 plateform_type, is_bot):
+                 platform_type, is_bot):
         """Contributor Organization Information
 
         Args:
@@ -307,16 +307,16 @@ class ContributorOrg:
             modify_type (str): The modify type contains 'User Individual', 'System Admin', 'Repo Admin', 'URL'
             modify_by (str): What has been modified, if the modify type is 'User Individual' and 'Repo Admin' then save operator user id, 
                 if the modifYtype is 'URl' then save url address. 
-            plateform_type (str): Is the contributor data source gitee or github
+            platform_type (str): Is the contributor data source gitee or github
             is_bot (bool): is bot
         """
-        self.id = get_uuid(contributor, modify_type, level, label, plateform_type)
+        self.id = get_uuid(contributor, modify_type, level, label, platform_type)
         self.contributor = contributor
         self.org_change_date_list = org_change_date_list
         self.level = level
         self.label = label
         self.modify_type = modify_type
         self.modify_by = modify_by
-        self.plateform_type = plateform_type
+        self.platform_type = platform_type
         self.is_bot = is_bot
         self.update_at_date = datetime_utcnow().isoformat()

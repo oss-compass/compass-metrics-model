@@ -90,7 +90,7 @@ class BotService:
           "size": 10000,
           "query": {
             "match_phrase": {
-              "plateform_type.keyword": source
+              "platform_type.keyword": source
             }
           }
         }
@@ -111,18 +111,18 @@ class BotService:
 
 
 class Bot:
-    def __init__(self, contributor, plateform_type, community, repo):
+    def __init__(self, contributor, platform_type, community, repo):
         """Bot Information
 
         Args:
             contributor (str): Contributor robot Name
-            plateform_type (str): Is the contributor data source gitee or github
+            platform_type (str): Is the contributor data source gitee or github
             community (str): Platform community address
             repo (str): Platform repo address
         """
-        self.id = get_uuid(contributor, plateform_type)
+        self.id = get_uuid(contributor, platform_type)
         self.contributor = contributor
-        self.plateform_type = plateform_type
+        self.platform_type = platform_type
         self.community = community
         self.repo = repo
         self.update_at_date = datetime_utcnow().isoformat()
