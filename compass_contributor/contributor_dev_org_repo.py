@@ -232,7 +232,8 @@ class ContributorDevOrgRepo:
             "pr_UnlinkIssueEvent": {"index": self.event_index, "date_field": "pr_unlink_issue_date_list"},
         }
         if self.git_index is not None:
-            self.date_field_list.append("code_commit_date_list")
+            git_date_field_list = ["code_author_date_list", "code_committer_date_list", "code_review_date_list"]
+            self.date_field_list.extend(git_date_field_list)
             self.date_field_list.append("code_direct_commit_date_list")
             self.admin_date_field_list.append("code_direct_commit_date_list")
             self.processing_commit_data(self.git_index, repo, self.from_date, self.end_date)
@@ -408,6 +409,60 @@ class ContributorDevOrgRepo:
 
     def processing_commit_data(self, index, repo, from_date, to_date):
         """ Start processing data, generate commit contributor profiles """
+
+        def get_signed_off_and_reviewed(msg):
+            """ Getting signed_off_by and reviewed_by user information from commit message """
+            signed_off_dict = {}
+            reviewed_dict = {}
+            for line in msg.splitlines():
+                if line.startswith("Signed-off-by: "):
+                    signed_off_by_split = line.replace("Signed-off-by: ", "").split(" <")
+                    if len(signed_off_by_split) == 2:
+                        author_name = signed_off_by_split[0].strip()
+                        if author_name is None:
+                            continue
+                        email = signed_off_by_split[1].replace(">", "").strip()
+                        signed_off_dict[author_name] = {
+                            "type": "code_author",
+                            "author_name": author_name,
+                            "author_email": email
+                        }
+                elif line.startswith("Reviewed-by: "):
+                    reviewed_by_split = line.replace("Reviewed-by: ", "").split(" <")
+                    if len(reviewed_by_split) == 2:
+                        author_name = reviewed_by_split[0].strip()
+                        if author_name is None:
+                            continue
+                        email = reviewed_by_split[1].replace(">", "").strip()
+                        reviewed_dict[author_name] = {
+                            "type": "code_review",
+                            "author_name": author_name,
+                            "author_email": email
+                        }
+            return signed_off_dict, reviewed_dict
+
+        def get_author_list(commit_source):
+            signed_off_dict, reviewed_dict = get_signed_off_and_reviewed(commit_source.get("message_analyzed", ""))
+            signed_off_dict[commit_source.get("author_name")] = {
+                "type": "code_author",
+                "author_name": commit_source.get("author_name"),
+                "author_email": commit_source.get("author_email", None)
+            }
+            committer_dict = {
+                "type": "code_committer",
+                "author_name": commit_source.get("committer_name"),
+                "author_email": commit_source.get("committer_email", None)
+            }
+            author_list = []
+            if signed_off_dict:
+                author_list.extend(list(signed_off_dict.values()))
+            if reviewed_dict:
+                author_list.extend(list(reviewed_dict.values()))
+            if commit_source.get("committer_name") not in signed_off_dict and commit_source.get("committer_name") in ["Github", "Gitee"]:
+                author_list.append(committer_dict)
+            return author_list
+
+
         logger.info(repo + " " + index + " processing...")
         created_at = self.get_repo_created(repo)
         start_time = datetime.now()
@@ -433,24 +488,7 @@ class ContributorDevOrgRepo:
                 continue
             grimoire_creation_date = datetime_to_utc(
                 str_to_datetime(source["grimoire_creation_date"]).replace(tzinfo=None) + timedelta(microseconds=int(source["uuid"], 16) % 100000)).isoformat()
-            id_identity_list = [
-                source.get("author_name"),
-                source.get("author_email", None)
-            ]
-            id_identity_list = set(
-                [exclude_special_str(x.lower()) for x in id_identity_list if x and x.lower() not in exclude_field_list and exclude_special_str(x) ])
-            org_change_date_list = []
-            if source.get("author_email") is not None:
-                domain = get_email_prefix_domain(source.get("author_email"))[1]
-                if domain is not None:
-                    org_name = self.get_org_name_by_email(source.get("author_email"))
-                    org_date = {
-                        "domain": domain,
-                        "org_name": org_name,
-                        "first_date": grimoire_creation_date,
-                        "last_date": grimoire_creation_date
-                    }
-                    org_change_date_list.append(org_date)
+            
             code_direct_commit_date = None
             if grimoire_creation_date >= created_at and source["hash"] not in pr_data_dict \
                     and (
@@ -459,29 +497,49 @@ class ContributorDevOrgRepo:
                             or (self.source == "github" and source["committer_name"] == source["author_name"] and source["committer_email"] == source["author_email"])
                             ):
                 code_direct_commit_date = grimoire_creation_date
+            
+            author_list = get_author_list(source)
+            for author_item in author_list:
+                author_type = author_item["type"]
+                date_field = author_type + "_date_list"
+                id_identity_list = [author_item["author_name"], author_item["author_email"]]
+                id_identity_list = set(
+                    [exclude_special_str(x.lower()) for x in id_identity_list if x and x.lower() not in exclude_field_list and exclude_special_str(x) ])
+                org_change_date_list = []
+                if author_item["author_email"] is not None:
+                    domain = get_email_prefix_domain(author_item["author_email"])[1]
+                    if domain is not None:
+                        org_name = self.get_org_name_by_email(author_item["author_email"])
+                        org_date = {
+                            "domain": domain,
+                            "org_name": org_name,
+                            "first_date": grimoire_creation_date,
+                            "last_date": grimoire_creation_date
+                        }
+                        org_change_date_list.append(org_date)
+                item = {
+                    "uuid": get_uuid(repo, "git", author_item["author_name"], author_item["author_email"], grimoire_creation_date),
+                    "id_git_author_name_list": set([author_item.get("author_name")] if author_item.get("author_name") else []),
+                    "id_git_author_email_list": set([author_item.get("author_email")] if author_item.get("author_email") else []),
+                    "id_identity_list": id_identity_list,
+                    date_field: {grimoire_creation_date},
+                    "last_contributor_date": grimoire_creation_date,
+                    "org_change_date_list": org_change_date_list
+                }
+                if author_type == "code_author" and author_item["author_name"] == source["author_name"]:
+                    item["code_direct_commit_date_list"] = {code_direct_commit_date} if code_direct_commit_date else set()
 
-            item = {
-                "uuid": get_uuid(repo, "git", source["author_name"], source.get("author_email"), grimoire_creation_date),
-                "id_git_author_name_list": set([source.get("author_name")] if source.get("author_name") else []),
-                "id_git_author_email_list": set([source.get("author_email")] if source.get("author_email") else []),
-                "id_identity_list": id_identity_list,
-                "code_commit_date_list": {grimoire_creation_date},
-                "code_direct_commit_date_list": {code_direct_commit_date} if code_direct_commit_date else set(),
-                "last_contributor_date": grimoire_creation_date,
-                "org_change_date_list": org_change_date_list
-            }
+                old_item_dict = {}
+                for identity in id_identity_list:
+                    if identity in self.git_item_identity_dict.keys() and self.git_item_identity_dict[identity] in self.git_item_id_dict.keys():
+                        old_item = self.git_item_id_dict.pop(self.git_item_identity_dict[identity])
+                        old_item_dict[old_item["uuid"]] = old_item
+                if len(old_item_dict) > 0:
+                    item = self.get_merge_old_new_contributor_data(old_item_dict, {item["uuid"]: item})[0][item["uuid"]]
 
-            old_item_dict = {}
-            for identity in id_identity_list:
-                if identity in self.git_item_identity_dict.keys() and self.git_item_identity_dict[identity] in self.git_item_id_dict.keys():
-                    old_item = self.git_item_id_dict.pop(self.git_item_identity_dict[identity])
-                    old_item_dict[old_item["uuid"]] = old_item
-            if len(old_item_dict) > 0:
-                item = self.get_merge_old_new_contributor_data(old_item_dict, {item["uuid"]: item})[0][item["uuid"]]
-
-            self.git_item_id_dict[item["uuid"]] = item
-            for identity in item["id_identity_list"]:
-                self.git_item_identity_dict[identity] = item["uuid"]
+                self.git_item_id_dict[item["uuid"]] = item
+                for identity in item["id_identity_list"]:
+                    self.git_item_identity_dict[identity] = item["uuid"]
         logger.info(repo + " " + index + " finish count:" + str(count) + " " + str(datetime.now() - start_time))
 
     def get_merge_org_change_date(self, old_data_list, new_data_list):
@@ -871,14 +929,31 @@ class ContributorDevOrgRepo:
         created_at = hits[0]["_source"]["created_at"]
         return datetime_to_utc(str_to_datetime(created_at)).isoformat()
 
-    def delete_contributor(self, repo, contributors_index):
+    def delete_contributor(self, repo, contributors_index, from_date=None, end_date=None):
         query = {
-            "query": { 
-                "match_phrase": {
-                    "repo_name.keyword": repo
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "match_phrase": {
+                                "repo_name.keyword": repo
+                            }
+                        }
+                    ]
                 }
             }
         }
+        if from_date and end_date:
+            query["query"]["bool"]["filter"] = [
+                        {
+                            "range": {
+                                "grimoire_creation_date": {
+                                    "gte": from_date,
+                                    "lte": end_date
+                                }
+                            }
+                        }
+                    ]
         self.client.delete_by_query(index=contributors_index, body=query, request_timeout=100)
 
     def get_pr_list_by_commit_hash(self, repo, hash_list):
@@ -928,7 +1003,7 @@ class ContributorDevOrgRepo:
         date_list = get_date_list(self.from_date, self.end_date)
         count = 0
         item_datas = []
-        self.delete_contributor(repo, self.contributors_enriched_index)
+        self.delete_contributor(repo, self.contributors_enriched_index, self.from_date, self.end_date)
         for date in date_list:
             created_since_metric = created_since(self.client, self.git_index, date, [repo])
             if created_since_metric is None:

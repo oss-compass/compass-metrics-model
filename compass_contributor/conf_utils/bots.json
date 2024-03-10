@@ -78,7 +78,9 @@
 		"contributor": [
 			"^.*bot$",
 			"^.*Bot$",
-			"^.*\\[bot\\]$"
+			"^.*\\[bot\\]$",
+			"anolis-bot-ci",
+			"openeuler-ci-bot"
 		],
 		"community":{
 			"https://gitee.com/openharmony": {

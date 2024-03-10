@@ -411,6 +411,14 @@
             {
                 "domain": "alibaba.com",
                 "is_top": true
+            },
+            {
+                "domain": "openanolis.org",
+                "is_top": true
+            },
+            {
+                "domain": "linux.alibaba.com",
+                "is_top": true
             }
         ],
         "Allegro": [
@@ -4101,6 +4109,10 @@
             {
                 "domain": "openeuler.sh",
                 "is_top": true
+            },
+            {
+                "domain": "huaweicloud.com",
+                "is_top": true
             }
         ],
         "HubSpot": [
@@ -5066,6 +5078,12 @@
         "Linux Networx, Inc.": [
             {
                 "domain": "lnxi.com",
+                "is_top": true
+            }
+        ],
+        "Linux Kernel": [
+            {
+                "domain": "kernel.org",
                 "is_top": true
             }
         ],
@@ -8995,6 +9013,14 @@
             {
                 "domain": "tencent.com",
                 "is_top": true
+            },
+            {
+                "domain": "lists.opencloudos.org",
+                "is_top": true
+            },
+            {
+                "domain": "opencloudos.org",
+                "is_top": true
             }
         ],
         "Tendril": [
@@ -11492,6 +11518,54 @@
         "IBM": [
             {
                 "domain": "linux.ibm.com",
+                "is_top": true
+            }
+        ],
+        "SWCPU": [
+            {
+                "domain": "swcpu.cn",
+                "is_top": true
+            },
+            {
+                "domain": "swcpu",
+                "is_top": true
+            }
+        ],
+        "ZhaoXin": [
+            {
+                "domain": "zhaoxin.com",
+                "is_top": true
+            },
+            {
+                "domain": "zhaoxin",
+                "is_top": true
+            }
+        ],
+        "Phytium": [
+            {
+                "domain": "phytium.com.cn",
+                "is_top": true
+            },
+            {
+                "domain": "phytium.com",
+                "is_top": true
+            },
+            {
+                "domain": "phytium.cn",
+                "is_top": true
+            },
+            {
+                "domain": "phytium",
+                "is_top": true
+            }
+        ],
+        "HYGON": [
+            {
+                "domain": "hygon.cn",
+                "is_top": true
+            },
+            {
+                "domain": "hygon",
                 "is_top": true
             }
         ]

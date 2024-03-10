@@ -111,7 +111,7 @@ class StarterProjectHealthMetricsModel(MetricsModel):
                 continue
             name = item["id_git_author_name_list"][0]
             count = author_name_dict.get(name, 0)
-            for commit_date in item["code_commit_date_list"]:
+            for commit_date in item["code_author_date_list"]:
                 if commit_date >= to_date:
                     break
                 if from_date <= commit_date and commit_date < to_date:
@@ -166,7 +166,7 @@ class StarterProjectHealthMetricsModel(MetricsModel):
             change_request_closure_ratio_recently, change_request_closed_count_recently, change_request_created_count_recently = \
                 self.change_request_closure_ratio(date - timedelta(days=90), date, repos_list)
             pr_time_to_close_avg, pr_time_to_close_mid = self.pr_open_time(date, repos_list)
-            commit_contributor_list = self.get_contributor_list(date - timedelta(days=90), date, repos_list, "code_commit_date_list")
+            commit_contributor_list = self.get_contributor_list(date - timedelta(days=90), date, repos_list, "code_author_date_list")
             metrics_data = {
                 'uuid': get_uuid(str(date), self.community, level, label, self.model_name, type),
                 'level': level,

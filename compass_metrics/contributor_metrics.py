@@ -12,7 +12,7 @@ def contributor_count(client, contributors_index, date, repo_list, from_date=Non
     if from_date is None:
         from_date = date - timedelta(days=90)
     to_date = date
-    date_field_list = ["code_commit_date_list", "issue_creation_date_list", "issue_comments_date_list", 
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list", 
                         "pr_creation_date_list", "pr_comments_date_list"]
     contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
     contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
@@ -29,7 +29,7 @@ def code_contributor_count(client, contributors_index, date, repo_list):
     """  Determine how many active pr creators, code reviewers, commit authors there are in the past 90 days. """
     from_date = date - timedelta(days=90)
     to_date = date
-    date_field_list = ["code_commit_date_list", "pr_creation_date_list", "pr_comments_date_list"]
+    date_field_list = ["code_author_date_list", "pr_creation_date_list", "pr_comments_date_list"]
     contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
     contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
     contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False) 
@@ -45,7 +45,7 @@ def commit_contributor_count(client, contributors_index, date, repo_list):
     """ Determine how many active code commit authors participants there are in the past 90 days """
     from_date = date - timedelta(days=90)
     to_date = date
-    date_field_list = ["code_commit_date_list"]                                                   
+    date_field_list = ["code_author_date_list"]                                                   
     contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
     contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
     contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                                                 
@@ -126,7 +126,7 @@ def org_contributor_count(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     from_date_str = from_date.strftime("%Y-%m-%d")
     to_date_str = to_date.strftime("%Y-%m-%d")
     org_contributor_set = set()
@@ -176,7 +176,7 @@ def bus_factor(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     bus_factor_count = 0
     author_name_dict = {}  # {"author_name:" commit_count}
     from_date_str = from_date.strftime("%Y-%m-%d")
@@ -185,7 +185,7 @@ def bus_factor(client, contributors_index, date, repo_list):
         if item["is_bot"]:
             continue
         name = item["id_git_author_name_list"][0]
-        commit_date_list = [x for x in sorted(item["code_commit_date_list"]) if from_date_str <= x < to_date_str]
+        commit_date_list = [x for x in sorted(item["code_author_date_list"]) if from_date_str <= x < to_date_str]
         author_name_dict[name] = author_name_dict.get(name, 0) + len(commit_date_list)
     commit_count_list = [commit_count for commit_count in author_name_dict.values()]
     commit_count_list.sort(reverse=True)
@@ -321,7 +321,7 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
 
     observe_date_field = ["fork_date_list", "star_date_list"]
     issue_date_field = ["issue_creation_date_list", "issue_comments_date_list"]
-    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_commit_date_list"]
+    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_author_date_list", "code_committer_date_list", "code_review_date_list"]
     issue_admin_date_field = ["issue_labeled_date_list", "issue_unlabeled_date_list", "issue_closed_date_list", "issue_reopened_date_list",
         "issue_assigned_date_list", "issue_unassigned_date_list", "issue_milestoned_date_list", "issue_demilestoned_date_list",
         "issue_marked_as_duplicate_date_list", "issue_transferred_date_list", 
@@ -334,7 +334,7 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
         "pr_renamed_title_date_list", "pr_change_description_date_list", "pr_setting_priority_date_list", "pr_change_priority_date_list", 
         "pr_merged_date_list", "pr_review_date_list", "pr_set_tester_date_list", "pr_unset_tester_date_list", "pr_check_pass_date_list", 
         "pr_test_pass_date_list", "pr_reset_assign_result_date_list", "pr_reset_test_result_date_list", "pr_link_issue_date_list", 
-        "pr_unlink_issue_date_list", "code_direct_commit_date_list"]
+        "pr_unlink_issue_date_list"]
     date_field_list = observe_date_field + issue_date_field + code_date_field + issue_admin_date_field + code_admin_date_field
 
     contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field_list)
@@ -348,10 +348,9 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
         contribution_without_observe = 0
         for contribution_type in contribution_type_list:
             count = contribution_type.get("contribution", 0)
-            if contribution_type.get("contribution_type") not in "code_code_direct_commit":
-                contribution += count
-                if contribution_type.get("contribution_type") not in ["star", "fork"]:
-                    contribution_without_observe += count
+            contribution += count
+            if contribution_type.get("contribution_type") not in ["star", "fork"]:
+                contribution_without_observe += count
         if contribution == 0:
             continue
         result = {
@@ -936,7 +935,7 @@ def activity_code_contributor_count(client, contributors_enriched_index, date, r
     """ Defines the number of contributors with code behavior 
     (e.g. creation, comments, code commit, pull request events) in the last 90 days.
     """
-    code_type = ["pr_creation", "pr_comments", "code_commit",
+    code_type = ["pr_creation", "pr_comments", "code_author", "code_committer", "code_review",
         "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
         "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
         "pr_marked_as_duplicate", "pr_transferred", 
@@ -951,7 +950,7 @@ def activity_code_contribution_per_person(client, contributors_enriched_index, d
     """ Defines the number of contributions per active code contributor in the last 90 days.
     """
     contribution_per_person = 0
-    code_type = ["pr_creation", "pr_comments", "code_commit",
+    code_type = ["pr_creation", "pr_comments", "code_author", "code_committer", "code_review",
         "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
         "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned", 
         "pr_marked_as_duplicate", "pr_transferred", 

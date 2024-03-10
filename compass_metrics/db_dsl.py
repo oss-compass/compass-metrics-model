@@ -533,6 +533,9 @@ def get_base_index_mapping():
                             "ignore_above": 256
                         }
                     }
+                },
+                "grimoire_creation_date" : {
+                    "type" : "date"
                 }
             }
         }
