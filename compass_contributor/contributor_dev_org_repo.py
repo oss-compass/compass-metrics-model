@@ -458,7 +458,7 @@ class ContributorDevOrgRepo:
                 author_list.extend(list(signed_off_dict.values()))
             if reviewed_dict:
                 author_list.extend(list(reviewed_dict.values()))
-            if commit_source.get("committer_name") not in signed_off_dict and commit_source.get("committer_name") in ["Github", "Gitee"]:
+            if commit_source.get("committer_name") not in signed_off_dict:
                 author_list.append(committer_dict)
             return author_list
 
@@ -500,6 +500,9 @@ class ContributorDevOrgRepo:
             
             author_list = get_author_list(source)
             for author_item in author_list:
+                author_name = author_item["author_name"]
+                if author_name is None or not isinstance(author_name, str) or author_name in ["Github", "Gitee"]:
+                    continue
                 author_type = author_item["type"]
                 date_field = author_type + "_date_list"
                 id_identity_list = [author_item["author_name"], author_item["author_email"]]
@@ -872,22 +875,28 @@ class ContributorDevOrgRepo:
 
     def is_bot_by_author_name(self, repo, author_name):
         """ Determine if a bot is a bot by author name """
-        common_list = self.bots_dict["common"]
-        if len(common_list) > 0:
-            for common in common_list:
-                regex = re.compile(common)
-                if regex.match(author_name):
+        try:
+            author_name = str(author_name)
+            common_list = self.bots_dict["common"]
+            if len(common_list) > 0:
+                for common in common_list:
+                    regex = re.compile(common)
+                    if regex.match(author_name):
+                        return True
+            community_dict = self.bots_dict["community"]
+            if len(community_dict) > 0:
+                for community, community_values in community_dict.items():
+                    if community in repo and author_name in community_values:
+                        return True
+            repo_dict = self.bots_dict["repo"]
+            if len(repo_dict) > 0:
+                if repo_dict.get(repo) and author_name in repo_dict.get(repo):
                     return True
-        community_dict = self.bots_dict["community"]
-        if len(community_dict) > 0:
-            for community, community_values in community_dict.items():
-                if community in repo and author_name in community_values:
-                    return True
-        repo_dict = self.bots_dict["repo"]
-        if len(repo_dict) > 0:
-            if repo_dict.get(repo) and author_name in repo_dict.get(repo):
-                return True
-        return False
+            return False
+        except Exception as e:
+            logger.info(f"Error: {e} repo: {repo} author_name: {author_name}")
+            return False
+
 
     def get_admin_date(self, contributor_data):
         """ Getting the time to become a manager """
