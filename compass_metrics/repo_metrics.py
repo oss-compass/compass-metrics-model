@@ -17,7 +17,7 @@ def get_activity_repo_list(client, contributors_index, date, repos_list, from_da
     if from_date is None:
         from_date = date - timedelta(days=180)
     if date_field_list is None:
-        date_field_list = ["code_commit_date_list", "issue_creation_date_list", "issue_comments_date_list", 
+        date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list", 
                             "pr_creation_date_list", "pr_comments_date_list"]
     query = get_contributor_query(repos_list, date_field_list, from_date, date, 0)
     query["aggs"] = {

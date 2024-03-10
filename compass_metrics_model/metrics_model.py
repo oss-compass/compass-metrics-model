@@ -656,7 +656,7 @@ class MetricsModel:
         if from_date is None:
             from_date = date - timedelta(days=180)
         if date_field_list is None:
-            date_field_list = ["code_commit_date_list", "issue_creation_date_list", "issue_comments_date_list", 
+            date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list", 
                                 "pr_creation_date_list", "pr_comments_date_list"]
         query = self.get_contributor_query(repos_list, date_field_list, from_date, date, 0)
         query["aggs"] = {
@@ -716,14 +716,14 @@ class MetricsModel:
         for contributor in contributor_list:
             if is_bot is None or contributor["is_bot"] == is_bot:
                 if company is None:
-                    for commit_date in contributor["code_commit_date_list"]:
+                    for commit_date in contributor["code_author_date_list"]:
                         if from_date <= commit_date and commit_date <= to_date:
                             commit_count += 1
                 else:
                     for org in contributor["org_change_date_list"]:
                         if org.get("org_name") is not None and org.get("org_name") == company and \
                                 check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
-                            for commit_date in contributor["code_commit_date_list"]:
+                            for commit_date in contributor["code_author_date_list"]:
                                 if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                                     commit_count += 1
         return commit_count/12.85
@@ -834,13 +834,13 @@ class ActivityMetricsModel(MetricsModel):
                 continue
             from_date = date - timedelta(days=90)
             to_date = date
-            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_author_date_list")
     
-            date_field_list = ["code_commit_date_list","issue_creation_date_list","issue_comments_date_list","pr_creation_date_list","pr_comments_date_list"]
+            date_field_list = ["code_author_date_list","issue_creation_date_list","issue_comments_date_list","pr_creation_date_list","pr_comments_date_list"]
             contributor_count = self.get_contributor_count(from_date, to_date, repos_list, date_field_list)
             contributor_count_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=True)
             contributor_count_without_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=False)
-            active_C2_contributor_count = self.get_contributor_count(from_date, to_date, repos_list, "code_commit_date_list")
+            active_C2_contributor_count = self.get_contributor_count(from_date, to_date, repos_list, "code_author_date_list")
             active_C1_pr_create_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_creation_date_list")
             active_C1_pr_comments_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_comments_date_list")
             active_C1_issue_create_contributor = self.get_contributor_count(from_date, to_date, repos_list, "issue_creation_date_list")
@@ -1286,7 +1286,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
         elif level in ["project", "community"]:
             active_repo_list = self.get_activity_repo_list(date, repos_list, from_date=date-timedelta(days=30), \
-                    date_field_list=["code_commit_date_list"])
+                    date_field_list=["code_author_date_list"])
             for repo in repos_list:
                 if repo in active_repo_list:
                     is_maintained_list.append("True")
@@ -1451,12 +1451,12 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             from_date = date - timedelta(days=90)
             to_date = date
 
-            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
-            date_field_list = ["code_commit_date_list","pr_creation_date_list","pr_comments_date_list"]
+            commit_contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_author_date_list")
+            date_field_list = ["code_author_date_list","pr_creation_date_list","pr_comments_date_list"]
             contributor_count = self.get_contributor_count(from_date, to_date, repos_list, date_field_list)
             contributor_count_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=True)
             contributor_count_without_bot = self.get_contributor_count(from_date, to_date, repos_list, date_field_list, is_bot=False)
-            active_C2_contributor_count = self.get_contributor_count(from_date, to_date, repos_list, "code_commit_date_list")
+            active_C2_contributor_count = self.get_contributor_count(from_date, to_date, repos_list, "code_author_date_list")
             active_C1_pr_create_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_creation_date_list")
             active_C1_pr_comments_contributor = self.get_contributor_count(from_date, to_date, repos_list, "pr_comments_date_list")
 
@@ -1582,13 +1582,13 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         to_date = to_date.strftime("%Y-%m-%d")
 
         for contributor in contributor_list:
-            for commit_date in contributor["code_commit_date_list"]:
+            for commit_date in contributor["code_author_date_list"]:
                 if from_date <= commit_date and commit_date <= to_date:
                     total_count += 1
 
             for org in contributor["org_change_date_list"]:
                 if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
-                    for commit_date in contributor["code_commit_date_list"]:
+                    for commit_date in contributor["code_author_date_list"]:
                         if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                             commit_count += 1
                             if contributor["is_bot"]:
@@ -1600,7 +1600,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 if check_times_has_overlap(org["first_date"], org["last_date"], from_date, to_date):
                     org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
                     count = org_commit_count_dict.get(org_name, 0)
-                    for commit_date in contributor["code_commit_date_list"]:
+                    for commit_date in contributor["code_author_date_list"]:
                         if get_latest_date(from_date, org["first_date"]) <= commit_date and commit_date <= get_oldest_date(org["last_date"], to_date):
                             count += 1
                     org_commit_count_dict[org_name] = count
@@ -1631,7 +1631,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 for contributor in repo_contributor_list:
                     for org in contributor["org_change_date_list"]:
                         if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"], from_day, to_day):
-                            for commit_date in contributor["code_commit_date_list"]:
+                            for commit_date in contributor["code_author_date_list"]:
                                 if from_day <= commit_date and commit_date <= to_day:
                                     org_name_set.add(org.get("org_name"))
                                     break
@@ -1651,7 +1651,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             
             from_date = date - timedelta(days=90)
             to_date = date
-            contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_commit_date_list")
+            contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_author_date_list")
             if len(contributor_list) == 0:
                 continue
             self.add_org_name(contributor_list)

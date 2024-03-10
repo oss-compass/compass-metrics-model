@@ -63,7 +63,7 @@ def commit_frequency(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     result = {
         'commit_frequency': get_commit_count(from_date, to_date, commit_contributor_list)/12.85,
         'commit_frequency_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True)/12.85,
@@ -77,7 +77,7 @@ def org_count(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     org_name_set = set()
     for contributor in commit_contributor_list:
         for org in contributor["org_change_date_list"]:
@@ -95,7 +95,7 @@ def org_commit_frequency(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     from_date_str = from_date.strftime("%Y-%m-%d")
     to_date_str = to_date.strftime("%Y-%m-%d")
     total_commit_count = 0
@@ -105,7 +105,7 @@ def org_commit_frequency(client, contributors_index, date, repo_list):
     org_commit_detail_dict = {}
 
     for contributor in commit_contributor_list:
-        commit_date_list = [x for x in sorted(contributor["code_commit_date_list"]) if from_date_str <= x < to_date_str]
+        commit_date_list = [x for x in sorted(contributor["code_author_date_list"]) if from_date_str <= x < to_date_str]
         total_commit_count += len(commit_date_list)
         for commit_date in commit_date_list:
             for org in contributor["org_change_date_list"]:
@@ -160,7 +160,7 @@ def org_contribution_last(client, contributors_index, date, repo_list):
     from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     contribution_last = 0
     repo_contributor_group_dict = {}
     for contributor in commit_contributor_list:
@@ -178,7 +178,7 @@ def org_contribution_last(client, contributors_index, date, repo_list):
                 for org in contributor["org_change_date_list"]:
                     if org.get("org_name") is not None and check_times_has_overlap(org["first_date"], org["last_date"],
                                                                                    from_day, to_day):
-                        for commit_date in contributor["code_commit_date_list"]:
+                        for commit_date in contributor["code_author_date_list"]:
                             if from_day <= commit_date <= to_day:
                                 org_name_set.add(org.get("org_name"))
                                 break
@@ -207,7 +207,7 @@ def is_maintained(client, git_index, contributors_index, date, repos_list, level
 
     elif level in ["project", "community"]:
         active_repo_list = get_activity_repo_list(client, contributors_index, date, repos_list, from_date=date-timedelta(days=30), \
-                    date_field_list=["code_commit_date_list"])
+                    date_field_list=["code_author_date_list"])
         for repo in repos_list:
             if repo in active_repo_list:
                 is_maintained_list.append("True")
@@ -241,7 +241,7 @@ def commit_count(client, contributors_index, date, repo_list, from_date=None):
         from_date = date - timedelta(days=90)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
-                                                   "code_commit_date_list")
+                                                   "code_author_date_list")
     result = {
         'commit_count': get_commit_count(from_date, to_date, commit_contributor_list),
         'commit_count_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True),
@@ -314,14 +314,14 @@ def get_commit_count(from_date, to_date, contributor_list, company=None, is_bot=
     for contributor in contributor_list:
         if is_bot is None or contributor["is_bot"] == is_bot:
             if company is None:
-                for commit_date in contributor["code_commit_date_list"]:
+                for commit_date in contributor["code_author_date_list"]:
                     if from_date_str <= commit_date <= to_date_str:
                         commit_count += 1
             else:
                 for org in contributor["org_change_date_list"]:
                     if org.get("org_name") is not None and org.get("org_name") == company and \
                             check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
-                        for commit_date in contributor["code_commit_date_list"]:
+                        for commit_date in contributor["code_author_date_list"]:
                             if get_latest_date(from_date_str, org["first_date"]) <= commit_date < \
                                     get_oldest_date(org["last_date"], to_date_str):
                                 commit_count += 1
