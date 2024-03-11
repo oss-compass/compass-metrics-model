@@ -321,7 +321,7 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
 
     observe_date_field = ["fork_date_list", "star_date_list"]
     issue_date_field = ["issue_creation_date_list", "issue_comments_date_list"]
-    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_author_date_list", "code_committer_date_list", "code_review_date_list"]
+    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_author_date_list", "code_committer_date_list"]
     issue_admin_date_field = ["issue_labeled_date_list", "issue_unlabeled_date_list", "issue_closed_date_list", "issue_reopened_date_list",
         "issue_assigned_date_list", "issue_unassigned_date_list", "issue_milestoned_date_list", "issue_demilestoned_date_list",
         "issue_marked_as_duplicate_date_list", "issue_transferred_date_list", 
