@@ -416,29 +416,35 @@ class ContributorDevOrgRepo:
             reviewed_dict = {}
             for line in msg.splitlines():
                 if line.startswith("Signed-off-by: "):
-                    signed_off_by_split = line.replace("Signed-off-by: ", "").split(" <")
-                    if len(signed_off_by_split) == 2:
-                        author_name = signed_off_by_split[0].strip()
-                        if author_name is None:
-                            continue
-                        email = signed_off_by_split[1].replace(">", "").strip()
-                        signed_off_dict[author_name] = {
-                            "type": "code_author",
-                            "author_name": author_name,
-                            "author_email": email
-                        }
+                    try:
+                        signed_off_by_split = line.replace("Signed-off-by: ", "").split(" <")
+                        if len(signed_off_by_split) == 2:
+                            author_name = signed_off_by_split[0].strip()
+                            if not author_name:
+                                continue
+                            email = signed_off_by_split[1].replace(">", "").strip()
+                            signed_off_dict[author_name] = {
+                                "type": "code_author",
+                                "author_name": author_name,
+                                "author_email": email
+                            }
+                    except Exception as e:
+                        logger.info(e)
                 elif line.startswith("Reviewed-by: "):
-                    reviewed_by_split = line.replace("Reviewed-by: ", "").split(" <")
-                    if len(reviewed_by_split) == 2:
-                        author_name = reviewed_by_split[0].strip()
-                        if author_name is None:
-                            continue
-                        email = reviewed_by_split[1].replace(">", "").strip()
-                        reviewed_dict[author_name] = {
-                            "type": "code_review",
-                            "author_name": author_name,
-                            "author_email": email
-                        }
+                    try:
+                        reviewed_by_split = line.replace("Reviewed-by: ", "").split(" <")
+                        if len(reviewed_by_split) == 2:
+                            author_name = reviewed_by_split[0].strip()
+                            if not author_name:
+                                continue
+                            email = reviewed_by_split[1].replace(">", "").strip()
+                            reviewed_dict[author_name] = {
+                                "type": "code_review",
+                                "author_name": author_name,
+                                "author_email": email
+                            }
+                    except Exception as e:
+                        logger.info(e)
             return signed_off_dict, reviewed_dict
 
         def get_author_list(commit_source):
