@@ -79,7 +79,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
-MAX_BULK_UPDATE_SIZE = 5000
+MAX_BULK_UPDATE_SIZE = 500
 
 SOFTWARE_ARTIFACT = "software-artifact"
 GOVERNANCE = "governance"

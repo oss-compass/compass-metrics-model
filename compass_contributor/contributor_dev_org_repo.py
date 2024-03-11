@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import urllib3
 from compass_common.datetime import (datetime_utcnow, str_to_datetime, datetime_to_utc, get_date_list, check_times_has_overlap)
 from compass_common.uuid_utils import get_uuid
-from compass_common.opensearch_utils import get_all_index_data, get_client, get_helpers as helpers
+from compass_common.opensearch_utils import get_all_index_data, get_generator, get_client, get_helpers as helpers
 from compass_common.datetime import get_latest_date, get_oldest_date
 from compass_common.list_utils import split_list
 from compass_metrics.contributor_metrics import contributor_eco_type_list
@@ -21,7 +21,10 @@ import pkg_resources
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 page_size = 1000
-MAX_BULK_UPDATE_SIZE = 5000
+MAX_BULK_UPDATE_SIZE = 500
+
+
+
 
 exclude_field_list = ["unknown", "-- undefined --"]
 
@@ -347,9 +350,7 @@ class ContributorDevOrgRepo:
         elif re.match(r"^pr_.*Event$", type) or type in "pr_PullRequestReview":
             results = self.get_pr_event_enrich_data(index, repo, from_date, to_date, page_size, type.replace("pr_", ""))
 
-        count = len(results)
-        if count == 0:
-            return
+        count = 0
         for result in results:
             source = result["_source"]
             grimoire_creation_date = datetime_to_utc(
@@ -405,6 +406,7 @@ class ContributorDevOrgRepo:
             self.platform_item_id_dict[item["uuid"]] = item
             for identity in item["id_identity_list"]:
                 self.platform_item_identity_dict[identity] = item["uuid"]
+            count += 1
         logger.info(repo + " " + index + " finish count:" + str(count) + " " + str(datetime.now() - start_time))
 
     def processing_commit_data(self, index, repo, from_date, to_date):
@@ -472,12 +474,10 @@ class ContributorDevOrgRepo:
         logger.info(repo + " " + index + " processing...")
         created_at = self.get_repo_created(repo)
         start_time = datetime.now()
-        results = self.get_commit_enrich_data(index, repo, from_date, to_date, page_size)
-        count = len(results)
-        if count == 0:
-            return
+        
+        commit_hash = self.get_commit_hash_data(index, repo, from_date, to_date, page_size)
         pr_hits = []
-        hash_list = [result["_source"]["hash"] for result in results]
+        hash_list = [result["_source"]["hash"] for result in commit_hash]
         hash_list_group = split_list(hash_list)
         for hash_l in hash_list_group:
             pr_hit = self.get_pr_list_by_commit_hash(repo, hash_l)
@@ -488,6 +488,9 @@ class ContributorDevOrgRepo:
                 pr_data_dict[pr_hit["_source"]["merge_commit_sha"]] = pr_hit["_source"]
             for pr_commit_hash in pr_hit["_source"]["commits_data"]:
                 pr_data_dict[pr_commit_hash] = pr_hit["_source"]
+
+        results = self.get_commit_enrich_data(index, repo, from_date, to_date, page_size)
+        count = 0
         for result in results:
             source = result["_source"]
             if source.get("author_name") is None:
@@ -549,6 +552,7 @@ class ContributorDevOrgRepo:
                 self.git_item_id_dict[item["uuid"]] = item
                 for identity in item["id_identity_list"]:
                     self.git_item_identity_dict[identity] = item["uuid"]
+                count += 1
         logger.info(repo + " " + index + " finish count:" + str(count) + " " + str(datetime.now() - start_time))
 
     def get_merge_org_change_date(self, old_data_list, new_data_list):
@@ -754,7 +758,7 @@ class ContributorDevOrgRepo:
         contributor1["org_change_date_list"] = org_change_date_list
         return contributor1
 
-    def get_enrich_dsl(self, repo_field, repo, from_date, to_date, page_size=100):
+    def get_enrich_dsl(self, repo_field, repo, from_date, to_date, page_size=100, source=None):
         """ Query statement to get enrich information """
         query = {
             "size": page_size,
@@ -780,20 +784,22 @@ class ContributorDevOrgRepo:
                 }
             }
         }
+        if source is not None:
+            query["_source"] = source
         return query
 
     def get_issue_enrich_data(self, index, repo, from_date, to_date, page_size=100):
         """ Get issue data list """
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_pr_enrich_data(self, index, repo, from_date, to_date, page_size=100):
         """ Get pr data list """
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_issue_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100):
@@ -801,20 +807,20 @@ class ContributorDevOrgRepo:
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"issue_pull_request": "false"}})
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_pr_comment_enrich_data(self, index, repo, from_date, to_date, page_size=100):
         """ Get pr comment data list """
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"item_type": "comment"}})
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_observe_enrich_data(self, index, repo, from_date, to_date, page_size=100):
         """ Get fork or star data list """
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_issue_event_enrich_data(self, index, repo, from_date, to_date, page_size=100, type="LabeledEvent"):
@@ -830,7 +836,7 @@ class ContributorDevOrgRepo:
                     "script": "doc['actor_username'].size() > 0 && doc['reporter_user_name'].size() > 0 &&  doc['actor_username'].value != doc['reporter_user_name'].value"
                 }
             })
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_pr_event_enrich_data(self, index, repo, from_date, to_date, page_size=100, type="LabeledEvent"):
@@ -858,12 +864,19 @@ class ContributorDevOrgRepo:
                     ]
                 }
             })
-        results = get_all_index_data(self.client, index=index, body=query_dsl)
+        results = get_generator(self.client, index=index, body=query_dsl)
         return results
 
     def get_commit_enrich_data(self, index, repo, from_date, to_date, page_size=100):
         """ Get commit data list """
         query_dsl = self.get_enrich_dsl("tag", repo + ".git", from_date, to_date, page_size)
+        results = get_generator(self.client, index=index, body=query_dsl)
+        return results
+
+    def get_commit_hash_data(self, index, repo, from_date, to_date, page_size=100):
+        """ Get commit data list """
+        source = ["hash"]
+        query_dsl = self.get_enrich_dsl("tag", repo + ".git", from_date, to_date, page_size, source=source)
         results = get_all_index_data(self.client, index=index, body=query_dsl)
         return results
 

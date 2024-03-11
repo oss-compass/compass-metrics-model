@@ -60,7 +60,7 @@ sys.path.append('../')
 
 logger = logging.getLogger(__name__)
 
-MAX_BULK_UPDATE_SIZE = 5000
+MAX_BULK_UPDATE_SIZE = 500
 
 def newest_message(repo_url):
     query = {
