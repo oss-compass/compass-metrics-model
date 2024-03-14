@@ -52,7 +52,10 @@
 			"twbs-grunt",
 			"vmwghbot",
 			"vsxen",
-			"yahoocla"
+			"yahoocla",
+			"github-actions",
+			"github-actions[bot]",
+			"pytorch-bot[bot]"
 		],
 		"community":{
 			"https://github.com/pytorch": {
@@ -80,6 +83,7 @@
 			"^.*Bot$",
 			"^.*\\[bot\\]$",
 			"anolis-bot-ci",
+			"anolis-bot",
 			"openeuler-ci-bot"
 		],
 		"community":{
