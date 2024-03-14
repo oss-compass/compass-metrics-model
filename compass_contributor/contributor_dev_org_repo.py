@@ -360,6 +360,7 @@ class ContributorDevOrgRepo:
                 continue
             id_identity_list = [
                 user_login,
+                source.get("auhtor_name") or source.get("actor_name"),
                 source.get("user_email")
             ]
             id_identity_list = set(
@@ -510,7 +511,7 @@ class ContributorDevOrgRepo:
             author_list = get_author_list(source)
             for author_item in author_list:
                 author_name = author_item["author_name"]
-                if author_name is None or not isinstance(author_name, str) or author_name in ["Github", "Gitee"]:
+                if author_name is None or not isinstance(author_name, str) or author_name in ["GitHub", "Gitee"]:
                     continue
                 author_type = author_item["type"]
                 date_field = author_type + "_date_list"
