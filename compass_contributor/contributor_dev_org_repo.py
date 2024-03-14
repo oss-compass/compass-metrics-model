@@ -417,6 +417,8 @@ class ContributorDevOrgRepo:
             """ Getting signed_off_by and reviewed_by user information from commit message """
             signed_off_dict = {}
             reviewed_dict = {}
+            if not msg:
+                return signed_off_dict, reviewed_dict
             for line in msg.splitlines():
                 if line.startswith("Signed-off-by: "):
                     try:
