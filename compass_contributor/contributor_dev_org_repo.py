@@ -356,7 +356,7 @@ class ContributorDevOrgRepo:
             grimoire_creation_date = datetime_to_utc(
                 str_to_datetime(source["grimoire_creation_date"]).replace(tzinfo=None) + timedelta(microseconds=int(source["uuid"], 16) % 100000)).isoformat()
             user_login = source.get("user_login")
-            if user_login is None:
+            if not user_login:
                 continue
             id_identity_list = [
                 user_login,
@@ -372,7 +372,7 @@ class ContributorDevOrgRepo:
                 domain = get_email_prefix_domain(source.get("user_email"))[1]
                 if domain is not None:
                     org_name = self.get_org_name_by_email(source.get("user_email"))
-            if org_name is None:      
+            if not org_name:      
                 org_name = source.get('user_org', source.get('user_company', None))
                 if org_name is not None:
                     org_name = org_name.strip()
@@ -496,7 +496,7 @@ class ContributorDevOrgRepo:
         count = 0
         for result in results:
             source = result["_source"]
-            if source.get("author_name") is None:
+            if not source.get("author_name"):
                 continue
             grimoire_creation_date = datetime_to_utc(
                 str_to_datetime(source["grimoire_creation_date"]).replace(tzinfo=None) + timedelta(microseconds=int(source["uuid"], 16) % 100000)).isoformat()
@@ -513,7 +513,7 @@ class ContributorDevOrgRepo:
             author_list = get_author_list(source)
             for author_item in author_list:
                 author_name = author_item["author_name"]
-                if author_name is None or not isinstance(author_name, str) or author_name in ["GitHub", "Gitee"]:
+                if not author_name or not isinstance(author_name, str) or author_name in ["GitHub", "Gitee"]:
                     continue
                 author_type = author_item["type"]
                 date_field = author_type + "_date_list"
@@ -886,7 +886,7 @@ class ContributorDevOrgRepo:
     def get_org_name_by_email(self, email):
         """ Return organization name based on email """
         domain = get_email_prefix_domain(email)[1]
-        if domain is None:
+        if not domain:
             return None
         org_name = self.organizations_dict.get(domain)
         if "facebook.com" in domain:
@@ -1037,7 +1037,7 @@ class ContributorDevOrgRepo:
         self.delete_contributor(repo, self.contributors_enriched_index, self.from_date, self.end_date)
         for date in date_list:
             created_since_metric = created_since(self.client, self.git_index, date, [repo])
-            if created_since_metric is None:
+            if not created_since_metric:
                 continue
             from_date = date - timedelta(days=7)
             contributor_list = contributor_eco_type_list(self.client, self.contributors_index, from_date, date, [repo])["contributor_eco_type_list"]
