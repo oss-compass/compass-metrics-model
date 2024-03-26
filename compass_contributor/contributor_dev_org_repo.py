@@ -502,7 +502,7 @@ class ContributorDevOrgRepo:
                 str_to_datetime(source["grimoire_creation_date"]).replace(tzinfo=None) + timedelta(microseconds=int(source["uuid"], 16) % 100000)).isoformat()
             
             code_direct_commit_date = None
-            if grimoire_creation_date >= created_at and source["hash"] not in pr_data_dict \
+            if created_at is not None and grimoire_creation_date >= created_at and source["hash"] not in pr_data_dict \
                     and (
                         (self.source == "github" and len(source["parents"]) <= 1 and source["committer_name"] == "GitHub" and source["committer_email"] == "noreply@github.com")
                         or (self.source == "gitee" and len(source["parents"]) <= 1 and source["committer_name"] == "Gitee" and source["committer_email"] == "noreply@gitee.com")
@@ -619,8 +619,10 @@ class ContributorDevOrgRepo:
 
     def get_platform_login_git_author_dict(self, repo):
         """Mappinging of get the login and commit author name from the pull requst information. """
-        created_at = self.get_repo_created(repo)
         login_author_name_dict = {}
+        created_at = self.get_repo_created(repo)
+        if created_at is None:
+            return login_author_name_dict
         query_dsl = self.get_enrich_dsl("tag", repo + ".git", self.from_date, self.end_date, page_size)
         query_dsl["query"]["bool"]["filter"].append({"range": {"grimoire_creation_date": {"gte": created_at}}})
         results = get_all_index_data(self.client, index=self.git_index, body=query_dsl)
@@ -957,8 +959,10 @@ class ContributorDevOrgRepo:
             ]
         }
         hits = self.client.search(index=self.repo_index, body=repo_query)["hits"]["hits"]
-        created_at = hits[0]["_source"]["created_at"]
-        return datetime_to_utc(str_to_datetime(created_at)).isoformat()
+        if hits:
+            created_at = hits[0]["_source"]["created_at"]
+            return datetime_to_utc(str_to_datetime(created_at)).isoformat()
+        return None
 
     def delete_contributor(self, repo, contributors_index, from_date=None, end_date=None):
         query = {
