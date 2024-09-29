@@ -1,0 +1,282 @@
+[
+    {
+        "nameWithOwner": "vuejs/vue",
+        "url": "https://github.com/vuejs/vue",
+        "stargazersCount": 207733,
+        "forkCount": 33679,
+        "description": "This is the repo for Vue 2. For Vue 3, go to https://github.com/vuejs/core",
+        "createdAt": "2013-07-29T03:24:51Z",
+        "updatedAt": "2024-09-28T21:14:04Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "espruino/EspruinoTools",
+        "url": "https://github.com/espruino/EspruinoTools",
+        "stargazersCount": 150,
+        "forkCount": 89,
+        "description": "JavaScript library of tools for Espruino - used for the Web IDE, CLI, etc.",
+        "createdAt": "2014-09-24T10:12:03Z",
+        "updatedAt": "2024-09-13T10:05:40Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "wheresrhys/fetch-mock",
+        "url": "https://github.com/wheresrhys/fetch-mock",
+        "stargazersCount": 1256,
+        "forkCount": 177,
+        "description": "Mock http requests made using fetch",
+        "createdAt": "2015-04-30T21:27:58Z",
+        "updatedAt": "2024-09-25T20:06:42Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/vuefire",
+        "url": "https://github.com/vuejs/vuefire",
+        "stargazersCount": 3847,
+        "forkCount": 332,
+        "description": "\ud83d\udd25 Firebase bindings for Vue.js",
+        "createdAt": "2016-01-07T22:57:53Z",
+        "updatedAt": "2024-09-27T11:39:46Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "nuxt/nuxt",
+        "url": "https://github.com/nuxt/nuxt",
+        "stargazersCount": 54245,
+        "forkCount": 4960,
+        "description": "The Intuitive Vue Framework.",
+        "createdAt": "2016-10-26T11:18:47Z",
+        "updatedAt": "2024-09-28T23:46:12Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "firebase/firebase-js-sdk",
+        "url": "https://github.com/firebase/firebase-js-sdk",
+        "stargazersCount": 4825,
+        "forkCount": 888,
+        "description": "Firebase Javascript SDK",
+        "createdAt": "2017-04-24T21:52:11Z",
+        "updatedAt": "2024-09-28T20:31:29Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "shentao/vue-global-events",
+        "url": "https://github.com/shentao/vue-global-events",
+        "stargazersCount": 691,
+        "forkCount": 32,
+        "description": "\u2328\ufe0f Register global events as a component",
+        "createdAt": "2017-11-29T22:15:22Z",
+        "updatedAt": "2024-08-29T05:43:27Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/core",
+        "url": "https://github.com/vuejs/core",
+        "stargazersCount": 46912,
+        "forkCount": 8228,
+        "description": "\ud83d\udd96 Vue.js is a progressive, incrementally-adoptable JavaScript framework for building UI on the web.",
+        "createdAt": "2018-06-12T13:49:36Z",
+        "updatedAt": "2024-09-29T00:24:31Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/rfcs",
+        "url": "https://github.com/vuejs/rfcs",
+        "stargazersCount": 4868,
+        "forkCount": 548,
+        "description": "RFCs for substantial changes / feature additions to Vue core",
+        "createdAt": "2018-12-10T22:46:31Z",
+        "updatedAt": "2024-09-23T10:38:47Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/router",
+        "url": "https://github.com/vuejs/router",
+        "stargazersCount": 3878,
+        "forkCount": 1182,
+        "description": "\ud83d\udea6 The official router for Vue.js",
+        "createdAt": "2019-02-07T18:09:43Z",
+        "updatedAt": "2024-09-28T16:00:48Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "hoppscotch/hoppscotch",
+        "url": "https://github.com/hoppscotch/hoppscotch",
+        "stargazersCount": 64080,
+        "forkCount": 4418,
+        "description": "Open source API development ecosystem - https://hoppscotch.io (open-source alternative to Postman, Insomnia)",
+        "createdAt": "2019-08-21T13:15:24Z",
+        "updatedAt": "2024-09-28T23:56:26Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/pinia",
+        "url": "https://github.com/vuejs/pinia",
+        "stargazersCount": 13000,
+        "forkCount": 1034,
+        "description": "\ud83c\udf4d Intuitive, type safe, light and flexible Store for Vue using the composition api with DevTools support",
+        "createdAt": "2019-11-18T21:05:01Z",
+        "updatedAt": "2024-09-28T19:35:03Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vueuse/vueuse",
+        "url": "https://github.com/vueuse/vueuse",
+        "stargazersCount": 19804,
+        "forkCount": 2508,
+        "description": "Collection of essential Vue Composition Utilities for Vue 2 and 3",
+        "createdAt": "2019-12-14T06:44:59Z",
+        "updatedAt": "2024-09-28T22:57:03Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "antfu/antfu.me",
+        "url": "https://github.com/antfu/antfu.me",
+        "stargazersCount": 753,
+        "forkCount": 193,
+        "description": "My personal website",
+        "createdAt": "2021-01-24T10:40:02Z",
+        "updatedAt": "2024-09-27T18:24:18Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "google/zx",
+        "url": "https://github.com/google/zx",
+        "stargazersCount": 42912,
+        "forkCount": 1090,
+        "description": "A tool for writing better scripts",
+        "createdAt": "2021-05-05T05:50:01Z",
+        "updatedAt": "2024-09-28T18:53:54Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "httptoolkit/brotli-wasm",
+        "url": "https://github.com/httptoolkit/brotli-wasm",
+        "stargazersCount": 261,
+        "forkCount": 20,
+        "description": "A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm",
+        "createdAt": "2021-05-21T13:03:59Z",
+        "updatedAt": "2024-09-24T07:48:32Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vitest-dev/vitest",
+        "url": "https://github.com/vitest-dev/vitest",
+        "stargazersCount": 12720,
+        "forkCount": 1147,
+        "description": "Next generation testing framework powered by Vite.",
+        "createdAt": "2021-12-03T19:19:49Z",
+        "updatedAt": "2024-09-28T19:19:23Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "joshjohanning/github-misc-scripts",
+        "url": "https://github.com/joshjohanning/github-misc-scripts",
+        "stargazersCount": 121,
+        "forkCount": 38,
+        "description": "GitHub script samples for automation",
+        "createdAt": "2022-01-06T00:09:01Z",
+        "updatedAt": "2024-09-23T13:12:41Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "tc39/proposal-signals",
+        "url": "https://github.com/tc39/proposal-signals",
+        "stargazersCount": 3315,
+        "forkCount": 57,
+        "description": "A proposal to add signals to JavaScript.",
+        "createdAt": "2023-08-14T19:47:24Z",
+        "updatedAt": "2024-09-28T23:12:18Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/devtools-next",
+        "url": "https://github.com/vuejs/devtools-next",
+        "stargazersCount": 1404,
+        "forkCount": 96,
+        "description": "The next iteration of Vue DevTools",
+        "createdAt": "2023-09-01T14:05:16Z",
+        "updatedAt": "2024-09-29T00:12:31Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "vuejs/core-vapor",
+        "url": "https://github.com/vuejs/core-vapor",
+        "stargazersCount": 1844,
+        "forkCount": 87,
+        "description": "Vue Vapor is a variant of Vue that offers rendering without the Virtual DOM.",
+        "createdAt": "2023-11-09T06:40:57Z",
+        "updatedAt": "2024-09-28T17:58:23Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "nuxt/learn.nuxt.com",
+        "url": "https://github.com/nuxt/learn.nuxt.com",
+        "stargazersCount": 533,
+        "forkCount": 82,
+        "description": "[Work in Progress] An interactive tutorial and playground for Nuxt",
+        "createdAt": "2023-11-21T15:07:05Z",
+        "updatedAt": "2024-09-28T16:58:24Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "unjs/crossws",
+        "url": "https://github.com/unjs/crossws",
+        "stargazersCount": 345,
+        "forkCount": 13,
+        "description": "\ud83d\udd0c   Cross-platform WebSocket Servers for Node.js, Deno, Bun and Cloudflare Workers.",
+        "createdAt": "2023-12-07T00:41:31Z",
+        "updatedAt": "2024-09-28T16:06:36Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "twoslashes/twoslash",
+        "url": "https://github.com/twoslashes/twoslash",
+        "stargazersCount": 491,
+        "forkCount": 16,
+        "description": "Markup for generating rich type information in your documentations ahead of time.",
+        "createdAt": "2024-01-10T20:03:20Z",
+        "updatedAt": "2024-09-28T17:57:17Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "Vue-js-Paris/.github",
+        "url": "https://github.com/Vue-js-Paris/.github",
+        "stargazersCount": 0,
+        "forkCount": 0,
+        "description": null,
+        "createdAt": "2024-04-03T12:02:17Z",
+        "updatedAt": "2024-04-03T12:02:18Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "Vue-js-Paris/branding",
+        "url": "https://github.com/Vue-js-Paris/branding",
+        "stargazersCount": 2,
+        "forkCount": 0,
+        "description": "Things related to logo, visuals, communication",
+        "createdAt": "2024-04-03T12:04:06Z",
+        "updatedAt": "2024-05-15T08:26:11Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "antfu/eslint-plugin-command",
+        "url": "https://github.com/antfu/eslint-plugin-command",
+        "stargazersCount": 190,
+        "forkCount": 11,
+        "description": "Comment-as-command for one-off codemod with ESLint.",
+        "createdAt": "2024-04-24T14:28:41Z",
+        "updatedAt": "2024-09-28T22:01:06Z",
+        "isFork": false
+    },
+    {
+        "nameWithOwner": "Vue-js-Paris/talks",
+        "url": "https://github.com/Vue-js-Paris/talks",
+        "stargazersCount": 1,
+        "forkCount": 0,
+        "description": "Propositions de talks",
+        "createdAt": "2024-05-15T08:16:28Z",
+        "updatedAt": "2024-06-15T13:04:38Z",
+        "isFork": false
+    }
+]
