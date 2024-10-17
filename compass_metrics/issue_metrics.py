@@ -246,4 +246,33 @@ def issue_comment_distribution(client, issue_index, date, repo_list, from_date=N
         "issue_comment_distribution": commet_distribution
     }
     return result
-    
+
+def time_to_close(client, issue_index, date, repos_list):
+    query_close_time = get_uuid_count_query(
+        "avg",
+        repos_list,
+        "time_to_close",
+        "grimoire_creation_date",
+        size=1000,
+        from_date=date - timedelta(days=90),
+        to_date=date
+    )
+    close_time_items = get_all_index_data(client, issue_index, query_close_time)
+    if len(close_time_items) == 0:
+        return {"time_to_close_avg": None, "time_to_close_mid": None}
+    close_time_repo = []
+    date_str = date.isoformat()
+    for item in close_time_items:
+        if 'state' in item['_source']:
+            if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and item['_source'][
+                'closed_at'] < date_str:
+                close_time_repo.append(get_time_diff_days(item['_source']['created_at'], item['_source']['closed_at']))
+            else:
+                close_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
+    close_time_avg = sum(close_time_repo) / len(close_time_repo)
+    close_time_mid = get_medium(close_time_repo)
+    result = {
+        "time_to_close_avg": close_time_avg,
+        "time_to_close_mid": close_time_mid
+    }
+    return result

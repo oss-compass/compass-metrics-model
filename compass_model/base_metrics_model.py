@@ -55,7 +55,8 @@ from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
                                            issue_first_reponse,
-                                           bug_issue_open_time)
+                                           bug_issue_open_time,
+                                           time_to_close)
 from compass_metrics.pr_metrics import (code_review_count,
                                         pr_open_time,
                                         close_pr_count,
@@ -92,7 +93,9 @@ INCREMENT_DECAY_METRICS = ["issue_first_reponse_avg",
                            "pr_open_time_avg",
                            "pr_open_time_mid",
                            "pr_time_to_first_response_avg",
-                           "pr_time_to_first_response_mid"]
+                           "pr_time_to_first_response_mid",
+                           "time_to_close_avg",
+                           "time_to_close_mid"]
 DECREASE_DECAY_METRICS = ["comment_frequency",
                           "code_review_count",
                           "code_merge_ratio",
@@ -103,7 +106,8 @@ NEGATICE_METRICS=["updated_since",
                   "issue_first_reponse",
                   "bug_issue_open_time",
                   "pr_open_time",
-                  "pr_time_to_first_response"]   
+                  "pr_time_to_first_response",
+                  "time_to_close"]
 
 
 def get_dict_hash(dictionary: Dict[str, Any]) -> str:
@@ -362,6 +366,7 @@ class BaseMetricsModel:
             "comment_frequency": lambda: comment_frequency(self.client, self.issue_index, date, repo_list),
             "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
             "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_comments_index, date, repo_list),
+            "time_to_close": lambda: time_to_close(self.client, self.issue_index, date, repo_list),
             # pr
             "pr_open_time": lambda: pr_open_time(self.client, self.pr_index, date, repo_list),
             "close_pr_count": lambda: close_pr_count(self.client, self.pr_index, date, repo_list),
