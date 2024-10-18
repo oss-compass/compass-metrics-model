@@ -1052,3 +1052,35 @@ def activity_domain_contributor(client, contributors_enriched_index, date, repo_
     contributor_count = client.search(index=contributors_enriched_index, body=query)[
         'aggregations']['count_of_uuid']['value']
     return contributor_count
+
+def types_of_contributions(client, contributors_index, from_date, to_date, repo_list):
+    def get_contribution_types(contributor_list):
+        contribution_dict = {}
+
+        for contributor in contributor_list:
+            contributor_name = (contributor.get("id_platform_login_name_list") or
+                                contributor.get("id_git_author_name_list", [None]))[0]
+
+            if contributor_name:
+                contribution_counts = {}
+                for date_field in date_field_list:
+                    contribution_count = len([x for x in contributor.get(date_field, [])
+                                              if from_date.isoformat() <= x < to_date.isoformat()])
+                    if contribution_count > 0:
+                        contribution_type = date_field.replace("_date_list", "")
+                        contribution_counts[contribution_type] = contribution_count
+                contribution_dict[contributor_name] = contribution_counts
+
+        return contribution_dict
+
+    observe_date_field = ["fork_date_list", "star_date_list"]
+    issue_date_field = ["issue_creation_date_list", "issue_comments_date_list"]
+    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_author_date_list",
+                       "code_committer_date_list"]
+    date_field_list = (observe_date_field + issue_date_field + code_date_field)
+
+    contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+
+    contribution_types = get_contribution_types(contributor_list)
+
+    return {"types_of_contributions": contribution_types}

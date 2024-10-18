@@ -50,7 +50,9 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  activity_individual_contribution_per_person,
                                                  activity_observation_contribution_per_person,
                                                  activity_code_contribution_per_person,
-                                                 activity_issue_contribution_per_person)
+                                                 activity_issue_contribution_per_person,
+                                                 types_of_contributions
+                                                 )
 from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
@@ -414,6 +416,7 @@ class BaseMetricsModel:
             "activity_observation_contribution_per_person": lambda: activity_observation_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_code_contribution_per_person": lambda: activity_code_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_issue_contribution_per_person": lambda: activity_issue_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
+            "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
