@@ -1052,3 +1052,55 @@ def activity_domain_contributor(client, contributors_enriched_index, date, repo_
     contributor_count = client.search(index=contributors_enriched_index, body=query)[
         'aggregations']['count_of_uuid']['value']
     return contributor_count
+
+def types_of_contributions(client, contributors_enriched_index, date, repo_list):
+    from_date = date - timedelta(days=90)
+    query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"terms": {"repo_name.keyword": repo_list}},
+                    {"range": {"grimoire_creation_date": {"gte": from_date.isoformat(), "lte": date.isoformat()}}}
+                ]
+            }
+        },
+        "size": 0,
+        "aggs": {
+            "contribution_types": {
+                "terms": {
+                    "field": "contribution_type_list.contribution_type.keyword",
+                    "size": 50
+                },
+                "aggs": {
+                    "total_contributions": {
+                        "sum": {
+                            "field": "contribution_type_list.contribution"
+                        }
+                    },
+                    "unique_contributors": {
+                        "cardinality": {
+                            "field": "contributor.keyword"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    response = client.search(index=contributors_enriched_index, body=query)
+    contribution_detail = []
+    total_contribution_types = 0
+    for bucket in response['aggregations']['contribution_types']['buckets']:
+        contribution_type = bucket['key']
+        total_contributions = bucket['total_contributions']['value']
+        unique_contributors = bucket['unique_contributors']['value']
+        contribution_detail.append({
+            "contribution_type": contribution_type,
+            "contributor": unique_contributors,
+            "contribution": total_contributions
+        })
+        total_contribution_types += 1
+    result = {
+        'contribution_type': total_contribution_types,
+        'contribution_type_detail': contribution_detail
+    }
+    return result
