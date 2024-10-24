@@ -1054,6 +1054,7 @@ def activity_domain_contributor(client, contributors_enriched_index, date, repo_
     return contributor_count
 
 def types_of_contributions(client, contributors_enriched_index, date, repo_list):
+    """ Define the types of contributions and their contributions over the past 90 days.  """
     from_date = date - timedelta(days=90)
     query = {
         "query": {
@@ -1100,7 +1101,7 @@ def types_of_contributions(client, contributors_enriched_index, date, repo_list)
         })
         total_contribution_types += 1
     result = {
-        'contribution_type': total_contribution_types,
+        'types_of_contributions': total_contribution_types,
         'contribution_type_detail': contribution_detail
     }
     return result
