@@ -1102,6 +1102,6 @@ def types_of_contributions(client, contributors_enriched_index, date, repo_list)
         total_contribution_types += 1
     result = {
         'types_of_contributions': total_contribution_types,
-        'contribution_type_detail': contribution_detail
+        'types_of_contributions_detail': contribution_detail
     }
     return result
