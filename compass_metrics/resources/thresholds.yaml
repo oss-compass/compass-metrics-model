@@ -187,4 +187,7 @@ metrics_default_threshold:
     - metric: 'activity_issue_contribution_per_person'
       repo_threshold: 10
       multiple_threshold: 10
+    - metric: 'types_of_contributions'
+      repo_threshold: 54
+      multiple_threshold: 54
     
