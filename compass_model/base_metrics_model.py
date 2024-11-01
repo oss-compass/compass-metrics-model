@@ -416,7 +416,7 @@ class BaseMetricsModel:
             "activity_observation_contribution_per_person": lambda: activity_observation_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_code_contribution_per_person": lambda: activity_code_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_issue_contribution_per_person": lambda: activity_issue_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
-            "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_index, date, repo_list),
+            "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
