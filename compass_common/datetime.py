@@ -222,3 +222,8 @@ def parse(date_str):
     except Exception:
         date = str_to_datetime(date_str).replace(tzinfo=None)
     return date
+def get_last_three_years_dates():
+    '''Get January 1st of the last three years including the current year'''
+    current_year = datetime.datetime.now().year
+    dates = [datetime.datetime(year, 1, 1) for year in range(current_year - 2, current_year + 1)]
+    return dates

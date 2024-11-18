@@ -7,8 +7,9 @@ import pkg_resources
 import yaml
 
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
-from compass_common.datetime import (get_date_list,
-                                     datetime_utcnow)
+from compass_common.datetime import (get_date_list,                                    
+                                     datetime_utcnow,
+                                     get_last_three_years_dates)
 from compass_common.uuid_utils import get_uuid
 from compass_common.algorithm_utils import get_score_by_criticality_score, normalize
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
@@ -24,7 +25,11 @@ from compass_metrics.git_metrics import (created_since,
                                          lines_add_of_code_frequency,
                                          lines_remove_of_code_frequency,
                                          org_commit_frequency,
-                                         org_contribution_last)
+                                         org_contribution_last,
+                                         commit_count_year,
+                                         lines_of_code_frequency_year,
+                                         LOC_frequency_year
+                                         )
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import (contributor_count,
                                                  code_contributor_count, 
@@ -51,14 +56,19 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  activity_observation_contribution_per_person,
                                                  activity_code_contribution_per_person,
                                                  activity_issue_contribution_per_person,
-                                                 types_of_contributions
+                                                 types_of_contributions,
+                                                 contributor_count_year,
+                                                 org_contributor_count_year
                                                  )
 from compass_metrics.issue_metrics import (comment_frequency,
                                            closed_issues_count,
                                            updated_issues_count,
                                            issue_first_reponse,
                                            bug_issue_open_time,
-                                           time_to_close)
+                                           time_to_close,
+                                           issue_count_year,
+                                           issue_completion_ratio_year,
+                                           comment_frequency_year)
 from compass_metrics.pr_metrics import (code_review_count,
                                         pr_open_time,
                                         close_pr_count,
@@ -76,6 +86,9 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         code_merge_count_with_non_author,
                                         code_merge_count,
                                         pr_issue_linked_count,
+                                        pr_count_year,
+                                        close_pr_ratio_year,
+                                        code_review_count_year
                                         )
 from typing import Dict, Any
 
@@ -299,7 +312,11 @@ class BaseMetricsModel:
             repo_list = get_repo_list(self.json_file, self.source)
             if len(repo_list) > 0:
                 for repo in repo_list:
-                    self.metrics_model_enrich([repo], repo, self.level)
+                     for metric_field in self.metrics_weights_thresholds.keys():
+                        if '_year' in metric_field:
+                            self.metrics_model_enrich_year([repo], repo, self.level)
+                        else:
+                            self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
             software_artifact_repo_list, governance_repo_list = get_community_repo_list(self.json_file, self.source)
             if len(software_artifact_repo_list) > 0:
@@ -345,6 +362,45 @@ class BaseMetricsModel:
                 item_datas = []
         helpers().bulk(client=self.client, actions=item_datas)
 
+    def metrics_model_enrich_year(self, repo_list, label, level, type=None):
+        """ Calculate the metrics model data of the repo list, and output the metrics model data once a year """
+        last_metrics_data = {}
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        date_list = get_last_three_years_dates()
+        item_datas = []
+        for date in date_list:
+            logger.info(f"{str(date)}--{self.model_name}--{label}")
+            created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
+            if created_since_metric is None:
+                continue
+            metrics = self.get_metrics(date, repo_list)
+            metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
+                                    self.custom_fields_hash)
+            metrics_data = {
+                'uuid': metrics_uuid,
+                'level': level,
+                'type': type,
+                'label': label,
+                'model_name': self.model_name,
+                **metrics,
+                'grimoire_creation_date': date.isoformat(),
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
+            }
+            cache_last_metrics_data(metrics_data, last_metrics_data)
+            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
+            item_data = {
+                "_index": self.out_index,
+                "_id": metrics_uuid,
+                "_source": metrics_data
+            }
+            item_datas.append(item_data)
+            print(len(item_datas))
+            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                helpers().bulk(client=self.client, actions=item_datas)
+                item_datas = []
+        helpers().bulk(client=self.client, actions=item_datas)
+
     def get_metrics(self, date, repo_list):
         """ Get the corresponding metrics data according to the metrics field """
         metrics_switch = {
@@ -362,6 +418,8 @@ class BaseMetricsModel:
             "commit_pr_linked_count": lambda: commit_pr_linked_count(self.client, self.git_index, self.pr_index, date, repo_list),
             "org_commit_frequency": lambda: org_commit_frequency(self.client, self.contributors_index, date, repo_list),
             "org_contribution_last": lambda: org_contribution_last(self.client, self.contributors_index, date, repo_list),
+            "commit_count_year": lambda: commit_count_year(self.client, self.contributors_index, date, repo_list),
+            "lines_of_code_frequency_year": lambda: lines_of_code_frequency_year(self.client, self.git_index, date, repo_list),
             # issue
             "issue_first_reponse": lambda: issue_first_reponse(self.client, self.issue_index, date, repo_list),
             "bug_issue_open_time": lambda: bug_issue_open_time(self.client, self.issue_index, date, repo_list),
@@ -369,6 +427,9 @@ class BaseMetricsModel:
             "closed_issues_count": lambda: closed_issues_count(self.client, self.issue_index, date, repo_list),
             "updated_issues_count": lambda: updated_issues_count(self.client, self.issue_comments_index, date, repo_list),
             "time_to_close": lambda: time_to_close(self.client, self.issue_index, date, repo_list),
+            "issue_count_year": lambda: issue_count_year(self.client, self.issue_index, date, repo_list),
+            "issue_completion_ratio_year": lambda: issue_completion_ratio_year(self.client, self.issue_index, date, repo_list),
+            "comment_frequency_year": lambda: comment_frequency_year(self.client, self.issue_index, date, repo_list),
             # pr
             "pr_open_time": lambda: pr_open_time(self.client, self.pr_index, date, repo_list),
             "close_pr_count": lambda: close_pr_count(self.client, self.pr_index, date, repo_list),
@@ -387,6 +448,9 @@ class BaseMetricsModel:
             "code_merge_count_with_non_author": lambda: code_merge_count_with_non_author(self.client, self.pr_index, date, repo_list),
             "code_merge_count": lambda: code_merge_count(self.client, self.pr_index, date, repo_list),
             "pr_issue_linked_count": lambda: pr_issue_linked_count(self.client, self.pr_index, self.pr_comments_index, date, repo_list),
+            "pr_count_year": lambda: pr_count_year(self.client, self.pr_index, date, repo_list),
+            "close_pr_ratio_year": lambda: close_pr_ratio_year(self.client, self.pr_index, date, repo_list),
+            "code_review_count_year": lambda: code_review_count_year(self.client, self.pr_index, date, repo_list),
 
             # repo
             "recent_releases_count": lambda: recent_releases_count(self.client, self.release_index, date, repo_list),
@@ -417,6 +481,8 @@ class BaseMetricsModel:
             "activity_code_contribution_per_person": lambda: activity_code_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_issue_contribution_per_person": lambda: activity_issue_contribution_per_person(self.client, self.contributors_enriched_index, date, repo_list),
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
+            "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
+            "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():

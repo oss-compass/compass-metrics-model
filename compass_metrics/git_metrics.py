@@ -16,6 +16,7 @@ from datetime import timedelta
 from compass_common.opensearch_utils import get_all_index_data
 import numpy as np
 import math
+from dateutil.relativedelta import relativedelta
 
 
 def created_since(client, git_index, date, repo_list):
@@ -347,3 +348,36 @@ def get_message_list(client, index_name, from_date, to_date, repo_list):
     if len(message_list) > 0:
         result_list = result_list + [message["_source"] for message in message_list]
     return result_list
+
+def commit_count_year(client, contributors_index, date, repo_list, from_date=None):
+    """ Determine the number of commits in the past 3 years. """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    result = {
+        'commit_count_year': get_commit_count(from_date, to_date, commit_contributor_list),
+        'commit_count_bot_year': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True),
+        'commit_count_without_bot_year': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)
+    }
+    return result
+
+
+def lines_of_code_frequency_year(client, git_index, date, repos_list):
+    """ Determine the  number of lines touched (lines added plus lines removed) per week in the past 3 years """
+    result = {
+        "lines_of_code_frequency_year": LOC_frequency_year(client, git_index, date, repos_list, 'lines_changed')
+    }
+    return result
+
+
+def LOC_frequency_year(client, git_index, date, repos_list, field='lines_changed'):
+    """ Determine the average number of lines touched per week in the past 3 years """
+    git_repos_list = [repo_url + '.git' for repo_url in repos_list]
+    query_LOC_frequency = get_uuid_count_query(
+        'sum', git_repos_list, field, 'grimoire_creation_date', size=0,
+        from_date=(date - relativedelta(years=3)).replace(month=1, day=1), to_date=date)
+    loc_frequency = client.search(index=git_index, body=query_LOC_frequency)[
+        'aggregations']['count_of_uuid']['value']
+    return loc_frequency / 12.85
