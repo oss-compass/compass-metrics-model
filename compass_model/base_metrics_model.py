@@ -312,11 +312,12 @@ class BaseMetricsModel:
             repo_list = get_repo_list(self.json_file, self.source)
             if len(repo_list) > 0:
                 for repo in repo_list:
-                     for metric_field in self.metrics_weights_thresholds.keys():
-                        if '_year' in metric_field:
-                            self.metrics_model_enrich_year([repo], repo, self.level)
-                        else:
-                            self.metrics_model_enrich([repo], repo, self.level)
+                     metric_field = next(iter(self.metrics_weights_thresholds.keys()), None)
+                     if metric_field:
+                         if '_year' in metric_field:
+                             self.metrics_model_enrich_year([repo], repo, self.level)
+                         else:
+                             self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
             software_artifact_repo_list, governance_repo_list = get_community_repo_list(self.json_file, self.source)
             if len(software_artifact_repo_list) > 0:
@@ -375,7 +376,7 @@ class BaseMetricsModel:
                 continue
             metrics = self.get_metrics(date, repo_list)
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
-                                    self.custom_fields_hash)
+                                    self.custom_fields_hash,"year")
             metrics_data = {
                 'uuid': metrics_uuid,
                 'level': level,
