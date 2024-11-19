@@ -5,6 +5,7 @@ from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.algorithm_utils import get_medium
 from compass_common.opensearch_utils import get_all_index_data
+from dateutil.relativedelta import relativedelta
 
 
 def issue_first_reponse(client, issue_index, date, repos_list):
@@ -276,3 +277,52 @@ def time_to_close(client, issue_index, date, repos_list):
         "time_to_close_mid": close_time_mid
     }
     return result
+
+
+def issue_count_year(client, issue_index, date, repo_list, from_date=None):
+    """ The number of issue created in the last 3 years. """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    query = get_uuid_count_query(
+        "cardinality", repo_list, "uuid", size=0, from_date=from_date, to_date=date)
+    query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    count = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['value']
+    result = {
+        "issue_count_year_year": count
+    }
+    return result
+
+
+def issue_completion_ratio_year(client, issue_index, date, repo_list, from_date=None):
+    """Measures the ratio between the total number of issue and the total number
+    of closed issue in the last 3 years."""
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    count = create_close_issue_count(client, issue_index, date, repo_list, from_date)["create_close_issue_count"]
+    total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
+
+    result = {
+        "issue_completion_ratio_year": count/total_count if count > 0 else None
+    }
+    return result
+
+def comment_frequency_year(client, issue_index, date, repo_list, from_date=None):
+    """ Determine the average number of comments per issue created in the last 3 years. """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    query_issue_comments_count = get_uuid_count_query(
+        "sum", repo_list, "num_of_comments_without_bot", date_field='grimoire_creation_date', size=0,
+        from_date=from_date, to_date=date)
+    query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    issue = client.search(index=issue_index, body=query_issue_comments_count)
+    try:
+        comment_count = float(issue['aggregations']["count_of_uuid"]['value'] / issue["hits"]["total"]["value"])
+    except ZeroDivisionError:
+        comment_count = None
+    result = {
+        'comment_frequency_year': float(round(comment_count, 4)) if comment_count is not None else None
+    }
+    return result
+
+   

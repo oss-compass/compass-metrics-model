@@ -4,6 +4,7 @@ from compass_common.opensearch_utils import get_all_index_data
 from datetime import timedelta
 from itertools import groupby
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 
 def contributor_count(client, contributors_index, date, repo_list, from_date=None):
@@ -1103,5 +1104,73 @@ def types_of_contributions(client, contributors_enriched_index, date, repo_list)
     result = {
         'types_of_contributions': total_contribution_types,
         'types_of_contributions_detail': contribution_detail
+    }
+    return result
+
+def org_contributor_count_year(client, contributors_index, date, repo_list):
+    """ Number of active code contributors with organization affiliation in the past 3 years """
+
+    from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    org_contributor_set = set()
+    org_contributor_bot_set = set()
+    org_contributor_without_bot_set = set()
+    org_contributor_detail_dict = {}
+
+    for contributor in commit_contributor_list:
+        for org in contributor["org_change_date_list"]:
+            author_name = contributor["id_git_author_name_list"][0]
+            if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                if org.get("org_name") is not None:
+                    org_contributor_set.add(author_name)
+                    if contributor["is_bot"]:
+                        org_contributor_bot_set.add(author_name)
+                    else:
+                        org_contributor_without_bot_set.add(author_name)
+
+                org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                is_org = True if org.get("org_name") else False
+                org_contributor_detail_count_set = org_contributor_detail_dict.get(org_name, {}).get("org_contributor_count_set", set())
+                org_contributor_detail_count_set.add(author_name)
+                org_contributor_detail_dict[org_name] = {
+                    "org_name": org_name,
+                    "is_org": is_org,
+                    "org_contributor_count_set": org_contributor_detail_count_set,
+                    "org_contributor_count": len(org_contributor_detail_count_set)
+                }
+    org_contributor_count_list = []
+    for x in org_contributor_detail_dict.values():
+        if "org_contributor_count_set" in x:
+            del x["org_contributor_count_set"]
+        org_contributor_count_list.append(x)
+    org_contributor_count_list = sorted(org_contributor_count_list, key=lambda x: x["org_contributor_count"], reverse=True)
+
+    result = {
+        'org_contributor_count_year': len(org_contributor_set),
+        'org_contributor_count_bot_year': len(org_contributor_bot_set),
+        'org_contributor_count_without_bot_year': len(org_contributor_without_bot_set),
+        'org_contributor_count_list_year': org_contributor_count_list
+    }
+    return result
+
+def contributor_count_year(client, contributors_index, date, repo_list, from_date=None):
+    """ Determine how many active code commit authors, pr authors, review participants, issue authors,
+    and issue comments participants there are in the past 3 years """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    to_date = date
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list",
+                        "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)
+    result = {
+        "contributor_count_year": contributor_count,
+        "contributor_count_bot_year": contributor_count_bot,
+        "contributor_count_without_bot_year": contributor_count_without_bot,
     }
     return result

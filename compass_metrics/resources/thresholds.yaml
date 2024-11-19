@@ -39,6 +39,12 @@ metrics_default_threshold:
     - metric: 'lines_remove_of_code_frequency'
       repo_threshold: 300000
       multiple_threshold: 300000
+    - metric: 'commit_count_year'
+      repo_threshold: 3000000
+      multiple_threshold: 3000000
+    - metric: 'lines_of_code_frequency_year'
+      repo_threshold: 3000000
+      multiple_threshold: 3000000
   issue: 
     - metric: 'issue_first_reponse'
       repo_threshold: 15
@@ -54,7 +60,16 @@ metrics_default_threshold:
       multiple_threshold: 2500
     - metric: 'updated_issues_count'
       repo_threshold: 2500
-      multiple_threshold: 2500  
+      multiple_threshold: 2500
+    - metric: 'issue_count_year'
+      repo_threshold: 30000
+      multiple_threshold: 30000
+    - metric: 'issue_completion_ratio_year'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'comment_frequency_year'
+      repo_threshold: 60
+      multiple_threshold: 60
   pr:
     - metric: 'pr_open_time'
       repo_threshold: 30
@@ -107,6 +122,15 @@ metrics_default_threshold:
     - metric: 'pr_issue_linked_count'
       repo_threshold: 4500
       multiple_threshold: 6000
+    - metric: 'close_pr_ratio_year'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'pr_count_year'
+      repo_threshold: 30000
+      multiple_threshold: 40000
+    - metric: 'code_review_count_year'
+      repo_threshold: 96
+      multiple_threshold: 96
   repo:
     - metric: 'recent_releases_count'
       repo_threshold: 12
@@ -190,4 +214,9 @@ metrics_default_threshold:
     - metric: 'types_of_contributions'
       repo_threshold: 54
       multiple_threshold: 54
-    
+    - metric: 'contributor_count_year'
+      repo_threshold: 2000
+      multiple_threshold: 3000
+    - metric: 'org_contributor_count_year'
+      repo_threshold: 2000
+      multiple_threshold: 3000
