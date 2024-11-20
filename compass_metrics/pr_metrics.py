@@ -390,7 +390,7 @@ def close_pr_ratio_year(client, pr_index, date, repos_list):
         to_date=date)
     pr_closed = client.search(index=pr_index, body=query_pr_closed)[
         'aggregations']["count_of_uuid"]['value']
-    pr_count = pr_count_year(client, pr_index, date, repos_list)["total_pr_count"]
+    pr_count = pr_count_year(client, pr_index, date, repos_list)["pr_count_year"]
     result = {
         "close_pr_ratio_year": pr_closed / pr_count if pr_count > 0 else None
     }
