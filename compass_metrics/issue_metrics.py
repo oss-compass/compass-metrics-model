@@ -289,7 +289,7 @@ def issue_count_year(client, issue_index, date, repo_list, from_date=None):
     query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     count = client.search(index=issue_index, body=query)['aggregations']["count_of_uuid"]['value']
     result = {
-        "issue_count_year_year": count
+        "issue_count_year": count
     }
     return result
 
