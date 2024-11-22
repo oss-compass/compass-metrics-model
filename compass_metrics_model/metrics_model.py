@@ -1606,7 +1606,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     org_commit_count_dict[org_name] = count
 
         if total_count == 0:
-            return 0, 0, 0, {}
+            return 0, 0, 0, {"Other": [0, 0, 0]}
         for org_name, count in org_commit_count_dict.items():
             if self.org_name_dict[org_name]:
                 org_commit_percentage_dict[org_name] = [count, count/total_count, 0 if commit_count == 0 else count/commit_count]
@@ -1652,8 +1652,6 @@ class OrganizationsActivityMetricsModel(MetricsModel):
             from_date = date - timedelta(days=90)
             to_date = date
             contributor_list = self.get_contributor_list(from_date, to_date, repos_list, "code_author_date_list")
-            if len(contributor_list) == 0:
-                continue
             self.add_org_name(contributor_list)
             contributor_count, contributor_count_bot, contributor_count_without_bot, org_contributor_count_dict = \
                 self.org_contributor_count(from_date, to_date, contributor_list)
@@ -1661,9 +1659,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                 self.org_commit_frequency(from_date, to_date, contributor_list)
             org_count = self.org_count(from_date, to_date, contributor_list)
             contribution_last = self.contribution_last(from_date, to_date, contributor_list)
-            for org_name in self.org_name_dict.keys():
-                if org_name not in org_commit_percentage_dict.keys():
-                    continue
+
+            for org_name in org_commit_percentage_dict.keys():
                 basic_args = [str(date), org_name, self.community, level, label, self.model_name, type]
                 if self.weights_hash:
                     basic_args.append(self.weights_hash)
@@ -1676,11 +1673,11 @@ class OrganizationsActivityMetricsModel(MetricsModel):
                     'label': label,
                     'model_name': self.model_name,
                     'org_name': org_name,
-                    'is_org': self.org_name_dict[org_name],
+                    'is_org': self.org_name_dict.get(org_name, False),
                     'contributor_count': contributor_count,
                     'contributor_count_bot': contributor_count_bot,
                     'contributor_count_without_bot': contributor_count_without_bot,
-                    'contributor_org_count': org_contributor_count_dict.get(org_name),
+                    'contributor_org_count': org_contributor_count_dict.get(org_name, 0),
                     'commit_frequency': round(commit_frequency, 4),
                     'commit_frequency_bot': round(commit_frequency_bot, 4),
                     'commit_frequency_without_bot': round(commit_frequency_without_bot, 4),
