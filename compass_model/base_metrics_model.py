@@ -320,10 +320,20 @@ class BaseMetricsModel:
                              self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
             software_artifact_repo_list, governance_repo_list = get_community_repo_list(self.json_file, self.source)
-            if len(software_artifact_repo_list) > 0:
-                self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level, SOFTWARE_ARTIFACT)
-            if len(governance_repo_list) > 0:
-                self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
+            metric_field = next(iter(self.metrics_weights_thresholds.keys()), None)
+            if metric_field:
+                if '_year' in metric_field:
+                    if len(software_artifact_repo_list) > 0:
+                        self.metrics_model_enrich_year(software_artifact_repo_list, self.community, self.level,
+                                                  SOFTWARE_ARTIFACT)
+                    if len(governance_repo_list) > 0:
+                        self.metrics_model_enrich_year(governance_repo_list, self.community, self.level, GOVERNANCE)
+                else:
+                    if len(software_artifact_repo_list) > 0:
+                        self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level,
+                                                  SOFTWARE_ARTIFACT)
+                    if len(governance_repo_list) > 0:
+                        self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
 
     def metrics_model_enrich(self, repo_list, label, level, type=None):
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
