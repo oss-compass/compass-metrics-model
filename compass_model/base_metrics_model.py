@@ -323,11 +323,10 @@ class BaseMetricsModel:
             metric_field = next(iter(self.metrics_weights_thresholds.keys()), None)
             if metric_field:
                 if '_year' in metric_field:
-                    if len(software_artifact_repo_list) > 0:
+                    combined_repo_list = software_artifact_repo_list + governance_repo_list
+                    if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_year(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
-                    if len(governance_repo_list) > 0:
-                        self.metrics_model_enrich_year(governance_repo_list, self.community, self.level, GOVERNANCE)
                 else:
                     if len(software_artifact_repo_list) > 0:
                         self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level,
