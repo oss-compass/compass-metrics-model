@@ -541,3 +541,39 @@ def get_base_index_mapping():
         }
     }
     return mapping
+
+def get_license_query(repo_list, page_size):
+    """ Query statement to get the license information including license_list, osi_license_list, and non_osi_licenses. """
+    query = {
+        "size": page_size,
+        "sort": [
+            {
+                "grimoire_creation_date": {
+                    "order": "desc"
+                }
+            }
+        ],
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "project_url.keyword": repo_list
+                        }
+                    },
+                    {
+                        "exists": {
+                            "field": "license.license_list"
+                        }
+                    }
+                ]
+            }
+        },
+        "_source": [
+            "license.license_list",
+            "license.osi_license_list",
+            "license.non_osi_licenses"
+        ]
+    }
+    
+    return query
