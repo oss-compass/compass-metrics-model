@@ -91,6 +91,11 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         code_review_count_year
                                         )
 from typing import Dict, Any
+from compass_metrics.license import (license_conflicts_exist, 
+                                     license_dep_conflicts_exist, 
+                                     license_is_weak, 
+                                     license_change_claims_required, 
+                                     license_commercial_allowed)
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -493,6 +498,13 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
+
+            # license
+            "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.contributors_index, date, repo_list),
+            "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.contributors_index, date, repo_list),
+            "license_is_weak": lambda: license_is_weak(self.client, self.contributors_index, date, repo_list),
+            "license_change_claims_required": lambda: license_change_claims_required(self.client, self.contributors_index, date, repo_list),
+            "license_commercial_allowed": lambda: license_commercial_allowed(self.client, self.contributors_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
