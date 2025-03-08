@@ -1,5 +1,16 @@
+import requests
+
 from compass_metrics.db_dsl import get_security_query
 from compass_common.opensearch_utils import get_all_index_data
+
+TPC_SERVICE_API_USERNAME = "temporary_user"
+TPC_SERVICE_API_PASSWORD = "default_password"
+TPC_SERVICE_API_ENDPOINT = "http://119.12.172.232:8082"
+# 线上回调地址
+TPC_SERVICE_SERVICE_CALLBACK_URL = "https://oss-compass.org/api/tpc_software_callback"
+# 测试环境回调地址
+TPC_SERVICE_SERVICE_CALLBACK_URL = "http://159.138.38.244/api/tpc_software_callback"
+
 
 def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
     """获取仓库的安全漏洞信息。
@@ -26,6 +37,7 @@ def get_security_msg(client, contributors_index, repo_list, page_size, flag=True
     security_msg = get_all_index_data(client, index=contributors_index, body=query)
 
     if not security_msg:
+        get_license(repo_list)
         return []
 
     results = []
@@ -163,3 +175,52 @@ def process_record(record):
     result['vulnerability_count'] = len(counted_cves)
     result['high_severity_count'] = len(high_severity_cves)
     return result
+
+# 如果没有数据，则请求opencheck
+def get_license(repo):
+    payload = {
+        "username": TPC_SERVICE_API_USERNAME,
+        "password": TPC_SERVICE_API_PASSWORD
+    }
+
+    # 获取token
+    result = base_post_request("auth", payload)
+    if not result["status"]:
+        return {'status': False, 'message': 'no auth'}
+    token = result["body"]["access_token"]
+
+    commands = ["scancode", "osv-scanner"]
+    payload = {
+        "commands": commands,
+        "project_url": f"{repo}.git",
+        "callback_url": TPC_SERVICE_SERVICE_CALLBACK_URL,
+        "task_metadata": {
+            "report_type": -1
+        }
+    }
+
+    # 向openchenck发送扫描项目请求
+    result = base_post_request("opencheck", payload, token=token)
+    if result["status"]:
+        return {'status': True, 'message': result['body']}
+    else:
+        return {'status': False, 'message': 'no callback'}
+
+
+def base_post_request(request_path, payload, token=None):
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"JWT {token}"
+    try:
+        response = requests.post(
+            f"{TPC_SERVICE_API_ENDPOINT}/{request_path}",
+            json=payload,
+            headers=headers
+        )
+        response.raise_for_status()
+        resp_data = response.json()
+        if "error" in resp_data:
+            return {"status": False, "message": f"Error: {resp_data.get('description', 'Unknown error')}"}
+        return {"status": True, "body": resp_data}
+    except requests.RequestException as ex:
+        return {"status": False, "message": str(ex)}
