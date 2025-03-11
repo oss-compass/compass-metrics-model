@@ -2,14 +2,7 @@ import requests
 
 from compass_metrics.db_dsl import get_security_query
 from compass_common.opensearch_utils import get_all_index_data
-
-TPC_SERVICE_API_USERNAME = "temporary_user"
-TPC_SERVICE_API_PASSWORD = "default_password"
-TPC_SERVICE_API_ENDPOINT = "http://119.12.172.232:8082"
-# 线上回调地址
-TPC_SERVICE_SERVICE_CALLBACK_URL = "https://oss-compass.org/api/tpc_software_callback"
-# 测试环境回调地址
-TPC_SERVICE_SERVICE_CALLBACK_URL = "http://159.138.38.244/api/tpc_software_callback"
+from compass_metrics.resources.security_config import TPC_SERVICE_API_USERNAME, TPC_SERVICE_API_PASSWORD, TPC_SERVICE_API_ENDPOINT, TPC_SERVICE_SERVICE_CALLBACK_URL, TPC_SERVICE_SERVICE_CALLBACK_URL_TEST
 
 
 def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
