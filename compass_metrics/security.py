@@ -1,8 +1,19 @@
 import requests
+import yaml
 
 from compass_metrics.db_dsl import get_security_query
 from compass_common.opensearch_utils import get_all_index_data
-from compass_metrics.resources.security_config import TPC_SERVICE_API_USERNAME, TPC_SERVICE_API_PASSWORD, TPC_SERVICE_API_ENDPOINT, TPC_SERVICE_SERVICE_CALLBACK_URL, TPC_SERVICE_SERVICE_CALLBACK_URL_TEST
+
+
+# 从 YAML 文件中加载配置
+with open('compass_metrics/resources/security_config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
+TPC_SERVICE_API_USERNAME = config['TPC_SERVICE_API_USERNAME']
+TPC_SERVICE_API_PASSWORD = config['TPC_SERVICE_API_PASSWORD']
+TPC_SERVICE_API_ENDPOINT = config['TPC_SERVICE_API_ENDPOINT']
+TPC_SERVICE_SERVICE_CALLBACK_URL = config['TPC_SERVICE_SERVICE_CALLBACK_URL']
+TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['TPC_SERVICE_SERVICE_CALLBACK_URL_TEST']
 
 
 def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
