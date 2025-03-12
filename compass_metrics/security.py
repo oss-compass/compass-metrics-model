@@ -1,19 +1,19 @@
 import requests
-import yaml
+import configparser
 
 from compass_metrics.db_dsl import get_security_query
 from compass_common.opensearch_utils import get_all_index_data
+from compass_metrics.constants.security_constants import SECURITY_CONFIG
 
+# 从 INI 文件中加载配置
+config = configparser.ConfigParser()
+config.read(SECURITY_CONFIG)
 
-# 从 YAML 文件中加载配置
-with open('compass_metrics/resources/security_config.yaml', 'r') as file:
-    config = yaml.safe_load(file)
-
-TPC_SERVICE_API_USERNAME = config['TPC_SERVICE_API_USERNAME']
-TPC_SERVICE_API_PASSWORD = config['TPC_SERVICE_API_PASSWORD']
-TPC_SERVICE_API_ENDPOINT = config['TPC_SERVICE_API_ENDPOINT']
-TPC_SERVICE_SERVICE_CALLBACK_URL = config['TPC_SERVICE_SERVICE_CALLBACK_URL']
-TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['TPC_SERVICE_SERVICE_CALLBACK_URL_TEST']
+TPC_SERVICE_API_USERNAME = config['OPEN_CHECKService']['username']
+TPC_SERVICE_API_PASSWORD = config['OPEN_CHECKService']['password']
+TPC_SERVICE_API_ENDPOINT = config['OPEN_CHECKService']['endpoint']
+TPC_SERVICE_SERVICE_CALLBACK_URL = config['OPEN_CHECKService']['service_callback_url']
+TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['OPEN_CHECKService']['service_callback_url_test']
 
 
 def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
@@ -66,6 +66,8 @@ def get_security_msg(client, contributors_index, repo_list, page_size, flag=True
 def security_vul_stat(client, contributors_index, repo_list, page_size):
     # 获取开源软件的安全漏洞数
     security_results = get_security_msg(client, contributors_index, repo_list, page_size)
+    if not security_results:
+        return {'security_vul_stat': 0, 'info': 'There is no data on security breaches'}
     result = {
         'security_vul_stat': security_results[0]['vulnerability_count'],
     }
@@ -90,14 +92,14 @@ def security_vul_fixed(client, contributors_index, repo_list, page_size):
     }
 
     # 如果没有扫描结果，直接返回
-    if len(security_results) == 0:
-        result['info'] = "没有扫描结果"
+    if not security_results:
+        result['info'] = "There are no scan results"
         return result
 
     # 如果只有一条扫描记录，则所有漏洞都算作未修复
     if len(security_results) == 1:
         vulStatus.unfixed = security_results[0]['vulnerability_count']
-        result['info'] = "只有一条扫描记录"
+        result['info'] = "Only one scan record"
         return result
 
     # 获取最早和最新的CVE数量
@@ -122,9 +124,10 @@ def security_scanned(client, contributors_index, repo_list, page_size):
         'security_scanned': 0,
         'scanner': "osv scanner"
     }
-    if len(security_results) > 0:
+    if security_results:
         result['security_scanned'] = 1
-        return result
+    else:
+        result['info'] = "There are no scan results"
     return result
 
 def process_record(record):
