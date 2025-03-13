@@ -91,6 +91,7 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         code_review_count_year
                                         )
 from typing import Dict, Any
+from compass_metrics.security import (security_vul_stat, security_vul_fixed, security_scanned)
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -493,6 +494,11 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
+
+            # security
+            "security_vul_stat": lambda: security_vul_stat(self.client, self.contributors_index, date, repo_list),
+            "security_vul_fixed": lambda: security_vul_fixed(self.client, self.contributors_index, date, repo_list),
+            "security_scanned": lambda: security_scanned(self.client, self.contributors_index, date, repo_list),
         }
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
