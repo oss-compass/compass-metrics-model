@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:31:20
 LastEditors: zyx
-LastEditTime: 2025-03-04 11:07:05
+LastEditTime: 2025-03-17 10:00:37
 '''
 import os
 from utils import save_json,clone_repo,TMP_PATH,JSON_BASEPATH
@@ -98,13 +98,14 @@ def search_readme_in_folder(path)->tuple:
                readme_content: The contents of the README file are returned as a string if found, otherwise an empty list.
     """
 
-    readme_files = ["README.md", "README.txt", "README.rst"]
-    readme_contents = []
+    readme_files = ["README.md", "README.txt", "README.rst","README","readme.md", "readme.txt", "readme.rst","readme"]
+    readme_contents = ""
     flag = False
 
     for files in os.listdir(path):
-        if os.path.isfile(files):
+        if not os.path.isfile(files):
             continue
+        
 
         if files in readme_files:
             flag = True # README file found
@@ -128,7 +129,7 @@ def get_documentation_links_from_repo(repo_url, platform='github'):
     """
 
     if os.path.basename(repo_url) not in os.listdir(TMP_PATH):
-        flag,readme_path = clone_repo(repo_url, platform)
+        flag,readme_path = clone_repo(repo_url)
         if not flag:
             ValueError("Repository clone failed.")
         else:

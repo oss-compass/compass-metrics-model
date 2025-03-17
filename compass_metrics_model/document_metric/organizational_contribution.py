@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-05 09:07:16
+LastEditTime: 2025-03-17 09:10:06
 '''
 from datetime import timedelta
 from itertools import groupby
@@ -18,9 +18,9 @@ from opensearchpy import OpenSearch
 CLIENT = ""
 
 DATE = datetime.datetime(2022,12,20)
-def organizational_contribution(repo_name):
-    CLIENT = ""
-    client = OpenSearch(CLIENT)
+def organizational_contribution(client,repo_name):
+    # CLIENT = ""
+    client = OpenSearch(client)
         
     query = {
         "size": 10000,
@@ -64,11 +64,11 @@ def Organizational_contribution(opensearch, date, repo_list):
     personal = contributor - organization
     return {"organization": organization, "personal": personal}
 
-# if __name__ == '__main__':
-#     repo_name = "https://github.com/mathjax/MathJax"
-#     # print(Organizational_contribution(CLIENT, DATE,["https://github.com/mathjax/MathJax"]))
+if __name__ == '__main__':
+    repo_name = "https://github.com/mathjax/MathJax"
+    # print(Organizational_contribution(CLIENT, DATE,["https://github.com/mathjax/MathJax"]))
 
-#     # repo_name = repo_list[0]
-#     print(get_ecological_types(repo_name))
-#     with open("组织贡献者.json", "w") as f:
-#         json.dump(get_ecological_types(repo_name), f,indent=4)
+    # # repo_name = repo_list[0]
+    # print(get_ecological_types(repo_name))
+    # with open("组织贡献者.json", "w") as f:
+    #     json.dump(get_ecological_types(repo_name), f,indent=4)

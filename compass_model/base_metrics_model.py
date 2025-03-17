@@ -92,6 +92,12 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         )
 from typing import Dict, Any
 
+
+from compass_metrics_model.code_readability import evaluate_code_readability
+from compass_metrics_model.document_metric import Industry_Support
+from compass_metrics_model.security_metric import VulnerabilityMetrics
+
+
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
@@ -493,7 +499,26 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
+
+
+            # code_readability
+            "code_readability": lambda: evaluate_code_readability(repo_list),
+            # industry
+            "industry_support": lambda: Industry_Support(self.client,repo_list),
+            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
+            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
+            "zh_files": lambda: Industry_Support(self.client,repo_list).get_zh_files(),
+            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            # security
+            "vulnerability_metrics": lambda: VulnerabilityMetrics(repo_list),
+            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels_metrics(),
+
         }
+
+        
+        
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field in metrics_switch:

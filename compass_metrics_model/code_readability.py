@@ -1,8 +1,11 @@
 import os
 
 import re
+from utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
 
-from utils import save_json
+from utils_code_readability import save_json,JSON_BASEPATH,TMP_PATH
+BASEPATH = TMP_PATH
+
 # Define comment syntax for different languages
 COMMENT_SYNTAX = {
     'python': '#',
@@ -151,7 +154,7 @@ def calculate_code_features(file_path):
 
         }
 
-def evaluate_code_readability(directory_path):
+def evaluate_code_readability1(url):
     '''
     Description: Evaluate code readability of all files in a directory. 
     Args:
@@ -160,6 +163,13 @@ def evaluate_code_readability(directory_path):
     Returns:
         list: List of dictionaries containing the evaluation results for each file.
     '''
+    repo_name = os.path.basename(url)
+    
+    if repo_name not in os.listdir(BASEPATH):
+        print(f"Cloning {repo_name} repository...")
+        clone_repo(url)
+    directory_path = os.path.join(BASEPATH, repo_name)
+
     ans =[]
     for root, dirs, files in os.walk(directory_path):
         for file in files:
@@ -191,9 +201,14 @@ def evaluate_code_readability(directory_path):
             ans.append(res)
     return ans
 
+def evaluate_code_readability(repo_list):
+    ans = {}
+    for i in repo_list:
+        ans[i] = evaluate_code_readability1(i)
+    return ans
 
 if __name__ == "__main__":
-    file_path = r"compass-metrics-model"
+    file_path = r"https://github.com/oss-compass/compass-metrics-model"
     print(os.path.basename(file_path))
 
     # print(evaluate_code_readability(file_path))
