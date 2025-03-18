@@ -9,11 +9,14 @@ from compass_metrics.constants.security_constants import SECURITY_CONFIG
 config = configparser.ConfigParser()
 config.read(SECURITY_CONFIG)
 
-TPC_SERVICE_API_USERNAME = config['OPEN_CHECKService']['username']
-TPC_SERVICE_API_PASSWORD = config['OPEN_CHECKService']['password']
-TPC_SERVICE_API_ENDPOINT = config['OPEN_CHECKService']['endpoint']
-TPC_SERVICE_SERVICE_CALLBACK_URL = config['OPEN_CHECKService']['service_callback_url']
-TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['OPEN_CHECKService']['service_callback_url_test']
+try:
+    TPC_SERVICE_API_USERNAME = config['OPEN_CHECKService']['username']
+    TPC_SERVICE_API_PASSWORD = config['OPEN_CHECKService']['password']
+    TPC_SERVICE_API_ENDPOINT = config['OPEN_CHECKService']['endpoint']
+    TPC_SERVICE_SERVICE_CALLBACK_URL = config['OPEN_CHECKService']['service_callback_url']
+    TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['OPEN_CHECKService']['service_callback_url_test']
+except KeyError as e:
+    print(f"KeyError: {e} - 请检查配置文件中是否存在该键")
 
 
 def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
