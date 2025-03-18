@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 10:23:24
 LastEditors: zyx
-LastEditTime: 2025-03-17 10:04:44
+LastEditTime: 2025-03-18 17:54:08
 '''
 from doc_quarty import doc_quarty_all
 from doc_chinese_support import doc_chinexe_support_git
@@ -29,18 +29,27 @@ class Industry_Support:
     def get_doc_quarty(self):
         for repo_url in self.repo_list:
             self.doc_quarty[repo_url] = doc_quarty_all(repo_url)
-        return self.doc_quarty
+        get_doc_quarty = self.doc_quarty
+        return get_doc_quarty
+
     
     def get_doc_number(self):
-        return self.doc_number
+        get_doc_number = self.doc_number
+        return get_doc_number
+
     
     def get_zh_files(self):
         for repo_url in self.repo_list:
             self.zh_files[repo_url] = doc_chinexe_support_git(repo_url)
-        return self.zh_files
+        get_zh_files = self.zh_files
+        return get_zh_files
+
     
     def get_org_contribution(self):
-        return organizational_contribution(self.client,self.repo_url)
+        get_org_contribution = {}
+        for repo_url in self.repo_list:
+            get_org_contribution[repo_url] = organizational_contribution(self.client,repo_url)
+        return get_org_contribution
     
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']
