@@ -205,11 +205,12 @@ def evaluate_code_readability(repo_list):
     ans = {}
     for i in repo_list:
         ans[i] = evaluate_code_readability1(i)
-    return ans
+    evaluate_code_readability = ans
+    return evaluate_code_readability
 
 if __name__ == "__main__":
-    file_path = r"https://github.com/oss-compass/compass-metrics-model"
-    print(os.path.basename(file_path))
+    file_path = [r"https://github.com/oss-compass/compass-metrics-model"]
+    # print(os.path.basename(file_path))
 
     # print(evaluate_code_readability(file_path))
     save_json(evaluate_code_readability(file_path), f'{os.path.basename(file_path)}.json')

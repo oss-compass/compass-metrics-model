@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 11:16:48
 LastEditors: zyx
-LastEditTime: 2025-03-17 10:26:33
+LastEditTime: 2025-03-18 17:44:31
 '''
 from vul_detect_time import vul_detect_time
 from vulnerability_feedback_channels import vulnerablity_feedback_channels
@@ -22,17 +22,23 @@ class VulnerabilityMetrics:
     def get_vul_detect_time(self):
         for repo_url in self.repo_list:
             self.vul_detect_time[repo_url] = vul_detect_time(repo_url)
-        return self.vul_detect_time
+        get_vul_detect_time = self.vul_detect_time
+        return get_vul_detect_time
+
     
     def get_vulnerablity_feedback_channels(self):
         for repo_url in self.repo_list:
             self.vulnerablity_feedback_channels[repo_url] = vulnerablity_feedback_channels(repo_url)
-        return self.vulnerablity_feedback_channels
+        get_vulnerablity_feedback_channels = self.vulnerablity_feedback_channels
+        return get_vulnerablity_feedback_channels
+
     
     def get_vul_levels_metrics(self):
         for repo_url in self.repo_list:
             self.vul_levels_metrics[repo_url] = get_vul_levels_metrics(repo_url)
-        return self.vul_levels_metrics
+        get_vul_levels_metrics = self.vul_levels_metrics
+        return get_vul_levels_metrics
+
     
 if __name__ == "__main__":
     repo_url =['https://github.com/numpy/numpy']
