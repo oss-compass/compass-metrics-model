@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:31:20
 LastEditors: zyx
-LastEditTime: 2025-03-17 10:00:37
+LastEditTime: 2025-03-20 16:42:50
 '''
 import os
 from utils import save_json,clone_repo,TMP_PATH,JSON_BASEPATH
@@ -148,7 +148,7 @@ def get_documentation_links_from_repo(repo_url, platform='github'):
     link_count, links = count_documents_from_Readme(readme)
 
     doc_number = {
-        "doc_number": document_count+link_count,
+        "get_doc_number": document_count+link_count,
         "folder_document_details": document_details,
         "links_document_details": links
     }

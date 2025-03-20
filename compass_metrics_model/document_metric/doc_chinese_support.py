@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-02-17 10:25:54
 LastEditors: zyx
-LastEditTime: 2025-03-03 09:31:39
+LastEditTime: 2025-03-20 16:39:59
 '''
 '''
 Descripttion: 
@@ -56,17 +56,17 @@ def doc_chinese_support(file_path):
 
 def find_zh_files(json_path,url):
     '''Find all files containing Chinese characters in the specified folder'''
-    zh_files = {"numbers":0, "files_details":[]}
+    zh_files = {"get_zh_files_number":0, "zh_files_details":[]}
     doc_details = load_json(json_path)["folder_document_details"]
     for doc_detail in doc_details:
         file_path = os.path.join(BASEPATH,doc_detail["path"])
         if doc_chinese_support(file_path):
             
-            zh_files["files_details"].append({})
-            zh_files["files_details"][zh_files["numbers"]]["name"] = doc_detail["name"]
-            zh_files["files_details"][zh_files["numbers"]]["path"] = doc_detail["path"]
-            zh_files["files_details"][zh_files["numbers"]]["commit_time"] = get_file_commit_time(url, doc_detail["path"],platform=check_github_gitee(url))
-            zh_files["numbers"] += 1
+            zh_files["zh_files_details"].append({})
+            zh_files["zh_files_details"][zh_files["numbers"]]["name"] = doc_detail["name"]
+            zh_files["zh_files_details"][zh_files["numbers"]]["path"] = doc_detail["path"]
+            zh_files["zh_files_details"][zh_files["numbers"]]["commit_time"] = get_file_commit_time(url, doc_detail["path"],platform=check_github_gitee(url))
+            zh_files["get_zh_files_number"] += 1
     return zh_files
 
 def get_file_commit_time(repo_url, file_path, platform='gitub'):

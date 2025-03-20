@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-02-17 09:30:38
 LastEditors: zyx
-LastEditTime: 2025-03-04 10:52:31
+LastEditTime: 2025-03-20 16:44:51
 '''
 import re
 import os
@@ -78,7 +78,7 @@ class DocQuarty:
 
 def find_doc_quarty_files(json_path):
     
-    ans = []
+    ans = {"get_doc_quarty":0, "doc_quarty_details":[]}
     doc_details = load_json(json_path)["folder_document_details"]
     for doc_detail in doc_details:
         file_path = os.path.join(BASEPATH,doc_detail["path"])
@@ -86,10 +86,12 @@ def find_doc_quarty_files(json_path):
         res = {
             'name': doc_detail["name"],
             'path': doc_detail["path"],
-            'Word count': doc_quarty.words,
-            'Picture count': doc_quarty.pic_number
+            'Word_count': doc_quarty.words,
+            'Picture_count': doc_quarty.pic_number
         }
-        ans.append(res)
+        ans["doc_quarty_details"].append(res)
+        ans["get_doc_quarty"] += 1
+
     return ans
 
 

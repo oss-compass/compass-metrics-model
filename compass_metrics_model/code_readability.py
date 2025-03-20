@@ -170,7 +170,7 @@ def evaluate_code_readability1(url):
         clone_repo(url)
     directory_path = os.path.join(BASEPATH, repo_name)
 
-    ans =[]
+    ans ={"evaluate_code_readability":0,"detail":[]}
     for root, dirs, files in os.walk(directory_path):
         for file in files:
             file_path = os.path.join(root, file)
@@ -198,9 +198,15 @@ def evaluate_code_readability1(url):
                 }
             }
             res.update(code_features)
-            ans.append(res)
-    return ans
+            ans['detail'].append(res)
+            if "avg_line_word_numbers" in res.keys():
+                ans['evaluate_code_readability'] += comment_ratio/0.5*100 + res['avg_line_word_numbers']/100 + res['avg_identifier_length']/10 + res['identifier_word_ratio']*100 + res['keyword_frequency']*100 + res['avg_identifiers_per_line']*100
+            else:
+                ans['evaluate_code_readability'] += comment_ratio/0.5*100 
+    
+    ans['evaluate_code_readability'] = ans['evaluate_code_readability']/len(ans['detail'])
 
+    return ans
 def evaluate_code_readability(repo_list):
     ans = {}
     for i in repo_list:

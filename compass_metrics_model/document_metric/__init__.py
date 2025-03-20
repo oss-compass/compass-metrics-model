@@ -2,9 +2,17 @@
 Descripttion: 
 version: V1.0
 Author: zyx
+Date: 2025-03-04 18:01:38
+LastEditors: zyx
+LastEditTime: 2025-03-20 17:05:02
+'''
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
 Date: 2025-03-04 10:23:24
 LastEditors: zyx
-LastEditTime: 2025-03-18 17:54:08
+LastEditTime: 2025-03-20 17:04:55
 '''
 from doc_quarty import doc_quarty_all
 from doc_chinese_support import doc_chinexe_support_git
@@ -24,32 +32,33 @@ class Industry_Support:
         for repo_url in self.repo_list:
             self.doc_number[repo_url] = get_documentation_links_from_repo(repo_url)
             
-            # self.zh_files[repo_url] = doc_chinexe_support_git(repo_url)
+
     
     def get_doc_quarty(self):
         for repo_url in self.repo_list:
             self.doc_quarty[repo_url] = doc_quarty_all(repo_url)
         get_doc_quarty = self.doc_quarty
-        return get_doc_quarty
+        return get_doc_quarty #{"get_doc_quarty":0, "doc_quarty_details":[]}
 
     
     def get_doc_number(self):
         get_doc_number = self.doc_number
-        return get_doc_number
+        return get_doc_number #{"get_doc_number": document_count+link_count,"folder_document_details": document_details,"links_document_details": links}
 
     
-    def get_zh_files(self):
+    def get_zh_files_number(self):
         for repo_url in self.repo_list:
             self.zh_files[repo_url] = doc_chinexe_support_git(repo_url)
-        get_zh_files = self.zh_files
-        return get_zh_files
+        get_zh_files_number = self.zh_files
+        return get_zh_files_number #{"get_zh_files_number":0, "zh_files_details":[]}
 
     
     def get_org_contribution(self):
+        
         get_org_contribution = {}
-        for repo_url in self.repo_list:
+        for repo_url in self.repo_list: 
             get_org_contribution[repo_url] = organizational_contribution(self.client,repo_url)
-        return get_org_contribution
+        return get_org_contribution #{"get_org_contribution":organization,"personal": persion, "organization": organization}
     
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']

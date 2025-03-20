@@ -34,7 +34,7 @@ def get_vul_levels_metrics(repo_name):
     hits = response['hits']['hits']
     security = [hit['_source']['security'] for hit in hits][0]
 
-    vul_levels = []
+    vul_levels = {"get_vul_levels":0,"vul_levels":{"high": 0, "medium": 0, "low": 0},"vul_level_details":[]}
 
     for pkg in security:
         for i in range(len(pkg["vulnerabilities"])):
@@ -44,7 +44,14 @@ def get_vul_levels_metrics(repo_name):
                 "vulnerabilities": pkg["vulnerabilities"][i]["aliases"],
                 "severity" : pkg["vulnerabilities"][i]["severity"]
             }
-            vul_levels.append(vul_level)
+            vul_levels["vul_level_details"].append(vul_level)
+            if pkg["vulnerabilities"][i]["severity"] == "HIGH":
+                vul_levels["vul_levels"]["high"] += 3
+            elif pkg["vulnerabilities"][i]["severity"] == "MEDIUM":
+                vul_levels["vul_levels"]["medium"] += 2
+            elif pkg["vulnerabilities"][i]["severity"] == "LOW":
+                vul_levels["vul_levels"]["low"] += 1
+            
     return vul_levels
 
 # def get_timeliness_is_high_metrics(repo_name):

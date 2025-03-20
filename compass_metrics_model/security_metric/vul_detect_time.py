@@ -60,7 +60,8 @@ def vul_detect_time(repo_url):
                         # repair_time.append((modified_time-published_time).days)
     if len(repair_time)>0:
         avg_time = sum(repair_time, datetime.timedelta(0)) / len(repair_time)
-        return avg_time.days
+        res = {"get_vul_detect_time": avg_time.days}
+        return res
     else:
         return None
         

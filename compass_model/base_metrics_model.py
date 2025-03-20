@@ -503,14 +503,14 @@ class BaseMetricsModel:
 
             # code_readability
             "code_readability": lambda: evaluate_code_readability(repo_list),
-            # industry
-            "industry_support": lambda: Industry_Support(self.client,repo_list),
+
+            # industry_support
             "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
             "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
-            "zh_files": lambda: Industry_Support(self.client,repo_list).get_zh_files(),
+            "zh_files": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
             "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            
             # security
-            "vulnerability_metrics": lambda: VulnerabilityMetrics(repo_list),
             "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
             "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
             "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
