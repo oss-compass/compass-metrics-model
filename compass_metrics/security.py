@@ -1,13 +1,18 @@
 import requests
 import configparser
+import os
 
 from compass_metrics.db_dsl import get_security_query
 from compass_common.opensearch_utils import get_all_index_data
 from compass_metrics.constants.security_constants import SECURITY_CONFIG
 
+# 获取当前文件所在目录的绝对路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, SECURITY_CONFIG)
+
 # 从 INI 文件中加载配置
 config = configparser.ConfigParser()
-config.read(SECURITY_CONFIG)
+config.read(config_path)
 
 try:
     TPC_SERVICE_API_USERNAME = config['OPEN_CHECKService']['username']
