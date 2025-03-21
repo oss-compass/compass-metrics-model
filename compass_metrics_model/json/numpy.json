@@ -1,5 +1,5 @@
 {
-    "doc_number": 600,
+    "get_doc_number": 601,
     "folder_document_details": [
         {
             "name": ".codecov.yml",
@@ -884,6 +884,10 @@
         {
             "name": "28343.change.rst",
             "path": "numpy/doc/release/upcoming_changes/28343.change.rst"
+        },
+        {
+            "name": "28426.change.rst",
+            "path": "numpy/doc/release/upcoming_changes/28426.change.rst"
         },
         {
             "name": "28436.change.rst",

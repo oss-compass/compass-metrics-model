@@ -505,15 +505,15 @@ class BaseMetricsModel:
             "code_readability": lambda: evaluate_code_readability(repo_list),
 
             # industry_support
-            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
-            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
-            "zh_files": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
-            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            "get_doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
+            "get_doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
+            "get_zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
+            "get_org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
             
-            # security
-            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
-            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
-            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
+            # security2
+            "get_vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "get_vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
+            "get_vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
 
         }
 
