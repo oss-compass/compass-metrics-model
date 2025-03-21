@@ -90,7 +90,7 @@ def license_dep_conflicts_exist(client, contributors_index, repo_list, page_size
         'license_list': licenses,
         'osi_license_list': [license.lower() for license in license_msg.get('osi_license_list', [])],
         'non_osi_licenses': [license.lower() for license in license_msg.get('non_osi_licenses', [])],
-        'license_conflicts_exist': 0 if compatibility_result['status'] == 'incompatible' else 1
+        'license_dep_conflicts_exist': 0 if compatibility_result['status'] == 'incompatible' else 1
     }
     
     return result
@@ -120,7 +120,7 @@ def license_is_weak(client, contributors_index, repo_list, page_size=1):
     result = {
         'license_is_weak': 1 if all_weak else 0,
         'license_list': licenses,
-        'details': '所有许可证都是宽松型或弱著作权许可证' if all_weak else '存在非宽松型许可证'
+        'details': 'All licenses are permissive or weak copyright licenses' if all_weak else 'A non-permissive license exists'
     }
     
     return result
@@ -154,7 +154,7 @@ def license_change_claims_required(client, contributors_index, repo_list, page_s
         'license_change_claims_required': 1 if claims_required else 0,
         'license_list': licenses,
         'licenses_requiring_claims': required_licenses,
-        'details': '需要对软件变更进行声明' if claims_required else '不需要对软件变更进行声明'
+        'details': 'Requires declaration of software changes' if claims_required else 'No declaration of software changes is required'
     }
     
     return result
@@ -187,7 +187,7 @@ def license_commercial_allowed(client, contributors_index, repo_list, page_size=
         'license_commercial_allowed': 1 if all_commercial_allowed else 0,
         'license_list': licenses,
         'non_commercial_licenses': non_commercial_licenses,
-        'details': '所有许可证都允许修改后闭源' if all_commercial_allowed else '存在不允许闭源的许可证'
+        'details': 'All licenses allow closed source modification' if all_commercial_allowed else 'There are licenses that do not allow closed source'
     }
     
     return result
@@ -219,7 +219,7 @@ def check_license_compatibility(licenses):
     if unknown_licenses:
         return {
             'status': 'unknown',
-            'details': f'发现未知的许可证: {unknown_licenses}'
+            'details': f'Discover unknown licenses: {unknown_licenses}'
         }
 
     # 检查许可证兼容性
@@ -232,10 +232,10 @@ def check_license_compatibility(licenses):
     if incompatible_pairs:
         return {
             'status': 'incompatible',
-            'details': f'发现不兼容的许可证组合: {incompatible_pairs}'
+            'details': f'Incompatible license combination found: {incompatible_pairs}'
         }
 
     return {
         'status': 'compatible',
-        'details': '所有许可证都是兼容的'
+        'details': 'All licenses are compatible'
     }
