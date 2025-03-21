@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-02-17 10:25:54
 LastEditors: zyx
-LastEditTime: 2025-03-20 16:39:59
+LastEditTime: 2025-03-21 10:04:27
 '''
 '''
 Descripttion: 
@@ -107,10 +107,10 @@ def doc_chinexe_support_git(url):
 
     zh_files = find_zh_files(json_path,url)
     return zh_files
-    
+
 
 if __name__ == "__main__":
-    # clone_repo("https://github.com/git-lfs/git-lfs")
+    clone_repo("https://github.com/git-lfs/git-lfs")
     print(doc_chinexe_support_git("https://github.com/numpy/numpy"))
     # # url = r"C:\Users\zyx\Desktop\文档数量\folder_document_details.json"
     # # file_path = r"C:\Users\zyx\Desktop\文档数量\test.md"

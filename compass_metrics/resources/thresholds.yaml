@@ -247,3 +247,34 @@ metrics_default_threshold:
     - metric: 'code_readability'
       repo_threshold: 2000
       multiple_threshold: 2000
+      
+  activity:
+    - metric: 'activity_quarterly_contribution'
+      repo_threshold: 1
+      multiple_threshold: 1
+  license:
+    - metric: 'license_conflicts_exist'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'license_dep_conflicts_exist'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'license_is_weak'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'license_change_claims_required'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'license_commercial_allowed'
+      repo_threshold: 1
+      multiple_threshold: 1
+  security:
+    - metric: 'security_vul_stat'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'security_vul_fixed'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'security_scanned'
+      repo_threshold: 1
+      multiple_threshold: 1

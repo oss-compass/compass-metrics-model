@@ -206,6 +206,7 @@ def evaluate_code_readability1(url):
     
     ans['evaluate_code_readability'] = ans['evaluate_code_readability']/len(ans['detail'])
 
+
     return ans
 def evaluate_code_readability(repo_list):
     ans = {}
