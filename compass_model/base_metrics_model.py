@@ -90,6 +90,9 @@ from compass_metrics.pr_metrics import (code_review_count,
                                         close_pr_ratio_year,
                                         code_review_count_year
                                         )
+from compass_metrics.activity import (activity_quarterly_contribution)
+from compass_metrics.security import (security_vul_stat, security_vul_fixed, security_scanned)
+from compass_metrics.license import (license_conflicts_exist, license_dep_conflicts_exist, license_is_weak, license_change_claims_required, license_commercial_allowed)
 from typing import Dict, Any
 
 
@@ -501,6 +504,7 @@ class BaseMetricsModel:
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
 
 
+
             # code_readability
             "code_readability": lambda: evaluate_code_readability(repo_list),
 
@@ -515,6 +519,7 @@ class BaseMetricsModel:
             "get_vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
             "get_vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
             
+
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license
