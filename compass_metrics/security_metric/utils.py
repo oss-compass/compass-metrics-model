@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-04 17:44:43
+LastEditTime: 2025-03-24 17:18:09
 '''
 import json
 import os
@@ -105,4 +105,5 @@ if __name__ == '__main__':
     # print(load_json('github_readme.json'))
     # print(load_json('gitee_readme.json'))
     # print(get_all_github_files('python/cpython'))
-    print(clone_repo('https://github.com/numpy/numpy'))
+    # print(clone_repo('https://github.com/numpy/numpy'))
+    print(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

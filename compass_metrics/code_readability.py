@@ -108,15 +108,18 @@ def is_modular(file_path):
         
         for line in lines:
             stripped_line = line.strip()
-            if stripped_line.startswith(function_syntax):
-                function_count += 1
-            if stripped_line.startswith(class_syntax):
-                class_count += 1
             if language in ['c', 'cpp']:
                 if function_syntax.search(stripped_line):
                     function_count += 1
                 if class_syntax in stripped_line:
                     class_count += 1
+                continue
+
+            if stripped_line.startswith(function_syntax):
+                function_count += 1
+            if stripped_line.startswith(class_syntax):
+                class_count += 1
+            
         
         return function_count, class_count
 
@@ -204,7 +207,7 @@ def evaluate_code_readability1(url):
             else:
                 ans['evaluate_code_readability'] += comment_ratio/0.5*100 
     
-    ans['evaluate_code_readability'] = ans['evaluate_code_readability']/len(ans['detail'])
+    # ans['evaluate_code_readability'] = ans['evaluate_code_readability']/len(ans['detail'])
 
 
     return ans
@@ -213,11 +216,25 @@ def evaluate_code_readability(repo_list):
     for i in repo_list:
         ans[i] = evaluate_code_readability1(i)
     evaluate_code_readability = ans
-    return evaluate_code_readability
+
+    ans = {
+        "evaluate_code_readability": 0,
+        "detail": {}
+    }
+
+    for i in evaluate_code_readability:
+        ans["evaluate_code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
+        if i not in ans["detail"]:
+            ans["detail"][i] = {}
+        ans["detail"][i] = evaluate_code_readability[i]
+
+
+
+    return ans
 
 if __name__ == "__main__":
-    file_path = [r"https://github.com/oss-compass/compass-metrics-model"]
+    file_path = ['https://github.com/numpy/numpy']
     # print(os.path.basename(file_path))
 
     # print(evaluate_code_readability(file_path))
-    save_json(evaluate_code_readability(file_path), f'{os.path.basename(file_path)}.json')
+    save_json(evaluate_code_readability(file_path), f'{os.path.basename(file_path[0])}.json')

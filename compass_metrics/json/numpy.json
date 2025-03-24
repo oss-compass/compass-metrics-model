@@ -1,5 +1,5 @@
 {
-    "get_doc_number": 601,
+    "doc_number": 601,
     "folder_document_details": [
         {
             "name": ".codecov.yml",

@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 11:16:48
 LastEditors: zyx
-LastEditTime: 2025-03-20 17:01:05
+LastEditTime: 2025-03-24 15:58:13
 '''
 from vul_detect_time import vul_detect_time
 from vulnerability_feedback_channels import vulnerablity_feedback_channels
@@ -23,20 +23,56 @@ class VulnerabilityMetrics:
         for repo_url in self.repo_list:
             self.vul_detect_time[repo_url] = vul_detect_time(repo_url)
         get_vul_detect_time = self.vul_detect_time
-        return get_vul_detect_time #{"get_vul_detect_time": avg_time.days}
+
+        ans = {
+            "vul_detect_time": 0,
+            "vul_detect_time_details": {}
+        }
+
+        for key,avg_time in get_vul_detect_time.items():
+            ans["vul_detect_time"] += avg_time.days / len(self.repo_list)
+            if ans["vul_detect_time_details"].get(key) is None:
+                ans["vul_detect_time_details"][key] = {}
+            ans["vul_detect_time_details"][key]["vul_detect_time"] = avg_time.days
+
+        return ans #{"get_vul_detect_time": avg_time.days}
 
     
     def get_vulnerablity_feedback_channels(self):
         for repo_url in self.repo_list:
             self.vulnerablity_feedback_channels[repo_url] = vulnerablity_feedback_channels(repo_url)
         get_vulnerablity_feedback_channels = self.vulnerablity_feedback_channels
-        return get_vulnerablity_feedback_channels #{"get_vulnerablity_feedback_channels":0, "vulnerablity_feedback_channels":[]}
+        ans = {
+            "vulnerablity_feedback_channels": 0,
+            "vulnerablity_feedback_channels_details": {}
+        }
+
+        for key,feedback in get_vulnerablity_feedback_channels.items():
+            ans["vulnerablity_feedback_channels"] += feedback["vulnerablity_feedback_channels"] / len(self.repo_list)
+            if ans["vulnerablity_feedback_channels_details"].get(key) is None:
+                ans["vulnerablity_feedback_channels_details"][key] = {}
+            ans["vulnerablity_feedback_channels_details"][key]["vulnerablity_feedback_channels"] = feedback["vulnerablity_feedback_channels"]
+            ans["vulnerablity_feedback_channels_details"][key]["vulnerablity_feedback_channels_details"] = feedback["vulnerablity_feedback_channels_details"]
+            
+        return get_vulnerablity_feedback_channels #{"get_vulnerablity_feedback_channels":0, "vulnerablity_feedback_channels_details":[]}
 
     
     def get_vul_levels(self):
         for repo_url in self.repo_list:
             self.vul_levels_metrics[repo_url] = get_vul_levels_metrics(repo_url)
         get_vul_levels = self.vul_levels_metrics
+
+        ans = {
+            "vul_levels": 0,
+            "vul_level_details": {}
+        }
+
+        for key,vul_level in get_vul_levels.items():
+            ans["vul_levels"] += vul_level["vul_levels"] / len(self.repo_list)
+            if ans["vul_level_details"].get(key) is None:
+                ans["vul_level_details"][key] = {}
+            ans["vul_level_details"][key]["vul_levels"] = vul_level["vul_levels"]
+            ans["vul_level_details"][key]["vul_level_details"] = vul_level["vul_level_details"]
         return get_vul_levels #{"get_vul_levels":0,"vul_levels":{"high": 0, "medium": 0, "low": 0},"vul_level_details":[]}
 
     

@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-24 10:29:32
+LastEditTime: 2025-03-24 15:52:49
 '''
 '''
 Descripttion: 
@@ -38,19 +38,43 @@ class Industry_Support:
         for repo_url in self.repo_list:
             self.doc_quarty[repo_url] = doc_quarty_all(repo_url)
         get_doc_quarty = self.doc_quarty
-        return get_doc_quarty #{"get_doc_quarty":0, "doc_quarty_details":[]}
+
+        ans = {"doc_quarty":0, "doc_quarty_details":{}}
+        for key,doc_quarty in get_doc_quarty.items():
+            ans["doc_quarty"] += doc_quarty["doc_quarty"] / len(self.repo_list)
+            if ans["doc_quarty_details"].get(key) is None:
+                ans["doc_quarty_details"][key] = {}
+            ans["doc_quarty_details"][key]["doc_quarty_details"] = doc_quarty["doc_quarty_details"]
+
+        return ans # {"doc_quarty":0, "doc_quarty_details":{}}
 
     
     def get_doc_number(self):
         get_doc_number = self.doc_number
-        return get_doc_number #{"get_doc_number": document_count+link_count,"folder_document_details": document_details,"links_document_details": links}
+        ans = {"doc_number":0, "folder_document_details":{}}
+        for key,doc_number in get_doc_number.items():
+            ans["doc_number"] += doc_number["doc_number"] / len(self.repo_list)
+            if ans["folder_document_details"].get(key) is None:
+                ans["folder_document_details"][key] = {}
+            ans["folder_document_details"][key]["folder_document_details"] = doc_number["folder_document_details"]
+            ans["folder_document_details"][key]["links_document_details"] = doc_number["links_document_details"]
+        return ans #{"doc_number": document_count+link_count,"folder_document_details": document_details,"links_document_details": links}
 
     
     def get_zh_files_number(self):
         for repo_url in self.repo_list:
             self.zh_files[repo_url] = doc_chinexe_support_git(repo_url)
         get_zh_files_number = self.zh_files
-        return get_zh_files_number #{"get_zh_files_number":0, "zh_files_details":[]}
+
+        ans = {"zh_files_number":0, "zh_files_details":{}}
+        for key,zh_files in get_zh_files_number.items():
+            ans["zh_files_number"] += zh_files["zh_files_number"] / len(self.repo_list)
+            if ans["zh_files_details"].get(key) is None:
+                ans["zh_files_details"][key] = {}
+            ans["zh_files_details"][key]["zh_files_details"] = zh_files["zh_files_details"]
+
+        
+        return ans #{"zh_files_number":0, "zh_files_details":{repo_url:zh_files_details}}
 
     
     def get_org_contribution(self):
@@ -58,7 +82,12 @@ class Industry_Support:
         get_org_contribution = {}
         for repo_url in self.repo_list: 
             get_org_contribution[repo_url] = organizational_contribution(self.client,repo_url)
-        return get_org_contribution #{"get_org_contribution":organization,"personal": persion, "organization": organization}
+
+        ans = {"org_contribution":0, "org_contribution_details":{}}
+        for key,org_contribution in get_org_contribution.items():
+            ans["org_contribution"] += org_contribution["org_contribution"] / len(self.repo_list)
+            ans["org_contribution_details"][key] = {"personal": org_contribution["persion"], "organization": org_contribution["organization"]}
+        return ans #{"org_contribution":organization,"personal": persion, "organization": organization}
     
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']

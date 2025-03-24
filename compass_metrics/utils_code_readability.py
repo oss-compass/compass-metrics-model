@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-04 17:44:43
+LastEditTime: 2025-03-24 17:19:02
 '''
 import json
 import os
@@ -12,7 +12,7 @@ import sys
 import requests
 import tqdm
 import markdown
-NOW_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NOW_PATH = os.path.dirname(os.path.abspath(__file__))
 TMP_PATH = os.path.join(NOW_PATH,'tmp')
 JSON_BASEPATH = os.path.join(NOW_PATH,'json')
 GITEE_TOKEN = ""
