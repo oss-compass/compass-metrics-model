@@ -93,9 +93,9 @@ from compass_metrics.pr_metrics import (code_review_count,
 from typing import Dict, Any
 
 
-from compass_metrics_model.code_readability import evaluate_code_readability
-from compass_metrics_model.document_metric import Industry_Support
-from compass_metrics_model.security_metric import VulnerabilityMetrics
+from compass_metrics.code_readability import evaluate_code_readability
+from compass_metrics.document_metric import Industry_Support
+from compass_metrics.security_metric import VulnerabilityMetrics
 
 
 logger = logging.getLogger(__name__)
@@ -505,16 +505,16 @@ class BaseMetricsModel:
             "code_readability": lambda: evaluate_code_readability(repo_list),
 
             # industry_support
-            "get_doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
-            "get_doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
-            "get_zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
-            "get_org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
+            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
+            "zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
+            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
             
             # security2
-            "get_vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
-            "get_vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
-            "get_vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
-            
+            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
+
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license

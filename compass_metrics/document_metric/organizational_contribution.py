@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-20 16:35:05
+LastEditTime: 2025-03-24 10:31:19
 '''
 from datetime import timedelta
 from itertools import groupby
@@ -49,7 +49,7 @@ def organizational_contribution(client,repo_name):
             if contribution["contribution_type"] == "code_author" and hit['_source']['ecological_type']=="organization participant":
                 organization += 1
     
-    return {"get_org_contribution":organization,"personal": persion, "organization": organization}
+    return {"org_contribution":organization,"personal": persion, "organization": organization}
 
     
 def Organizational_contribution(opensearch, date, repo_list):
@@ -62,7 +62,7 @@ def Organizational_contribution(opensearch, date, repo_list):
     organization = org_contributor_count(client=client, contributors_index="github-contributors_org_repo", date=date, repo_list = repo_list)["org_contributor_count"]
     contributor = contributor_count(client=client, contributors_index="github-contributors_org_repo", date=date, repo_list = repo_list)["contributor_count"]
     personal = contributor - organization
-    return {"get_org_contribution":organization,"organization": organization, "personal": personal}
+    return {"org_contribution":organization,"organization": organization, "personal": personal}
 
 if __name__ == '__main__':
     repo_name = "https://github.com/mathjax/MathJax"
