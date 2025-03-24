@@ -219,14 +219,20 @@ def evaluate_code_readability(repo_list):
 
     ans = {
         "evaluate_code_readability": 0,
-        "detail": {}
+        "evaluate_code_readability_detail": []
     }
 
     for i in evaluate_code_readability:
         ans["evaluate_code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
-        if i not in ans["detail"]:
-            ans["detail"][i] = {}
-        ans["detail"][i] = evaluate_code_readability[i]
+        ans["evaluate_code_readability_detail"].append(
+            {
+                "repo": i,
+                "evaluate_code_readability": evaluate_code_readability[i]["detail"]
+            }
+        )
+        # if i not in ans["detail"]:
+        #     ans["detail"][i] = {}
+        # ans["detail"][i] = evaluate_code_readability[i]
 
 
 
