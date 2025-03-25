@@ -517,7 +517,7 @@ class BaseMetricsModel:
             # security2
             "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
             "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
-            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
 
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),

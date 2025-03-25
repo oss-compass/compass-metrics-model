@@ -1,16 +1,16 @@
-from datetime import timedelta
-from itertools import groupby
-import pandas as pd
-from dateutil.relativedelta import relativedelta
-import datetime
-from compass_metrics.contributor_metrics import contributor_count,org_contributor_count
-from compass_common.opensearch_utils import get_client
-from opensearchpy import OpenSearch
+# from datetime import timedelta
+# from itertools import groupby
+# import pandas as pd
+# from dateutil.relativedelta import relativedelta
+# import datetime
+# from compass_metrics.contributor_metrics import contributor_count,org_contributor_count
+# from compass_common.opensearch_utils import get_client
+# from opensearchpy import OpenSearch
 import json
-CLIENT = "http://admin:admin@159.138.38.244:9200"
-def get_vul_levels_metrics(repo_name):
+CLIENT = ""
+def get_vul_levels_metrics(repo_name,client):
     '''get security metrics(security level and vulnerablity published time) for a given repo'''
-    client = OpenSearch(CLIENT)
+    # client = OpenSearch(CLIENT)
 
     query = {
         "size": 500,
