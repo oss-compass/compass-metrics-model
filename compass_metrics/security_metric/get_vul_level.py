@@ -1,11 +1,11 @@
-# from datetime import timedelta
-# from itertools import groupby
-# import pandas as pd
-# from dateutil.relativedelta import relativedelta
-# import datetime
-# from compass_metrics.contributor_metrics import contributor_count,org_contributor_count
-# from compass_common.opensearch_utils import get_client
-# from opensearchpy import OpenSearch
+from datetime import timedelta
+from itertools import groupby
+import pandas as pd
+from dateutil.relativedelta import relativedelta
+import datetime
+from compass_metrics.contributor_metrics import contributor_count,org_contributor_count
+from compass_common.opensearch_utils import get_client
+from opensearchpy import OpenSearch
 import json
 CLIENT = ""
 def get_vul_levels_metrics(repo_name,client):

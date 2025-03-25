@@ -252,7 +252,7 @@ metrics_default_threshold:
   activity:
     - metric: 'activity_quarterly_contribution'
       repo_threshold: 1
-      multiple_threshold: 1WW
+      multiple_threshold: 1
   license:
     - metric: 'license_conflicts_exist'
       repo_threshold: 1
