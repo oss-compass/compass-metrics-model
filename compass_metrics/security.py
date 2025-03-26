@@ -84,15 +84,11 @@ def security_vul_fixed(client, contributors_index, repo_list, page_size):
     security_results = get_security_msg(client, contributors_index, repo_list, page_size, False)
 
     # 初始化结果
-    class VulnerabilityFixStatus:
-        def __init__(self):
-            self.fixed = 0
-            self.unfixed = 0
-
-    vulStatus = VulnerabilityFixStatus()
-
+    fixed = 0
+    unfixed = 0
     result = {
-        'security_vul_fixed': vulStatus,
+        'security_vul_fixed': fixed,
+        'security_vul_unfixed': unfixed,
         'info': None
     }
 
@@ -103,7 +99,7 @@ def security_vul_fixed(client, contributors_index, repo_list, page_size):
 
     # 如果只有一条扫描记录，则所有漏洞都算作未修复
     if len(security_results) == 1:
-        vulStatus.unfixed = security_results[0]['vulnerability_count']
+        result['security_vul_unfixed'] = security_results[0]['vulnerability_count']
         result['info'] = "Only one scan record"
         return result
 
@@ -113,9 +109,9 @@ def security_vul_fixed(client, contributors_index, repo_list, page_size):
 
     # 计算修复和未修复的漏洞数量
     # 已修复 = 最早扫描中有但最新扫描中没有的CVE数量
-    vulStatus.fixed = abs(latest - earliest)
+    result['security_vul_fixed'] = abs(latest - earliest)
     # 未修复 = 最新扫描中的CVE数量
-    vulStatus.unfixed = len(latest)
+    result['security_vul_unfixed'] = latest
 
     return result
 
