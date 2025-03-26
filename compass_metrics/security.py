@@ -21,7 +21,7 @@ TPC_SERVICE_SERVICE_CALLBACK_URL = config['OPEN_CHECKService']['service_callback
 TPC_SERVICE_SERVICE_CALLBACK_URL_TEST = config['OPEN_CHECKService']['service_callback_url_test']
 
 
-def get_security_msg(client, contributors_index, date, repo_list, page_size, flag=True):
+def get_security_msg(client, contributors_index, repo_list, page_size, flag=True):
     """获取仓库的安全漏洞信息。
 
     Args:
@@ -42,7 +42,7 @@ def get_security_msg(client, contributors_index, date, repo_list, page_size, fla
             - scan_date: 扫描时间
     """
     # 修改查询以按时间排序
-    query = get_security_query(repo_list, page_size, date)
+    query = get_security_query(repo_list, page_size)
     security_msg = get_all_index_data(client, index=contributors_index, body=query)
 
     if not security_msg:
@@ -68,9 +68,9 @@ def get_security_msg(client, contributors_index, date, repo_list, page_size, fla
 
     return results
 
-def security_vul_stat(client, contributors_index, date, repo_list, page_size = 500):
+def security_vul_stat(client, contributors_index, repo_list, page_size):
     # 获取开源软件的安全漏洞数
-    security_results = get_security_msg(client, contributors_index, date, repo_list, page_size)
+    security_results = get_security_msg(client, contributors_index, repo_list, page_size)
     if not security_results:
         return {'security_vul_stat': 0, 'info': 'There is no data on security breaches'}
     result = {
@@ -78,17 +78,21 @@ def security_vul_stat(client, contributors_index, date, repo_list, page_size = 5
     }
     return result
 
-def security_vul_fixed(client, contributors_index, date, repo_list, page_size = 500):
+def security_vul_fixed(client, contributors_index, repo_list, page_size):
     # 评估开源软件已暴露安全漏洞的修复情况。
     # 获取最早和最新的扫描结果
-    security_results = get_security_msg(client, contributors_index, date, repo_list, page_size, False)
+    security_results = get_security_msg(client, contributors_index, repo_list, page_size, False)
 
     # 初始化结果
-    fixed = 0
-    unfixed = 0
+    class VulnerabilityFixStatus:
+        def __init__(self):
+            self.fixed = 0
+            self.unfixed = 0
+
+    vulStatus = VulnerabilityFixStatus()
+
     result = {
-        'security_vul_fixed': fixed,
-        'security_vul_unfixed': unfixed,
+        'security_vul_fixed': vulStatus,
         'info': None
     }
 
@@ -99,7 +103,7 @@ def security_vul_fixed(client, contributors_index, date, repo_list, page_size = 
 
     # 如果只有一条扫描记录，则所有漏洞都算作未修复
     if len(security_results) == 1:
-        result['security_vul_unfixed'] = security_results[0]['vulnerability_count']
+        vulStatus.unfixed = security_results[0]['vulnerability_count']
         result['info'] = "Only one scan record"
         return result
 
@@ -109,16 +113,16 @@ def security_vul_fixed(client, contributors_index, date, repo_list, page_size = 
 
     # 计算修复和未修复的漏洞数量
     # 已修复 = 最早扫描中有但最新扫描中没有的CVE数量
-    result['security_vul_fixed'] = abs(latest - earliest)
+    vulStatus.fixed = abs(latest - earliest)
     # 未修复 = 最新扫描中的CVE数量
-    result['security_vul_unfixed'] = latest
+    vulStatus.unfixed = len(latest)
 
     return result
 
-def security_scanned(client, contributors_index, date, repo_list, page_size = 500):
+def security_scanned(client, contributors_index, repo_list, page_size):
     # 返回是否有扫描，并且返回扫描工具
     # 获取数据
-    security_results = get_security_msg(client, contributors_index, date, repo_list, page_size)
+    security_results = get_security_msg(client, contributors_index, repo_list, page_size)
 
     # 初始化结果
     result = {
