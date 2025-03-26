@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-26 11:21:32
+LastEditTime: 2025-03-26 16:46:56
 '''
 '''
 Descripttion: 
@@ -117,6 +117,7 @@ class Industry_Support:
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']
     dm = Industry_Support(123,a)
-    print(dm.get_doc_quarty())
-    print(dm.get_doc_number())
+    # print(dm.get_doc_quarty())
+    # print(dm.get_doc_number())
+    print(dm.get_zh_files_number())
     # print(dm.get_zh_files())
