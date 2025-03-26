@@ -7,7 +7,7 @@ LastEditors: zyx
 LastEditTime: 2025-03-24 15:46:06
 '''
 import os
-from utils import save_json,clone_repo,TMP_PATH,JSON_BASEPATH
+from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_BASEPATH
 import re
 
 def count_documents_from_folder(path, extensions=None)->tuple:

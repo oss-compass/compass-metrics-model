@@ -8,8 +8,8 @@ LastEditTime: 2025-03-24 10:29:58
 '''
 import re
 import os
-from utils import TMP_PATH,JSON_BASEPATH,clone_repo
-from utils import save_json,load_json
+from compass_metrics.document_metric.utils import TMP_PATH,JSON_BASEPATH,clone_repo
+from compass_metrics.document_metric.utils import save_json,load_json
 
 BASEPATH = TMP_PATH
 

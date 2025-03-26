@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-02-17 10:25:54
 LastEditors: zyx
-LastEditTime: 2025-03-21 10:04:27
+LastEditTime: 2025-03-26 10:32:04
 '''
 '''
 Descripttion: 
@@ -19,8 +19,8 @@ import re
 import json
 import requests
 from git import Repo
-from utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_BASEPATH
-from utils import load_json,check_github_gitee,clone_repo,save_json
+from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_BASEPATH
+from compass_metrics.document_metric.utils import load_json,check_github_gitee,clone_repo,save_json
 import unicodedata
 GITHUB_HEADERS = {'Authorization': f'token {GITHUB_TOKEN}'}
 GITEE_HEADERS = {'Authorization': f'token {GITEE_TOKEN}'}

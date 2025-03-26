@@ -1,5 +1,5 @@
 import requests
-from utils import get_github_token,get_gitee_token
+from compass_metrics.security_metric.utils import get_github_token,get_gitee_token
 import datetime
 def get_github_versions(repo_url):
     api_url = repo_url.replace("github.com", "api.github.com/repos") + "/tags"

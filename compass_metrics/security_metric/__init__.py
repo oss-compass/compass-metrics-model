@@ -4,12 +4,12 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 11:16:48
 LastEditors: zyx
-LastEditTime: 2025-03-25 11:16:39
+LastEditTime: 2025-03-26 11:18:56
 '''
-from vul_detect_time import vul_detect_time
-from vulnerability_feedback_channels import vulnerablity_feedback_channels
-from get_vul_level import get_vul_levels_metrics
-from utils import get_github_token,get_gitee_token,save_json
+from compass_metrics.security_metric.vul_detect_time import vul_detect_time
+from compass_metrics.security_metric.vulnerability_feedback_channels import vulnerablity_feedback_channels
+from compass_metrics.security_metric.get_vul_level import get_vul_levels_metrics
+from compass_metrics.security_metric.utils import get_github_token,get_gitee_token,save_json
 
 class VulnerabilityMetrics:
     def __init__(self, repo_list):

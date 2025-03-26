@@ -1,9 +1,9 @@
 import os
 
 import re
-from utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
+from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
 
-from utils_code_readability import save_json,JSON_BASEPATH,TMP_PATH
+from compass_metrics.utils_code_readability import save_json,JSON_BASEPATH,TMP_PATH
 BASEPATH = TMP_PATH
 
 # Define comment syntax for different languages

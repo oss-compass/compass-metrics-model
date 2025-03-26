@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-24 21:28:04
+LastEditTime: 2025-03-26 11:21:32
 '''
 '''
 Descripttion: 
@@ -14,10 +14,10 @@ Date: 2025-03-04 10:23:24
 LastEditors: zyx
 LastEditTime: 2025-03-20 17:04:55
 '''
-from doc_quarty import doc_quarty_all
-from doc_chinese_support import doc_chinexe_support_git
-from doc_num import get_documentation_links_from_repo
-from organizational_contribution import organizational_contribution
+from compass_metrics.document_metric.doc_quarty import doc_quarty_all
+from compass_metrics.document_metric.doc_chinese_support import doc_chinexe_support_git
+from compass_metrics.document_metric.doc_num import get_documentation_links_from_repo
+from compass_metrics.document_metric.organizational_contribution import organizational_contribution
 
 
 class Industry_Support:
