@@ -95,6 +95,12 @@ from compass_metrics.security import (security_vul_stat, security_vul_fixed, sec
 from compass_metrics.license import (license_conflicts_exist, license_dep_conflicts_exist, license_is_weak, license_change_claims_required, license_commercial_allowed)
 from typing import Dict, Any
 
+
+from compass_metrics.code_readability import evaluate_code_readability
+from compass_metrics.document_metric import Industry_Support
+from compass_metrics.security_metric import VulnerabilityMetrics
+
+
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
@@ -496,7 +502,23 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
-          
+
+
+
+            # code_readability
+            "code_readability": lambda: evaluate_code_readability(repo_list),
+
+            # industry_support
+            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
+            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
+            "zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
+            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            
+            # security2
+            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
+
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license
@@ -509,7 +531,11 @@ class BaseMetricsModel:
             "security_vul_stat": lambda: security_vul_stat(self.client, self.contributors_index, date, repo_list),
             "security_vul_fixed": lambda: security_vul_fixed(self.client, self.contributors_index, date, repo_list),
             "security_scanned": lambda: security_scanned(self.client, self.contributors_index, date, repo_list),
+
         }
+
+        
+        
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field in metrics_switch:
