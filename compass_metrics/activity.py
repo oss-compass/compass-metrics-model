@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 from dateutil.relativedelta import relativedelta
 from typing import List
-from git_metrics import commit_count_quarterly
+from .git_metrics import commit_count_quarterly
 
 
 def activity_quarterly_contribution(client, contributors_index: str, repo_list: List[str], date: datetime) -> dict:
@@ -20,10 +20,7 @@ def activity_quarterly_contribution(client, contributors_index: str, repo_list: 
             - activity_quarterly_contribution_bot: 机器人贡献量
             - activity_quarterly_contribution_without_bot: 非机器人贡献量
     """
-    result = []
-    result_bot = []
-    result_without_bot = []
-
+    
     # 计算季度的起止时间
     quarter_end = date
     quarter_start = quarter_end - relativedelta(months=3) + timedelta(days=1)
@@ -36,9 +33,9 @@ def activity_quarterly_contribution(client, contributors_index: str, repo_list: 
         from_date=quarter_start
     )
 
-    result.append(quarter_data['commit_count_quarterly'])
-    result_bot.append(quarter_data['commit_count_quarterly_bot'])
-    result_without_bot.append(quarter_data['commit_count_quarterly_without_bot'])
+    result = quarter_data['commit_count_quarterly']
+    result_bot = quarter_data['commit_count_quarterly_bot']
+    result_without_bot = quarter_data['commit_count_quarterly_without_bot']
 
     return {
         'activity_quarterly_contribution': result,
