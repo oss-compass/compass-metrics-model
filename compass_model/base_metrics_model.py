@@ -316,7 +316,7 @@ class BaseMetricsModel:
 
     def metrics_model_metrics(self, elastic_url):
         """ Execute model calculation tasks """
-        self.client = "123"#get_client(elastic_url)
+        self.client = get_client(elastic_url)
         if self.level == "repo":
             repo_list = get_repo_list(self.json_file, self.source)
             if len(repo_list) > 0:
@@ -346,7 +346,7 @@ class BaseMetricsModel:
     def metrics_model_enrich(self, repo_list, label, level, type=None):
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
         last_metrics_data = {}
-        # add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
         date_list = get_date_list(self.from_date, self.end_date)
         item_datas = []
         for date in date_list:
