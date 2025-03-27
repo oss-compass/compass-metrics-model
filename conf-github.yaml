@@ -22,7 +22,7 @@ params:
     'community': 'pytorch',
     'company': 'Facebook',
     'source': 'github',
-    'json_file': '/root/lsb_metric_model_lab/compass-metrics-model/projects-github-pytorch.json',
+    'json_file': '',
     'contributors_org_index':'github-contributors_org',
     'organizations_index': 'organizations',
     'bots_index': 'bots'

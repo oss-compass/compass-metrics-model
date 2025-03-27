@@ -1,19 +1,4 @@
-'''
-Descripttion: 
-version: V1.0
-Author: zyx
-Date: 2025-03-04 18:01:38
-LastEditors: zyx
-LastEditTime: 2025-03-26 11:21:32
-'''
-'''
-Descripttion: 
-version: V1.0
-Author: zyx
-Date: 2025-03-04 10:23:24
-LastEditors: zyx
-LastEditTime: 2025-03-20 17:04:55
-'''
+
 from compass_metrics.document_metric.doc_quarty import doc_quarty_all
 from compass_metrics.document_metric.doc_chinese_support import doc_chinexe_support_git
 from compass_metrics.document_metric.doc_num import get_documentation_links_from_repo
@@ -80,7 +65,7 @@ class Industry_Support:
 
         ans = {"zh_files_number":0, "zh_files_details":[]}
         for key,zh_files in get_zh_files_number.items():
-            ans["zh_files_number"] += zh_files["zh_files_number"] / len(self.repo_list)
+            ans["zh_files_number"] += int(zh_files["zh_files_number"] / len(self.repo_list))
 
             ans["zh_files_details"].append(
                 {
@@ -117,6 +102,7 @@ class Industry_Support:
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']
     dm = Industry_Support(123,a)
+
     print(dm.get_doc_quarty())
     print(dm.get_doc_number())
     # print(dm.get_zh_files())
