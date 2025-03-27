@@ -12,6 +12,7 @@ import re
 import dateutil.parser
 import dateutil.rrule
 import dateutil.tz
+from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 
