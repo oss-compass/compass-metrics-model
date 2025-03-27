@@ -12,7 +12,6 @@ import re
 import dateutil.parser
 import dateutil.rrule
 import dateutil.tz
-from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 
@@ -231,26 +230,4 @@ def get_last_three_years_dates():
     current_month_first = datetime.datetime(current_year, current_month, 1)
     dates.append(current_month_first)
     return dates
-
-def get_last_four_quarters_dates():
-    '''获取最近四个季度的最后一天，包括当前季度'''
-    current_date = datetime.datetime.now()
-    quarter_end_dates = []
-    current_month = current_date.month
-    if current_month in [1, 2, 3]:
-        current_quarter_end = datetime.datetime(current_date.year, 3, 31)
-    elif current_month in [4, 5, 6]:
-        current_quarter_end = datetime.datetime(current_date.year, 6, 30)
-    elif current_month in [7, 8, 9]:
-        current_quarter_end = datetime.datetime(current_date.year, 9, 30)
-    else:
-        current_quarter_end = datetime.datetime(current_date.year, 12, 31)
-    quarter_end_dates.append(current_quarter_end)
-
-    # 添加之前三个季度的最后一天
-    for _ in range(3):
-        current_quarter_end -= relativedelta(months=3)
-        quarter_end_dates.append(current_quarter_end)
-
-    return quarter_end_dates
 

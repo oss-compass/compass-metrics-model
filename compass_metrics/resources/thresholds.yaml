@@ -220,35 +220,6 @@ metrics_default_threshold:
     - metric: 'org_contributor_count_year'
       repo_threshold: 2000
       multiple_threshold: 3000
-
-  Industry_support:
-    - metric: 'doc_quarty'
-      repo_threshold: 2000
-      multiple_threshold: 3000
-    - metric: 'doc_number'
-      repo_threshold: 200
-      multiple_threshold: 200
-    - metric: 'zh_files_number'
-      repo_threshold: 200
-      multiple_threshold: 200
-    - metric: 'org_contribution'
-      repo_threshold: 2000
-      multiple_threshold: 2000
-  security2:
-    - metric: 'vul_dectect_time'
-      repo_threshold: 0
-      multiple_threshold: 0
-    - metric: 'vulnerablity_feedback_channels'
-      repo_threshold: 1
-      multiple_threshold: 1
-    - metric: 'vul_levels'
-      repo_threshold: 0
-      multiple_threshold: 0
-  code_readability:
-    - metric: 'code_readability'
-      repo_threshold: 2000
-      multiple_threshold: 2000
-
   activity:
     - metric: 'activity_quarterly_contribution'
       repo_threshold: 1
@@ -279,4 +250,3 @@ metrics_default_threshold:
     - metric: 'security_scanned'
       repo_threshold: 1
       multiple_threshold: 1
-

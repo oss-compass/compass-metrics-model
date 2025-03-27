@@ -541,8 +541,8 @@ def get_base_index_mapping():
         }
     }
     return mapping
-def get_license_query(repo_list, page_size, date):
-    """ Query statement to get the license information including license_list, osi_license_list, and non_osi_licenses. """
+def get_license_query(repo_list, page_size):
+    """Query statement to get the license information including license_list, osi_license_list, and non_osi_licenses."""
     query = {
         "size": page_size,
         "sort": [
@@ -564,13 +564,6 @@ def get_license_query(repo_list, page_size, date):
                         "exists": {
                             "field": "license.license_list"
                         }
-                    },
-                    {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "lte": date  # grimoire_creation_date小于或等于指定日期
-                            }
-                        }
                     }
                 ]
             }
@@ -581,11 +574,10 @@ def get_license_query(repo_list, page_size, date):
             "license.non_osi_licenses"
         ]
     }
-
+    
     return query
 
-
-def get_security_query(repo_list, page_size, date):
+def get_security_query(repo_list, page_size):
     query = {
         "size": page_size,
         "sort": [
@@ -607,13 +599,6 @@ def get_security_query(repo_list, page_size, date):
                         "exists": {
                             "field": "security"  # 确保security字段存在
                         }
-                    },
-                    {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "lte": date  # grimoire_creation_date小于或等于指定日期
-                            }
-                        }
                     }
                 ]
             }
@@ -623,4 +608,5 @@ def get_security_query(repo_list, page_size, date):
             "grimoire_creation_date"  # 返回时间字段用于排序
         ]
     }
+    
     return query
