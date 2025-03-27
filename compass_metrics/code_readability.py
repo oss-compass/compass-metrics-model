@@ -218,13 +218,13 @@ def evaluate_code_readability(repo_list):
     evaluate_code_readability = ans
 
     ans = {
-        "evaluate_code_readability": 0,
-        "evaluate_code_readability_detail": []
+        "code_readability": 0,
+        "code_readability_detail": []
     }
 
     for i in evaluate_code_readability:
-        ans["evaluate_code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
-        ans["evaluate_code_readability_detail"].append(
+        ans["code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
+        ans["code_readability_detail"].append(
             {
                 "repo": i,
                 "evaluate_code_readability": evaluate_code_readability[i]["detail"]

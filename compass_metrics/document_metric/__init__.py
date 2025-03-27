@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 18:01:38
 LastEditors: zyx
-LastEditTime: 2025-03-26 16:46:56
+LastEditTime: 2025-03-26 17:04:36
 '''
 '''
 Descripttion: 
@@ -80,7 +80,7 @@ class Industry_Support:
 
         ans = {"zh_files_number":0, "zh_files_details":[]}
         for key,zh_files in get_zh_files_number.items():
-            ans["zh_files_number"] += zh_files["zh_files_number"] / len(self.repo_list)
+            ans["zh_files_number"] += int(zh_files["zh_files_number"] / len(self.repo_list))
 
             ans["zh_files_details"].append(
                 {
