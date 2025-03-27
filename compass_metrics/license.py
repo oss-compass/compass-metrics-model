@@ -224,7 +224,7 @@ def check_license_compatibility(licenses):
     if unknown_licenses:
         return {
             'status': 'unknown',
-            'details': f'发现未知的许可证: {unknown_licenses}'
+            'details': f'Discover unknown licenses: {unknown_licenses}'
         }
 
     # 检查许可证兼容性
