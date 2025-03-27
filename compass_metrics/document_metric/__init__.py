@@ -1,19 +1,4 @@
-'''
-Descripttion: 
-version: V1.0
-Author: zyx
-Date: 2025-03-04 18:01:38
-LastEditors: zyx
-LastEditTime: 2025-03-26 17:04:36
-'''
-'''
-Descripttion: 
-version: V1.0
-Author: zyx
-Date: 2025-03-04 10:23:24
-LastEditors: zyx
-LastEditTime: 2025-03-20 17:04:55
-'''
+
 from compass_metrics.document_metric.doc_quarty import doc_quarty_all
 from compass_metrics.document_metric.doc_chinese_support import doc_chinexe_support_git
 from compass_metrics.document_metric.doc_num import get_documentation_links_from_repo
@@ -117,7 +102,7 @@ class Industry_Support:
 if __name__ == '__main__':
     a = ['https://github.com/numpy/numpy']
     dm = Industry_Support(123,a)
-    # print(dm.get_doc_quarty())
-    # print(dm.get_doc_number())
-    print(dm.get_zh_files_number())
+
+    print(dm.get_doc_quarty())
+    print(dm.get_doc_number())
     # print(dm.get_zh_files())
