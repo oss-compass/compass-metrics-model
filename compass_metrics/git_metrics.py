@@ -250,6 +250,15 @@ def commit_count(client, contributors_index, date, repo_list, from_date=None):
     }
     return result
 
+def commit_count_quarterly(client, contributors_index, to_date, repo_list, from_date):
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    result = {
+        'commit_count_quarterly': get_commit_count(from_date, to_date, commit_contributor_list),
+        'commit_count_quarterly_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True),
+        'commit_count_quarterly_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)
+    }
+    return result
 
 def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
     """ Determine the numbers of new code commit link pull request in the last 90 days. """
