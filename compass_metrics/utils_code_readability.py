@@ -8,9 +8,7 @@ LastEditTime: 2025-03-24 17:19:02
 '''
 import json
 import os
-import sys
 import requests
-import tqdm
 import markdown
 NOW_PATH = os.path.dirname(os.path.abspath(__file__))
 TMP_PATH = os.path.join(NOW_PATH,'tmp')
