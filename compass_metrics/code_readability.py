@@ -1,10 +1,8 @@
 import os
 
 import re
-from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
-
-from compass_metrics.utils_code_readability import save_json,JSON_BASEPATH,TMP_PATH
-BASEPATH = TMP_PATH
+from compass_metrics.utils_code_readability import clone_repo, save_json, TMP_PATH
+REPOPATH = TMP_PATH
 
 # Define comment syntax for different languages
 COMMENT_SYNTAX = {
@@ -168,10 +166,10 @@ def evaluate_code_readability1(url):
     '''
     repo_name = os.path.basename(url)
     
-    if repo_name not in os.listdir(BASEPATH):
+    if repo_name not in os.listdir(REPOPATH):
         print(f"Cloning {repo_name} repository...")
         clone_repo(url)
-    directory_path = os.path.join(BASEPATH, repo_name)
+    directory_path = os.path.join(REPOPATH, repo_name)
 
     ans ={"evaluate_code_readability":0,"detail":[]}
     for root, dirs, files in os.walk(directory_path):
@@ -218,13 +216,13 @@ def evaluate_code_readability(repo_list):
     evaluate_code_readability = ans
 
     ans = {
-        "evaluate_code_readability": 0,
-        "evaluate_code_readability_detail": []
+        "code_readability": 0,
+        "code_readability_detail": []
     }
 
     for i in evaluate_code_readability:
-        ans["evaluate_code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
-        ans["evaluate_code_readability_detail"].append(
+        ans["code_readability"] += evaluate_code_readability[i]["evaluate_code_readability"] / len(evaluate_code_readability)
+        ans["code_readability_detail"].append(
             {
                 "repo": i,
                 "evaluate_code_readability": evaluate_code_readability[i]["detail"]
