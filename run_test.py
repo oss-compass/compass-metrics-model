@@ -1,3 +1,11 @@
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-03-04 17:59:54
+LastEditors: zyx
+LastEditTime: 2025-03-26 22:20:30
+'''
 import os
 import yaml
 import logging
@@ -19,7 +27,7 @@ logger.setLevel(logging.DEBUG)
 logging.info('loggging info message')
 
 if __name__ == '__main__':
-    config_url = './conf-pytorch.yaml'
+    config_url = './conf-github.yaml'
     CONF = yaml.safe_load(open(config_url))
     elastic_url = CONF['url']
     params = CONF['params']

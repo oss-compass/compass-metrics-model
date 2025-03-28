@@ -9,7 +9,8 @@ import yaml
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,                                    
                                      datetime_utcnow,
-                                     get_last_three_years_dates)
+                                     get_last_three_years_dates,
+                                     get_last_four_quarters_dates)
 from compass_common.uuid_utils import get_uuid
 from compass_common.algorithm_utils import get_score_by_criticality_score, normalize
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
@@ -94,6 +95,12 @@ from compass_metrics.activity import (activity_quarterly_contribution)
 from compass_metrics.security import (security_vul_stat, security_vul_fixed, security_scanned)
 from compass_metrics.license import (license_conflicts_exist, license_dep_conflicts_exist, license_is_weak, license_change_claims_required, license_commercial_allowed)
 from typing import Dict, Any
+
+
+from compass_metrics.code_readability import evaluate_code_readability
+from compass_metrics.document_metric import Industry_Support
+from compass_metrics.security_metric import VulnerabilityMetrics
+
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
@@ -319,6 +326,8 @@ class BaseMetricsModel:
                      if metric_field:
                          if '_year' in metric_field:
                              self.metrics_model_enrich_year([repo], repo, self.level)
+                         if '_quarterly' in metric_field:
+                             self.metrics_model_enrich_quarterly([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
@@ -330,12 +339,18 @@ class BaseMetricsModel:
                     if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_year(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
+                if '_quarterly' in metric_field:
+                    combined_repo_list = software_artifact_repo_list + governance_repo_list
+                    if len(combined_repo_list) > 0:
+                        self.metrics_model_enrich_quarterly(software_artifact_repo_list, self.community, self.level,
+                                                       SOFTWARE_ARTIFACT)
                 else:
                     if len(software_artifact_repo_list) > 0:
                         self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
                     if len(governance_repo_list) > 0:
                         self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
+
 
     def metrics_model_enrich(self, repo_list, label, level, type=None):
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
@@ -380,6 +395,45 @@ class BaseMetricsModel:
         last_metrics_data = {}
         add_release_message(self.client, repo_list, self.repo_index, self.release_index)
         date_list = get_last_three_years_dates()
+        item_datas = []
+        for date in date_list:
+            logger.info(f"{str(date)}--{self.model_name}--{label}")
+            created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
+            if created_since_metric is None:
+                continue
+            metrics = self.get_metrics(date, repo_list)
+            metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
+                                    self.custom_fields_hash,"year")
+            metrics_data = {
+                'uuid': metrics_uuid,
+                'level': level,
+                'type': type,
+                'label': label,
+                'model_name': self.model_name,
+                **metrics,
+                'grimoire_creation_date': date.isoformat(),
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
+            }
+            cache_last_metrics_data(metrics_data, last_metrics_data)
+            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
+            item_data = {
+                "_index": self.out_index,
+                "_id": metrics_uuid,
+                "_source": metrics_data
+            }
+            item_datas.append(item_data)
+            print(len(item_datas))
+            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                helpers().bulk(client=self.client, actions=item_datas)
+                item_datas = []
+        helpers().bulk(client=self.client, actions=item_datas)
+
+    def metrics_model_enrich_quarterly(self, repo_list, label, level, type=None):
+        """ Calculate the metrics model data of the repo list, and output the metrics model data once a year """
+        last_metrics_data = {}
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        date_list = get_last_four_quarters_dates()
         item_datas = []
         for date in date_list:
             logger.info(f"{str(date)}--{self.model_name}--{label}")
@@ -496,7 +550,23 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
-          
+
+
+
+            # code_readability
+            "code_readability": lambda: evaluate_code_readability(repo_list),
+
+            # industry_support
+            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
+            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
+            "zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
+            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            
+            # security2
+            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
+
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license
@@ -509,7 +579,11 @@ class BaseMetricsModel:
             "security_vul_stat": lambda: security_vul_stat(self.client, self.contributors_index, date, repo_list),
             "security_vul_fixed": lambda: security_vul_fixed(self.client, self.contributors_index, date, repo_list),
             "security_scanned": lambda: security_scanned(self.client, self.contributors_index, date, repo_list),
+
         }
+
+        
+        
         metrics = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field in metrics_switch:
