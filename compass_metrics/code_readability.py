@@ -1,10 +1,14 @@
 import os
 
 import re
+
 from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
 
 from compass_metrics.utils_code_readability import save_json,JSON_REPO_PATH,TMP_PATH
-REPO_PATH = TMP_PATH
+
+from compass_metrics.utils_code_readability import clone_repo, save_json, TMP_PATH
+REPOPATH = TMP_PATH
+
 
 # Define comment syntax for different languages
 COMMENT_SYNTAX = {
@@ -168,10 +172,12 @@ def evaluate_code_readability1(url):
     '''
     repo_name = os.path.basename(url)
     
-    if repo_name not in os.listdir(REPO_PATH):
+
+    if repo_name not in os.listdir(REPOPATH):
         print(f"Cloning {repo_name} repository...")
         clone_repo(url)
-    directory_path = os.path.join(REPO_PATH, repo_name)
+    directory_path = os.path.join(REPOPATH, repo_name)
+
 
     ans ={"evaluate_code_readability":0,"detail":[]}
     for root, dirs, files in os.walk(directory_path):
