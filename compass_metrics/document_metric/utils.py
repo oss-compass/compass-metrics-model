@@ -14,14 +14,23 @@ import tqdm
 import markdown
 NOW_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(NOW_PATH,'tmp')
-JSON_BASEPATH = os.path.join(NOW_PATH,'json')
-GITEE_TOKEN = ""
-GITHUB_TOKEN = ''
+JSON_REPO_PATH = os.path.join(NOW_PATH,'json')
+import configparser
+
+# 创建 ConfigParser 对象
+config = configparser.ConfigParser()
+
+# 读取 config.ini 文件
+config.read(r'compass_metrics/resources/config.ini')
+
+# 获取 GITEE_TOKEN 和 GITHUB_TOKEN
+GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
+GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 
 if not os.path.exists(TMP_PATH):
     os.makedirs(TMP_PATH)
-if not os.path.exists(JSON_BASEPATH):
-    os.makedirs(JSON_BASEPATH)
+if not os.path.exists(JSON_REPO_PATH):
+    os.makedirs(JSON_REPO_PATH)
 
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'

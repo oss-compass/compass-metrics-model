@@ -7,7 +7,7 @@ LastEditors: zyx
 LastEditTime: 2025-03-24 15:46:06
 '''
 import os
-from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_BASEPATH
+from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_REPO_PATH
 import re
 
 def count_documents_from_folder(path, extensions=None)->tuple:
@@ -153,7 +153,7 @@ def get_documentation_links_from_repo(repo_url, platform='github'):
         "links_document_details": links
     }
 
-    save_json(doc_number,os.path.join(JSON_BASEPATH,f'{os.path.basename(repo_url)}.json'))
+    save_json(doc_number,os.path.join(JSON_REPO_PATH,f'{os.path.basename(repo_url)}.json'))
     return doc_number
 
 
