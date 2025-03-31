@@ -1,24 +1,27 @@
-
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-01-16 17:34:10
+LastEditors: zyx
+LastEditTime: 2025-03-24 17:19:02
+'''
 import json
 import os
+import sys
 import requests
+import tqdm
 import markdown
-NOW_PATH = os.path.dirname(os.path.abspath(__file__))
-TMP_PATH = os.path.join(NOW_PATH,'tmp')
-JSON_REPO_PATH = os.path.join(NOW_PATH,'json')
 import configparser
 
-# 创建 ConfigParser 对象
+DATA_PATH = r"/data"
+NOW_PATH =  os.path.dirname(os.path.abspath(__file__))
+TMP_PATH = os.path.join(DATA_PATH,'tmp')
+JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 config = configparser.ConfigParser()
 
-
-# 读取 config.ini 文件
-
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
-
-
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
-
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 

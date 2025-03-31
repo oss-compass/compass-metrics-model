@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-31 10:37:50
+LastEditTime: 2025-03-04 17:44:17
 '''
 import json
 import os
@@ -12,25 +12,23 @@ import sys
 import requests
 import tqdm
 import markdown
+DATA_PATH = r"/data"
+NOW_PATH =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TMP_PATH = os.path.join(DATA_PATH,'tmp')
+JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 import configparser
-
-NOW_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TMP_PATH = os.path.join(NOW_PATH,'tmp')
-JSON_REPO_PATH = os.path.join(NOW_PATH,'json')
-
 
 config = configparser.ConfigParser()
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
+# print(os.path.join(NOW_PATH,r'resources/config.ini'))
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 
-
-
 if not os.path.exists(TMP_PATH):
     os.makedirs(TMP_PATH)
-if not os.path.exists(JSON_REPO_PATH):
-    os.makedirs(JSON_REPO_PATH)
+if not os.path.exists(JSON_REPOPATH):
+    os.makedirs(JSON_REPOPATH)
 
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'
@@ -108,6 +106,7 @@ def check_github_gitee(url):
         return None
     
 if __name__ == '__main__':
+    123
     # print(get_github_readme('python/cpython'))
     # print(get_gitee_readme('python/cpython'))
     # save_json(get_github_readme('python/cpython'), 'github_readme.json')
@@ -115,5 +114,4 @@ if __name__ == '__main__':
     # print(load_json('github_readme.json'))
     # print(load_json('gitee_readme.json'))
     # print(get_all_github_files('python/cpython'))
-    print(config.get('OPEN_CHECKService', 'GITHUB_TOKEN'))
-    print(os.path.join(NOW_PATH,r'resources/config.ini'))
+    # print(clone_repo('https://github.com/numpy/numpy'))
