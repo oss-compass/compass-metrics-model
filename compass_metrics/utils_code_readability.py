@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-31 10:40:16
+LastEditTime: 2025-03-31 15:02:01
 '''
 import json
 import os
@@ -18,10 +18,12 @@ import configparser
 # 创建 ConfigParser 对象
 config = configparser.ConfigParser()
 
+
 # 读取 config.ini 文件
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
 
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
+
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 
