@@ -15,7 +15,7 @@ import markdown
 # from compass_metrics.resources.config.ini import GITEE_TOKEN, GITHUB_TOKEN
 DATA_PATH = r"/data"
 NOW_PATH =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TMP_PATH = os.path.join(DATA_PATH,'tmp')
+TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
 JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 
 import configparser
