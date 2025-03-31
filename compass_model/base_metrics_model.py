@@ -9,7 +9,8 @@ import yaml
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
 from compass_common.datetime import (get_date_list,                                    
                                      datetime_utcnow,
-                                     get_last_three_years_dates)
+                                     get_last_three_years_dates,
+                                     get_last_four_quarters_dates)
 from compass_common.uuid_utils import get_uuid
 from compass_common.algorithm_utils import get_score_by_criticality_score, normalize
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
@@ -325,6 +326,8 @@ class BaseMetricsModel:
                      if metric_field:
                          if '_year' in metric_field:
                              self.metrics_model_enrich_year([repo], repo, self.level)
+                         if '_quarterly' in metric_field:
+                             self.metrics_model_enrich_quarterly([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
@@ -336,12 +339,18 @@ class BaseMetricsModel:
                     if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_year(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
+                if '_quarterly' in metric_field:
+                    combined_repo_list = software_artifact_repo_list + governance_repo_list
+                    if len(combined_repo_list) > 0:
+                        self.metrics_model_enrich_quarterly(software_artifact_repo_list, self.community, self.level,
+                                                       SOFTWARE_ARTIFACT)
                 else:
                     if len(software_artifact_repo_list) > 0:
                         self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
                     if len(governance_repo_list) > 0:
                         self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
+
 
     def metrics_model_enrich(self, repo_list, label, level, type=None):
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
@@ -386,6 +395,45 @@ class BaseMetricsModel:
         last_metrics_data = {}
         add_release_message(self.client, repo_list, self.repo_index, self.release_index)
         date_list = get_last_three_years_dates()
+        item_datas = []
+        for date in date_list:
+            logger.info(f"{str(date)}--{self.model_name}--{label}")
+            created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
+            if created_since_metric is None:
+                continue
+            metrics = self.get_metrics(date, repo_list)
+            metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
+                                    self.custom_fields_hash,"year")
+            metrics_data = {
+                'uuid': metrics_uuid,
+                'level': level,
+                'type': type,
+                'label': label,
+                'model_name': self.model_name,
+                **metrics,
+                'grimoire_creation_date': date.isoformat(),
+                'metadata__enriched_on': datetime_utcnow().isoformat(),
+                **self.custom_fields
+            }
+            cache_last_metrics_data(metrics_data, last_metrics_data)
+            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
+            item_data = {
+                "_index": self.out_index,
+                "_id": metrics_uuid,
+                "_source": metrics_data
+            }
+            item_datas.append(item_data)
+            print(len(item_datas))
+            if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                helpers().bulk(client=self.client, actions=item_datas)
+                item_datas = []
+        helpers().bulk(client=self.client, actions=item_datas)
+
+    def metrics_model_enrich_quarterly(self, repo_list, label, level, type=None):
+        """ Calculate the metrics model data of the repo list, and output the metrics model data once a year """
+        last_metrics_data = {}
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        date_list = get_last_four_quarters_dates()
         item_datas = []
         for date in date_list:
             logger.info(f"{str(date)}--{self.model_name}--{label}")
