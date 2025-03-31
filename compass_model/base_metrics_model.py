@@ -279,6 +279,7 @@ class BaseMetricsModel:
         self.model_name = model_name
         self.algorithm = algorithm
         self.client = None
+        self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
 
         if type(metrics_weights_thresholds) == dict:
             default_metrics_thresholds = self.get_default_metrics_thresholds()
@@ -570,15 +571,15 @@ class BaseMetricsModel:
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license
-            "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.contributors_index, date, repo_list),
-            "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.contributors_index, date, repo_list),
-            "license_is_weak": lambda: license_is_weak(self.client, self.contributors_index, date, repo_list),
-            "license_change_claims_required": lambda: license_change_claims_required(self.client, self.contributors_index, date, repo_list),
-            "license_commercial_allowed": lambda: license_commercial_allowed(self.client, self.contributors_index, date, repo_list),
+            "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "license_is_weak": lambda: license_is_weak(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "license_change_claims_required": lambda: license_change_claims_required(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "license_commercial_allowed": lambda: license_commercial_allowed(self.client, self.compass_metric_model_opencheck, date, repo_list),
             # security
-            "security_vul_stat": lambda: security_vul_stat(self.client, self.contributors_index, date, repo_list),
-            "security_vul_fixed": lambda: security_vul_fixed(self.client, self.contributors_index, date, repo_list),
-            "security_scanned": lambda: security_scanned(self.client, self.contributors_index, date, repo_list),
+            "security_vul_stat": lambda: security_vul_stat(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "security_vul_fixed": lambda: security_vul_fixed(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "security_scanned": lambda: security_scanned(self.client, self.compass_metric_model_opencheck, date, repo_list),
 
         }
 
