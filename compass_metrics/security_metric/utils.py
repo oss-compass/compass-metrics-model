@@ -21,7 +21,10 @@ JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 import configparser
 
 config = configparser.ConfigParser()
+
+# 读取 config.ini 文件
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
+
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
