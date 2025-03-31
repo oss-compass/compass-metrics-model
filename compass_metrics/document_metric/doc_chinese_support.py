@@ -4,14 +4,14 @@ import re
 import json
 import requests
 from git import Repo
-from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_BASEPATH
+from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_REPO_PATH
 from compass_metrics.document_metric.utils import load_json,check_github_gitee,clone_repo,save_json
 import unicodedata
 GITHUB_HEADERS = {'Authorization': f'token {GITHUB_TOKEN}'}
 GITEE_HEADERS = {'Authorization': f'token {GITEE_TOKEN}'}
-BASEPATH = TMP_PATH
-if not os.path.exists(BASEPATH):
-    os.makedirs(BASEPATH)
+REPO_PATH = TMP_PATH
+if not os.path.exists(REPO_PATH):
+    os.makedirs(REPO_PATH)
 
 
 def contains_chinese(text):
@@ -46,7 +46,7 @@ def find_zh_files(json_path,url):
 
     doc_details = load_json(json_path)["folder_document_details"]
     for doc_detail in doc_details:
-        file_path = os.path.join(BASEPATH,doc_detail["path"])
+        file_path = os.path.join(REPO_PATH,doc_detail["path"])
         if doc_chinese_support(file_path):
             
             zh_files["zh_files_details"].append({})
@@ -84,14 +84,14 @@ def doc_chinexe_support_git(url):
     '''Check if the specified folder contains documents with Chinese characters'''
     repo_name = os.path.basename(url)
     
-    if repo_name not in os.listdir(BASEPATH):
+    if repo_name not in os.listdir(REPO_PATH):
         print(f"Cloning {repo_name} repository...")
         clone_repo(url)
     
     
-    json_path = os.path.join(JSON_BASEPATH, f"{repo_name}.json")
+    json_path = os.path.join(JSON_REPO_PATH, f"{repo_name}.json")
 
-    if f"{repo_name}.json" not in os.listdir(JSON_BASEPATH):
+    if f"{repo_name}.json" not in os.listdir(JSON_REPO_PATH):
         return ValueError(f"Start by performing the document quantity metric...")
 
     zh_files = find_zh_files(json_path,url)
