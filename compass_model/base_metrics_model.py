@@ -235,7 +235,7 @@ def decrease_decay(last_data, threshold, days):
 
 class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
-                 contributors_index, compass_metric_model_opencheck, release_index, out_index, from_date, end_date, level, community, source,
+                 contributors_index, release_index, out_index, from_date, end_date, level, community, source,
                  json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None,
                  contributors_enriched_index=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
