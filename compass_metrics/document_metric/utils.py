@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-04 17:44:17
+LastEditTime: 2025-03-31 10:37:50
 '''
 import json
 import os
@@ -12,20 +12,20 @@ import sys
 import requests
 import tqdm
 import markdown
+import configparser
+
 NOW_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(NOW_PATH,'tmp')
 JSON_REPO_PATH = os.path.join(NOW_PATH,'json')
-import configparser
 
-# 创建 ConfigParser 对象
+
 config = configparser.ConfigParser()
-
-# 读取 config.ini 文件
-config.read(r'compass_metrics/resources/config.ini')
-
+config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
+
+
 
 if not os.path.exists(TMP_PATH):
     os.makedirs(TMP_PATH)
@@ -115,4 +115,5 @@ if __name__ == '__main__':
     # print(load_json('github_readme.json'))
     # print(load_json('gitee_readme.json'))
     # print(get_all_github_files('python/cpython'))
-    print(clone_repo('https://github.com/numpy/numpy'))
+    print(config.get('OPEN_CHECKService', 'GITHUB_TOKEN'))
+    print(os.path.join(NOW_PATH,r'resources/config.ini'))
