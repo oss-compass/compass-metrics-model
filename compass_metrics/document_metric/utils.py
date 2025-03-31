@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-04 17:44:17
+LastEditTime: 2025-03-31 22:44:15
 '''
 import json
 import os
@@ -15,7 +15,7 @@ import markdown
 DATA_PATH = r"/data"
 NOW_PATH =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
-JSON_REPOPATH = os.path.join(DATA_PATH,'json')
+JSON_REPO_PATH = os.path.join(DATA_PATH,'json')
 import configparser
 
 config = configparser.ConfigParser()
@@ -27,8 +27,8 @@ GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 
 if not os.path.exists(TMP_PATH):
     os.makedirs(TMP_PATH)
-if not os.path.exists(JSON_REPOPATH):
-    os.makedirs(JSON_REPOPATH)
+if not os.path.exists(JSON_REPO_PATH):
+    os.makedirs(JSON_REPO_PATH)
 
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'

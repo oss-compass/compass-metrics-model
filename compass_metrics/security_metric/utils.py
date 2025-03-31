@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-24 17:18:09
+LastEditTime: 2025-03-31 22:44:02
 '''
 import json
 import os
@@ -16,7 +16,7 @@ import markdown
 DATA_PATH = r"/data"
 NOW_PATH =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
-JSON_REPOPATH = os.path.join(DATA_PATH,'json')
+JSON_REPO_PATH = os.path.join(DATA_PATH,'json')
 
 import configparser
 

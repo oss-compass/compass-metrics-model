@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-24 17:19:02
+LastEditTime: 2025-03-31 22:45:35
 '''
 import json
 import os
@@ -17,7 +17,7 @@ import configparser
 DATA_PATH = r"/data"
 NOW_PATH =  os.path.dirname(os.path.abspath(__file__))
 TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
-JSON_REPOPATH = os.path.join(DATA_PATH,'json')
+JSON_REPO_PATH = os.path.join(DATA_PATH,'json')
 config = configparser.ConfigParser()
 
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
