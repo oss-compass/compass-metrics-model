@@ -1,11 +1,4 @@
-'''
-Descripttion: 
-version: V1.0
-Author: zyx
-Date: 2025-01-16 17:34:10
-LastEditors: zyx
-LastEditTime: 2025-03-31 15:02:01
-'''
+
 import json
 import os
 import requests
@@ -20,7 +13,9 @@ config = configparser.ConfigParser()
 
 
 # 读取 config.ini 文件
+
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
+
 
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
 

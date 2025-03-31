@@ -18,13 +18,12 @@ NOW_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(NOW_PATH,'tmp')
 JSON_REPO_PATH = os.path.join(NOW_PATH,'json')
 
+
 config = configparser.ConfigParser()
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
 GITEE_TOKEN = config.get('OPEN_CHECKService', 'GITEE_TOKEN')
 GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
-
-
 
 
 
