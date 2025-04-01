@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:31:20
 LastEditors: zyx
-LastEditTime: 2025-03-24 15:46:06
+LastEditTime: 2025-04-01 15:21:19
 '''
 import os
 from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_REPO_PATH
@@ -36,11 +36,17 @@ def count_documents_from_folder(path, extensions=None)->tuple:
             if "requirements" in file:
                 continue
             if any(file.endswith(ext) for ext in extensions):
-                document_count += 1
-                document_details.append({
-                    "name": file,
-                    "path": os.path.join(root, file).replace(TMP_PATH, "")[1:].replace("\\", "/")
-                })
+                try:
+                    with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    document_count += 1
+                    document_details.append({
+                        "name": file,
+                        "path": os.path.join(root, file).replace(TMP_PATH, "")[1:].replace("\\", "/")
+                    })
+                except:
+                    continue
+
     return document_count, document_details
 
 def count_documents_from_Readme(markdown)->tuple:

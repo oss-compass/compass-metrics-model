@@ -50,10 +50,9 @@ def find_zh_files(json_path,url):
         if doc_chinese_support(file_path):
             
             zh_files["zh_files_details"].append({})
-            zh_files["zh_files_details"][zh_files["numbers"]]["name"] = doc_detail["name"]
-            zh_files["zh_files_details"][zh_files["numbers"]]["path"] = doc_detail["path"]
-            zh_files["zh_files_details"][zh_files["numbers"]]["commit_time"] = get_file_commit_time(url, doc_detail["path"],platform=check_github_gitee(url))
-
+            zh_files["zh_files_details"][zh_files["zh_files_number"]]["name"] = doc_detail["name"]
+            zh_files["zh_files_details"][zh_files["zh_files_number"]]["path"] = doc_detail["path"]
+            zh_files["zh_files_details"][zh_files["zh_files_number"]]["commit_time"] = get_file_commit_time(url, doc_detail["path"],platform=check_github_gitee(url))
             zh_files["zh_files_number"] += 1
 
     return zh_files
