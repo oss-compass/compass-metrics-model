@@ -22,7 +22,7 @@ def contains_chinese(text):
     return False
 def chinese_ratio_exceeds_threshold(text, threshold=0.05):
     chinese_chars = sum(1 for char in text if re.search('[\u4e00-\u9fff]', char))
-    total_chars = len(text)
+    total_chars = 1+len(text)
     return (chinese_chars / total_chars) > threshold
 
 
