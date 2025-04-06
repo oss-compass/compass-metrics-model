@@ -278,8 +278,8 @@ class BaseMetricsModel:
         self.json_file = json_file
         self.model_name = model_name
         self.algorithm = algorithm
-        self.client = None
         self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
+        self.client = None
 
         if type(metrics_weights_thresholds) == dict:
             default_metrics_thresholds = self.get_default_metrics_thresholds()
@@ -329,6 +329,8 @@ class BaseMetricsModel:
                              self.metrics_model_enrich_year([repo], repo, self.level)
                          if '_quarterly' in metric_field:
                              self.metrics_model_enrich_quarterly([repo], repo, self.level)
+                         if 'license_' in metric_field or 'security_' in metric_field:
+                             self.metrics_model_enrich_version([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
@@ -345,6 +347,11 @@ class BaseMetricsModel:
                     if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_quarterly(software_artifact_repo_list, self.community, self.level,
                                                        SOFTWARE_ARTIFACT)
+                if 'license_' in metric_field or 'security_' in metric_field:
+                    combined_repo_list = software_artifact_repo_list + governance_repo_list
+                    if len(combined_repo_list) > 0:
+                        self.metrics_model_enrich_version(software_artifact_repo_list, self.community, self.level,
+                                                            SOFTWARE_ARTIFACT)
                 else:
                     if len(software_artifact_repo_list) > 0:
                         self.metrics_model_enrich(software_artifact_repo_list, self.community, self.level,
@@ -390,6 +397,32 @@ class BaseMetricsModel:
                 helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []
         helpers().bulk(client=self.client, actions=item_datas)
+
+    def metrics_model_enrich_version(self, repo_list, label, level, type=None):
+        """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
+        last_metrics_data = {}
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        metrics = self.get_metrics(None, repo_list)
+        metrics_uuid = get_uuid(self.community, level, label, self.model_name, type,
+                                self.custom_fields_hash)
+        metrics_data = {
+            'uuid': metrics_uuid,
+            'level': level,
+            'type': type,
+            'label': label,
+            'model_name': self.model_name,
+            'version_number': self.custom_fields['version_number'],
+            **metrics,
+            'metadata__enriched_on': datetime_utcnow().isoformat(),
+            **self.custom_fields
+        }
+        cache_last_metrics_data(metrics_data, last_metrics_data)
+        item_data = {
+            "_index": self.out_index,
+            "_id": metrics_uuid,
+            "_source": metrics_data
+        }
+        helpers().bulk(client=self.client, actions=[item_data])
 
     def metrics_model_enrich_year(self, repo_list, label, level, type=None):
         """ Calculate the metrics model data of the repo list, and output the metrics model data once a year """
@@ -571,15 +604,15 @@ class BaseMetricsModel:
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
             # license
-            "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "license_is_weak": lambda: license_is_weak(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "license_change_claims_required": lambda: license_change_claims_required(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "license_commercial_allowed": lambda: license_commercial_allowed(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "license_is_weak": lambda: license_is_weak(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "license_change_claims_required": lambda: license_change_claims_required(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "license_commercial_allowed": lambda: license_commercial_allowed(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             # security
-            "security_vul_stat": lambda: security_vul_stat(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "security_vul_fixed": lambda: security_vul_fixed(self.client, self.compass_metric_model_opencheck, date, repo_list),
-            "security_scanned": lambda: security_scanned(self.client, self.compass_metric_model_opencheck, date, repo_list),
+            "security_vul_stat": lambda: security_vul_stat(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "security_vul_fixed": lambda: security_vul_fixed(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
+            "security_scanned": lambda: security_scanned(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
 
         }
 

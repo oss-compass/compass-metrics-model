@@ -541,7 +541,7 @@ def get_base_index_mapping():
         }
     }
     return mapping
-def get_license_query(repo_list, page_size, date):
+def get_license_query(repo_list, page_size, version):
     """ Query statement to get the license information including license_list, osi_license_list, and non_osi_licenses. """
     query = {
         "size": page_size,
@@ -566,10 +566,8 @@ def get_license_query(repo_list, page_size, date):
                         }
                     },
                     {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "lte": date  # grimoire_creation_date小于或等于指定日期
-                            }
+                        "match": {
+                            "version_number": version
                         }
                     }
                 ]
@@ -585,7 +583,7 @@ def get_license_query(repo_list, page_size, date):
     return query
 
 
-def get_security_query(repo_list, page_size, date):
+def get_security_query(repo_list, page_size, version):
     query = {
         "size": page_size,
         "sort": [
@@ -609,10 +607,8 @@ def get_security_query(repo_list, page_size, date):
                         }
                     },
                     {
-                        "range": {
-                            "grimoire_creation_date": {
-                                "lte": date  # grimoire_creation_date小于或等于指定日期
-                            }
+                        "match": {
+                            "version_number": version
                         }
                     }
                 ]
