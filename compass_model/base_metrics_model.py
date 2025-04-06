@@ -589,18 +589,18 @@ class BaseMetricsModel:
 
 
             # code_readability
-            "code_readability": lambda: evaluate_code_readability(repo_list),
+            "code_readability": lambda: evaluate_code_readability(repo_list,self.custom_fields["version_number"]),
 
             # industry_support
-            "doc_quarty": lambda: Industry_Support(self.client,repo_list).get_doc_quarty(),
-            "doc_number": lambda: Industry_Support(self.client,repo_list).get_doc_number(),
-            "zh_files_number": lambda: Industry_Support(self.client,repo_list).get_zh_files_number(),
-            "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
+            "doc_quarty": lambda: Industry_Support(self.client,repo_list,self.custom_fields["version_number"]).get_doc_quarty(),
+            "doc_number": lambda: Industry_Support(self.client,repo_list,self.custom_fields["version_number"]).get_doc_number(),
+            "zh_files_number": lambda: Industry_Support(self.client,repo_list,self.custom_fields["version_number"]).get_zh_files_number(),
+            "org_contribution": lambda: Industry_Support(self.client,repo_list,self.custom_fields["version_number"]).get_org_contribution(),
             
             # security2
-            "vul_detect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
-            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
-            "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
+            "vul_detect_time": lambda: VulnerabilityMetrics(repo_list,self.custom_fields["version_number"]).get_vul_detect_time(),
+            "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list,self.custom_fields["version_number"]).get_vulnerablity_feedback_channels(),
+            "vul_levels": lambda: VulnerabilityMetrics(repo_list,self.custom_fields["version_number"]).get_vul_levels(self.client),
 
             # activity
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),

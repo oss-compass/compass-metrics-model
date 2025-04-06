@@ -4,10 +4,10 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:31:20
 LastEditors: zyx
-LastEditTime: 2025-04-01 15:21:19
+LastEditTime: 2025-03-24 15:46:06
 '''
 import os
-from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_REPO_PATH
+from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_REPOPATH
 import re
 
 def count_documents_from_folder(path, extensions=None)->tuple:
@@ -46,7 +46,6 @@ def count_documents_from_folder(path, extensions=None)->tuple:
                     })
                 except:
                     continue
-
     return document_count, document_details
 
 def count_documents_from_Readme(markdown)->tuple:
@@ -121,7 +120,7 @@ def search_readme_in_folder(path)->tuple:
     
     return flag,readme_contents
 
-def get_documentation_links_from_repo(repo_url, platform='github'):
+def get_documentation_links_from_repo(repo_url,version,platform='github'):
     """
     Clones a repository, searches for README files, counts documents, and saves the details to a JSON file.
     Args:
@@ -134,17 +133,21 @@ def get_documentation_links_from_repo(repo_url, platform='github'):
         ValueError: If the repository clone fails or if the README file is not found in the folder.
     """
 
-    if os.path.basename(repo_url) not in os.listdir(TMP_PATH):
-        flag,readme_path = clone_repo(repo_url)
+
+
+    repo_name = os.path.basename(repo_url)+"-"+version
+    
+    if repo_name not in os.listdir(TMP_PATH):
+        flag,readme_path = clone_repo(repo_url,version)
         if not flag:
             ValueError("Repository clone failed.")
         else:
             print(f"Repository cloned to {readme_path}")
 
     
-    readme_path = os.path.join(TMP_PATH, os.path.basename(repo_url))
+    readme_path = os.path.join(TMP_PATH, repo_name)
     if readme_path:
-        print(f"Repository has already cloned to {readme_path}")
+        # print(f"Repository has already cloned to {readme_path}")
         flag,readme = search_readme_in_folder(readme_path)
     else:
         ValueError("README file not found in folder.")
@@ -159,7 +162,7 @@ def get_documentation_links_from_repo(repo_url, platform='github'):
         "links_document_details": links
     }
 
-    save_json(doc_number,os.path.join(JSON_REPO_PATH,f'{os.path.basename(repo_url)}.json'))
+    save_json(doc_number,os.path.join(JSON_REPOPATH,f'{repo_name}.json'))
     return doc_number
 
 

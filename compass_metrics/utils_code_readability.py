@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-31 22:45:35
+LastEditTime: 2025-03-24 17:19:02
 '''
 import json
 import os
@@ -17,7 +17,7 @@ import configparser
 DATA_PATH = r"/data"
 NOW_PATH =  os.path.dirname(os.path.abspath(__file__))
 TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
-JSON_REPO_PATH = os.path.join(DATA_PATH,'json')
+JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 config = configparser.ConfigParser()
 
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
@@ -63,7 +63,7 @@ def get_github_token():
 def get_gitee_token():
     return  os.getenv('GITEE_TOKEN', GITEE_TOKEN)
 
-def clone_repo(repo_url):
+def clone_repo(repo_url,version):
     """
     Clone a repository from GitHub or Gitee.
     Args:
@@ -87,12 +87,19 @@ def clone_repo(repo_url):
 
     repo_name = repo_url.split('/')[-1]
     clone_path = os.path.join(TMP_PATH, repo_name)
+    new_clone_path = os.path.join(TMP_PATH, repo_name + "-"+version)
 
-    clone_command = f'git clone https://{token}@{repo_url} {clone_path}'
+    clone_command = f'git clone --branch {version} https://{token}@{repo_url} {clone_path}'
+
+
     result = os.system(clone_command)
 
+
+
     if result == 0:
-        return True,clone_path
+        if os.path.exists(clone_path):
+            os.rename(clone_path, new_clone_path)
+        return True,new_clone_path
     else:
         return False, None
     

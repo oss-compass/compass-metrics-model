@@ -8,7 +8,7 @@ from compass_common.opensearch_utils import get_client
 from opensearchpy import OpenSearch
 import json
 CLIENT = ""
-def get_vul_levels_metrics(repo_name,client):
+def get_vul_levels_metrics(repo_name,client,version):
     '''get security metrics(security level and vulnerablity published time) for a given repo'''
     # client = OpenSearch(CLIENT)
 
@@ -101,7 +101,7 @@ def get_vul_levels_metrics(repo_name,client):
     
 
 if __name__ == '__main__':
-    repo_list = "https://gitee.com/openharmony-sig/rntpc_react-native-map-linking"
+    repo_list ="https://github.com/qier222/YesPlayMusic"
     # print(get_security_metrics(repo_list))
     with open("漏洞等级.json", "w") as f:
         json.dump(get_vul_levels_metrics(repo_list), f,indent=4)
