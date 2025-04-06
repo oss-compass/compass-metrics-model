@@ -15,12 +15,12 @@ import json
 from compass_metrics.contributor_metrics import contributor_count,org_contributor_count
 from compass_common.opensearch_utils import get_client
 from opensearchpy import OpenSearch
-CLIENT = ""
+# CLIENT = ""
 
 DATE = datetime.datetime(2022,12,20)
 def organizational_contribution(client,repo_name):
     # CLIENT = ""
-    client = OpenSearch(client)
+    # client = OpenSearch(client)
         
     query = {
         "size": 10000,
