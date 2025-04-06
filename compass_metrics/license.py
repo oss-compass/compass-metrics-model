@@ -3,11 +3,11 @@ from compass_common.opensearch_utils import get_all_index_data
 from compass_metrics.constants.license_constants import (
     LICENSE_COMPATIBILITY, COMMERCIAL_ALLOWED_LICENSES, WEAK_LICENSES, CLAIM_REQUIRED_LICENSES)
 
-def get_license_msg(client, contributors_index, date, repo_list, page_size=1):
+def get_license_msg(client, contributors_index, version, repo_list, page_size=1):
     """获取仓库开源许可证信息。
         只取一条，如果有多条则取grimoire_creation_date最新的
         """
-    query = get_license_query(repo_list, page_size, date)
+    query = get_license_query(repo_list, page_size, version)
     license_msg = get_all_index_data(client, index=contributors_index, body=query)
 
     # 初始化存储所有许可证的集合
@@ -38,7 +38,7 @@ def get_license_msg(client, contributors_index, date, repo_list, page_size=1):
     return result
 
 
-def license_conflicts_exist(client, contributors_index, date, repo_list, page_size=1):
+def license_conflicts_exist(client, contributors_index, version, repo_list, page_size=1):
     """检查仓库是否存在许可证冲突（同时存在 OSI 和非 OSI 许可证）。
 
     Args:
@@ -49,7 +49,7 @@ def license_conflicts_exist(client, contributors_index, date, repo_list, page_si
 
     """
     flag = 0
-    license_msg = get_license_msg(client, contributors_index, date, repo_list, page_size)
+    license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
 
     # 检查是否同时存在 OSI 和非 OSI 许可证
     has_osi = len(license_msg['osi_license_list']) > 0
@@ -65,7 +65,7 @@ def license_conflicts_exist(client, contributors_index, date, repo_list, page_si
     return result
 
 
-def license_dep_conflicts_exist(client, contributors_index, date, repo_list, page_size=1):
+def license_dep_conflicts_exist(client, contributors_index, version, repo_list, page_size=1):
     """检查仓库的许可证兼容性。
 
     Args:
@@ -78,7 +78,7 @@ def license_dep_conflicts_exist(client, contributors_index, date, repo_list, pag
         dict: 包含许可证兼容性检查结果
     """
     # 获取许可证信息
-    license_msg = get_license_msg(client, contributors_index, date, repo_list, page_size)
+    license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
 
     # 获取所有许可证
     licenses = _get_normalized_licenses(license_msg)
@@ -87,8 +87,8 @@ def license_dep_conflicts_exist(client, contributors_index, date, repo_list, pag
     compatibility_result = check_license_compatibility(licenses)
 
     result = {
-        'status': compatibility_result['status'],
-        'details': compatibility_result['details'],
+        'license_dep_conflicts_exist_status': compatibility_result['status'],
+        'license_dep_conflicts_exist_details': compatibility_result['details'],
         'license_list': licenses,
         'osi_license_list': [license.lower() for license in license_msg.get('osi_license_list', [])],
         'non_osi_licenses': [license.lower() for license in license_msg.get('non_osi_licenses', [])],
@@ -98,7 +98,7 @@ def license_dep_conflicts_exist(client, contributors_index, date, repo_list, pag
     return result
 
 
-def license_is_weak(client, contributors_index, date, repo_list, page_size=1):
+def license_is_weak(client, contributors_index, version, repo_list, page_size=1):
     """
     检查仓库的许可证是否为宽松型或弱著作权许可证。
     宽松型许可证包括：MIT、Apache、BSD等
@@ -114,7 +114,7 @@ def license_is_weak(client, contributors_index, date, repo_list, page_size=1):
         dict: 包含许可证类型检查结果
     """
     # 获取许可证信息
-    license_msg = get_license_msg(client, contributors_index, date, repo_list, page_size)
+    license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
     licenses = _get_normalized_licenses(license_msg)
 
     # 检查是否所有许可证都是宽松型的
@@ -123,13 +123,13 @@ def license_is_weak(client, contributors_index, date, repo_list, page_size=1):
     result = {
         'license_is_weak': 1 if all_weak else 0,
         'license_list': licenses,
-        'details': 'All licenses are permissive or weak copyright licenses' if all_weak else 'A non-permissive license exists'
+        'license_is_weak_details': 'All licenses are permissive or weak copyright licenses' if all_weak else 'A non-permissive license exists'
     }
 
     return result
 
 
-def license_change_claims_required(client, contributors_index, date, repo_list, page_size=1):
+def license_change_claims_required(client, contributors_index, version, repo_list, page_size=1):
     """
     检查仓库的许可证是否要求对软件变更进行声明。
     某些许可证（如 GPL、LGPL、MPL）要求对软件的修改进行声明，
@@ -145,7 +145,7 @@ def license_change_claims_required(client, contributors_index, date, repo_list, 
         dict: 包含许可证变更声明要求的检查结果
     """
     # 获取许可证信息
-    license_msg = get_license_msg(client, contributors_index, date, repo_list, page_size)
+    license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
     licenses = _get_normalized_licenses(license_msg)
 
     # 检查是否有任何许可证要求声明变更
@@ -158,13 +158,13 @@ def license_change_claims_required(client, contributors_index, date, repo_list, 
         'license_change_claims_required': 1 if claims_required else 0,
         'license_list': licenses,
         'licenses_requiring_claims': required_licenses,
-        'details': 'Requires declaration of software changes' if claims_required else 'No declaration of software changes is required'
+        'license_change_claims_required_details': 'Requires declaration of software changes' if claims_required else 'No declaration of software changes is required'
     }
 
     return result
 
 
-def license_commercial_allowed(client, contributors_index, date, repo_list, page_size=1):
+def license_commercial_allowed(client, contributors_index, version, repo_list, page_size=1):
     """
     检查仓库的许可证是否允许修改后闭源（商业化使用）。
     包括宽松许可证（如MIT、Apache）和弱著作权许可证（如LGPL、MPL）。
@@ -179,7 +179,7 @@ def license_commercial_allowed(client, contributors_index, date, repo_list, page
         dict: 包含许可证商业化许可检查结果
     """
     # 获取许可证信息
-    license_msg = get_license_msg(client, contributors_index, date, repo_list, page_size)
+    license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
     licenses = _get_normalized_licenses(license_msg)
 
     # 检查是否所有许可证都允许闭源
@@ -192,7 +192,7 @@ def license_commercial_allowed(client, contributors_index, date, repo_list, page
         'license_commercial_allowed': 1 if all_commercial_allowed else 0,
         'license_list': licenses,
         'non_commercial_licenses': non_commercial_licenses,
-        'details': 'All licenses allow closed source modification' if all_commercial_allowed else 'There are licenses that do not allow closed source'
+        'license_commercial_allowed_details': 'All licenses allow closed source modification' if all_commercial_allowed else 'There are licenses that do not allow closed source'
     }
 
     return result
@@ -213,7 +213,7 @@ def check_license_compatibility(licenses):
     if not licenses:
         return {
             'status': 'compatible',
-            'details': '没有发现许可证'
+            'details': 'No license found'
         }
 
     # 将许可证名称统一为小写
