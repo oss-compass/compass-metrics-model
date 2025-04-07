@@ -280,6 +280,7 @@ class BaseMetricsModel:
         self.algorithm = algorithm
         self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
         self.client = None
+        self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
 
         if type(metrics_weights_thresholds) == dict:
             default_metrics_thresholds = self.get_default_metrics_thresholds()
@@ -591,12 +592,17 @@ class BaseMetricsModel:
             "org_contribution": lambda: Industry_Support(self.client,repo_list).get_org_contribution(),
             
             # security2
-            "vul_dectect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
+            "vul_detect_time": lambda: VulnerabilityMetrics(repo_list).get_vul_detect_time(),
             "vulnerablity_feedback_channels": lambda: VulnerabilityMetrics(repo_list).get_vulnerablity_feedback_channels(),
             "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
 
             # activity
+<<<<<<< HEAD
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, self.custom_fields['version_number']),
+=======
+            "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
+
+>>>>>>> 97a7588d4d451fb50d006e48ee3f7f83a66166ab
             # license
             "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),

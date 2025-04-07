@@ -8,10 +8,10 @@ LastEditTime: 2025-03-24 10:29:58
 '''
 import re
 import os
-from compass_metrics.document_metric.utils import TMP_PATH,JSON_BASEPATH,clone_repo
+from compass_metrics.document_metric.utils import TMP_PATH,JSON_REPO_PATH,clone_repo
 from compass_metrics.document_metric.utils import save_json,load_json
 
-BASEPATH = TMP_PATH
+REPO_PATH = TMP_PATH
 
 class DocQuarty:
     def __init__(self, file_path):
@@ -81,7 +81,7 @@ def find_doc_quarty_files(json_path):
     ans = {"doc_quarty":0, "doc_quarty_details":[]}
     doc_details = load_json(json_path)["folder_document_details"]
     for doc_detail in doc_details:
-        file_path = os.path.join(BASEPATH,doc_detail["path"])
+        file_path = os.path.join(REPO_PATH,doc_detail["path"])
         doc_quarty = DocQuarty(file_path)
         res = {
             'name': doc_detail["name"],
@@ -100,13 +100,13 @@ def doc_quarty_all(url):
     '''document quarty'''
     repo_name = os.path.basename(url)
     
-    if repo_name not in os.listdir(BASEPATH):
+    if repo_name not in os.listdir(REPO_PATH):
         print(f"Cloning {repo_name} repository...")
         clone_repo(url)
         
-    json_path = os.path.join(JSON_BASEPATH, f"{repo_name}.json")
+    json_path = os.path.join(JSON_REPO_PATH, f"{repo_name}.json")
 
-    if f"{repo_name}.json" not in os.listdir(JSON_BASEPATH):
+    if f"{repo_name}.json" not in os.listdir(JSON_REPO_PATH):
         return ValueError(f"Start by performing the document quantity metric...")
 
     zh_files = find_doc_quarty_files(json_path)
