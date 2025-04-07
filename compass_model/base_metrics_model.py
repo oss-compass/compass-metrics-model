@@ -327,9 +327,9 @@ class BaseMetricsModel:
                      if metric_field:
                          if '_year' in metric_field:
                              self.metrics_model_enrich_year([repo], repo, self.level)
-                         if '_quarterly' in metric_field:
-                             self.metrics_model_enrich_quarterly([repo], repo, self.level)
-                         if 'license_' in metric_field or 'security_' in metric_field:
+                         if 'license' in metric_field or 'security' in metric_field or 'activity_quarterly_' in metric_field:
+                             self.metrics_model_enrich_version([repo], repo, self.level)
+                         if 'doc_' in metric_field or 'org_contribution' or 'vul_' in metric_field:
                              self.metrics_model_enrich_version([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
@@ -342,12 +342,7 @@ class BaseMetricsModel:
                     if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_year(software_artifact_repo_list, self.community, self.level,
                                                   SOFTWARE_ARTIFACT)
-                if '_quarterly' in metric_field:
-                    combined_repo_list = software_artifact_repo_list + governance_repo_list
-                    if len(combined_repo_list) > 0:
-                        self.metrics_model_enrich_quarterly(software_artifact_repo_list, self.community, self.level,
-                                                       SOFTWARE_ARTIFACT)
-                if 'license_' in metric_field or 'security_' in metric_field:
+                if 'license' in metric_field or 'security' in metric_field or 'activity_quarterly_' in metric_field:
                     combined_repo_list = software_artifact_repo_list + governance_repo_list
                     if len(combined_repo_list) > 0:
                         self.metrics_model_enrich_version(software_artifact_repo_list, self.community, self.level,
@@ -457,7 +452,6 @@ class BaseMetricsModel:
                 "_source": metrics_data
             }
             item_datas.append(item_data)
-            print(len(item_datas))
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
                 helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []
@@ -602,7 +596,7 @@ class BaseMetricsModel:
             "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
 
             # activity
-            "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
+            "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, self.custom_fields['version_number']),
             # license
             "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
