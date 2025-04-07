@@ -332,6 +332,9 @@ class BaseMetricsModel:
                              self.metrics_model_enrich_quarterly([repo], repo, self.level)
                          if 'license_' in metric_field or 'security_' in metric_field:
                              self.metrics_model_enrich_version([repo], repo, self.level)
+
+                         if 'doc_' in metric_field or 'org_contribution' or 'vul_' in metric_field:
+                             self.metrics_model_enrich_version([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
         if self.level == "community":
