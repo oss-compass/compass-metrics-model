@@ -46,7 +46,7 @@ def get_security_msg(client, contributors_index, version, repo_list, page_size, 
     security_msg = get_all_index_data(client, index=contributors_index, body=query)
 
     if not security_msg:
-        get_license(repo_list)
+        get_license(repo_list, version)
         return []
 
     results = []
@@ -186,7 +186,7 @@ def process_record(record):
     return result
 
 # 如果没有数据，则请求opencheck
-def get_license(repo):
+def get_license(repo, version):
     payload = {
         "username": TPC_SERVICE_API_USERNAME,
         "password": TPC_SERVICE_API_PASSWORD
@@ -204,7 +204,8 @@ def get_license(repo):
         "project_url": f"{repo}.git",
         "callback_url": TPC_SERVICE_SERVICE_CALLBACK_URL,
         "task_metadata": {
-            "report_type": -1
+            "report_type": -1,
+            "version_number": version
         }
     }
 
