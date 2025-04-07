@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-01-16 17:34:10
 LastEditors: zyx
-LastEditTime: 2025-03-31 22:44:15
+LastEditTime: 2025-03-04 17:44:17
 '''
 import json
 import os
@@ -12,12 +12,11 @@ import sys
 import requests
 import tqdm
 import markdown
-DATA_PATH = r"/data"
+DATA_PATH = "/data"
 NOW_PATH =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP_PATH = os.path.join(DATA_PATH,'repos_tmp')
-JSON_REPO_PATH = os.path.join(DATA_PATH,'json')
+JSON_REPOPATH = os.path.join(DATA_PATH,'json')
 import configparser
-
 config = configparser.ConfigParser()
 config.read(os.path.join(NOW_PATH,r'resources/config.ini'))
 # 获取 GITEE_TOKEN 和 GITHUB_TOKEN
@@ -27,8 +26,8 @@ GITHUB_TOKEN = config.get('OPEN_CHECKService', 'GITHUB_TOKEN')
 
 if not os.path.exists(TMP_PATH):
     os.makedirs(TMP_PATH)
-if not os.path.exists(JSON_REPO_PATH):
-    os.makedirs(JSON_REPO_PATH)
+if not os.path.exists(JSON_REPOPATH):
+    os.makedirs(JSON_REPOPATH)
 
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'
@@ -64,7 +63,7 @@ def get_github_token():
 def get_gitee_token():
     return  os.getenv('GITEE_TOKEN', GITEE_TOKEN)
 
-def clone_repo(repo_url):
+def clone_repo(repo_url,version):
     """
     Clone a repository from GitHub or Gitee.
     Args:
@@ -88,12 +87,19 @@ def clone_repo(repo_url):
 
     repo_name = repo_url.split('/')[-1]
     clone_path = os.path.join(TMP_PATH, repo_name)
+    new_clone_path = os.path.join(TMP_PATH, repo_name + "-"+version)
 
-    clone_command = f'git clone https://{token}@{repo_url} {clone_path}'
+    clone_command = f'git clone --branch {version} https://{token}@{repo_url} {clone_path}'
+
+
     result = os.system(clone_command)
 
+
+
     if result == 0:
-        return True,clone_path
+        if os.path.exists(clone_path):
+            os.rename(clone_path, new_clone_path)
+        return True,new_clone_path
     else:
         return False, None
     
@@ -106,7 +112,7 @@ def check_github_gitee(url):
         return None
     
 if __name__ == '__main__':
-    123
+    # 123s
     # print(get_github_readme('python/cpython'))
     # print(get_gitee_readme('python/cpython'))
     # save_json(get_github_readme('python/cpython'), 'github_readme.json')
@@ -114,4 +120,20 @@ if __name__ == '__main__':
     # print(load_json('github_readme.json'))
     # print(load_json('gitee_readme.json'))
     # print(get_all_github_files('python/cpython'))
-    # print(clone_repo('https://github.com/numpy/numpy'))
+    def get_github_versions(repo_url):
+        api_url = repo_url.replace("github.com", "api.github.com/repos") + "/tags"
+        headers = {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': f'token {get_github_token()}'
+        }
+        response = requests.get(api_url, headers=headers)
+        if response.status_code == 200:
+            tags = response.json()
+            versions = [tag['name'] for tag in tags]
+            return versions
+        else:
+            return None
+    # repo_url = ["https://github.com/mathjax/MathJax"]
+    # print(clone_repo(repo_url,"2.7.6"))
+    repo_url = "https://github.com/git-lfs/git-lfs"
+    print(get_github_versions(repo_url))

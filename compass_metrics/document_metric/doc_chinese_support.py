@@ -1,17 +1,33 @@
-
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-02-17 10:25:54
+LastEditors: zyx
+LastEditTime: 2025-03-26 16:59:14
+'''
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-02-17 10:25:54
+LastEditors: zyx
+LastEditTime: 2025-03-03 09:26:04
+'''
 import os 
 import re
 import json
 import requests
 from git import Repo
-from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_REPO_PATH
+from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_REPOPATH
 from compass_metrics.document_metric.utils import load_json,check_github_gitee,clone_repo,save_json
+
 import unicodedata
 GITHUB_HEADERS = {'Authorization': f'token {GITHUB_TOKEN}'}
 GITEE_HEADERS = {'Authorization': f'token {GITEE_TOKEN}'}
-REPO_PATH = TMP_PATH
-if not os.path.exists(REPO_PATH):
-    os.makedirs(REPO_PATH)
+REPOPATH = TMP_PATH
+if not os.path.exists(REPOPATH):
+    os.makedirs(REPOPATH)
 
 
 def contains_chinese(text):
@@ -23,6 +39,8 @@ def contains_chinese(text):
 def chinese_ratio_exceeds_threshold(text, threshold=0.05):
     chinese_chars = sum(1 for char in text if re.search('[\u4e00-\u9fff]', char))
     total_chars = 1+len(text)
+    # if (chinese_chars / total_chars) > threshold:
+    #     print("12")
     return (chinese_chars / total_chars) > threshold
 
 
@@ -41,12 +59,10 @@ def doc_chinese_support(file_path):
 
 def find_zh_files(json_path,url):
     '''Find all files containing Chinese characters in the specified folder'''
-
     zh_files = {"zh_files_number":0, "zh_files_details":[]}
-
     doc_details = load_json(json_path)["folder_document_details"]
     for doc_detail in doc_details:
-        file_path = os.path.join(REPO_PATH,doc_detail["path"])
+        file_path = os.path.join(REPOPATH,doc_detail["path"])
         if doc_chinese_support(file_path):
             
             zh_files["zh_files_details"].append({})
@@ -54,7 +70,6 @@ def find_zh_files(json_path,url):
             zh_files["zh_files_details"][zh_files["zh_files_number"]]["path"] = doc_detail["path"]
             zh_files["zh_files_details"][zh_files["zh_files_number"]]["commit_time"] = get_file_commit_time(url, doc_detail["path"],platform=check_github_gitee(url))
             zh_files["zh_files_number"] += 1
-
     return zh_files
 
 def get_file_commit_time(repo_url, file_path, platform='gitub'):
@@ -79,18 +94,19 @@ def get_file_commit_time(repo_url, file_path, platform='gitub'):
     else:
         return None
 
-def doc_chinexe_support_git(url):
+def doc_chinexe_support_git(url,version):
     '''Check if the specified folder contains documents with Chinese characters'''
-    repo_name = os.path.basename(url)
+    repo_name = os.path.basename(url)+"-"+version
     
-    if repo_name not in os.listdir(REPO_PATH):
+    if repo_name not in os.listdir(REPOPATH):
         print(f"Cloning {repo_name} repository...")
-        clone_repo(url)
+        clone_repo(url,version)
+        
     
     
-    json_path = os.path.join(JSON_REPO_PATH, f"{repo_name}.json")
+    json_path = os.path.join(JSON_REPOPATH, f"{repo_name}.json")
 
-    if f"{repo_name}.json" not in os.listdir(JSON_REPO_PATH):
+    if f"{repo_name}.json" not in os.listdir(JSON_REPOPATH):
         return ValueError(f"Start by performing the document quantity metric...")
 
     zh_files = find_zh_files(json_path,url)
@@ -98,8 +114,8 @@ def doc_chinexe_support_git(url):
 
 
 if __name__ == "__main__":
-    clone_repo("https://github.com/git-lfs/git-lfs")
-    print(doc_chinexe_support_git("https://github.com/numpy/numpy"))
+    # clone_repo("https://github.com/git-lfs/git-lfs")
+    print(doc_chinexe_support_git("https://github.com/git-lfs/git-lfs",'v2.7.2'))
     # # url = r"C:\Users\zyx\Desktop\文档数量\folder_document_details.json"
     # # file_path = r"C:\Users\zyx\Desktop\文档数量\test.md"
     # # doc_chinese_support(file_path)

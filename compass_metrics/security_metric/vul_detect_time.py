@@ -30,7 +30,7 @@ def get_gitee_versions(repo_url):
         return None
 
 
-def vul_detect_time(repo_url):
+def vul_detect_time(repo_url,version):
     '''evluate the average time of vulnerability repair in the latest 5 versions'''
 
     package = repo_url.split("/")[-1]
@@ -40,6 +40,12 @@ def vul_detect_time(repo_url):
         versions = get_gitee_versions(repo_url)[:5]
     else:
         return ValueError("Unsupported url. Use 'github' or 'gitee'.")
+    
+    # 找到对应的版本索引
+    index = versions.index(version) if version in versions else -1
+
+    versions = versions[:index+1] if index != -1 else versions
+
     url = "https://api.osv.dev/v1/query"
     repair_time = []
     for version in versions:

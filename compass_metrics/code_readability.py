@@ -1,14 +1,10 @@
 import os
 
 import re
-
 from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
 
-from compass_metrics.utils_code_readability import save_json,JSON_REPO_PATH,TMP_PATH
-
-from compass_metrics.utils_code_readability import clone_repo, save_json, TMP_PATH
+from compass_metrics.utils_code_readability import save_json,JSON_REPOPATH,TMP_PATH
 REPOPATH = TMP_PATH
-
 
 # Define comment syntax for different languages
 COMMENT_SYNTAX = {
@@ -161,7 +157,7 @@ def calculate_code_features(file_path):
 
         }
 
-def evaluate_code_readability1(url):
+def evaluate_code_readability1(url,version):
     '''
     Description: Evaluate code readability of all files in a directory. 
     Args:
@@ -170,14 +166,12 @@ def evaluate_code_readability1(url):
     Returns:
         list: List of dictionaries containing the evaluation results for each file.
     '''
-    repo_name = os.path.basename(url)
+    repo_name = os.path.basename(url) + "-" + version
     
-
     if repo_name not in os.listdir(REPOPATH):
         print(f"Cloning {repo_name} repository...")
-        clone_repo(url)
+        clone_repo(url,version)
     directory_path = os.path.join(REPOPATH, repo_name)
-
 
     ans ={"evaluate_code_readability":0,"detail":[]}
     for root, dirs, files in os.walk(directory_path):
@@ -217,10 +211,10 @@ def evaluate_code_readability1(url):
 
 
     return ans
-def evaluate_code_readability(repo_list):
+def evaluate_code_readability(repo_list, version):
     ans = {}
     for i in repo_list:
-        ans[i] = evaluate_code_readability1(i)
+        ans[i] = evaluate_code_readability1(i,version)
     evaluate_code_readability = ans
 
     ans = {
@@ -245,8 +239,8 @@ def evaluate_code_readability(repo_list):
     return ans
 
 if __name__ == "__main__":
-    file_path = ['https://github.com/numpy/numpy']
+    file_path = ["https://github.com/mathjax/MathJax"]
     # print(os.path.basename(file_path))
 
     # print(evaluate_code_readability(file_path))
-    save_json(evaluate_code_readability(file_path), f'{os.path.basename(file_path[0])}.json')
+    save_json(evaluate_code_readability(file_path,"2.7.6"), f'{os.path.basename(file_path[0])}.json')

@@ -1,4 +1,19 @@
-
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-03-04 18:01:38
+LastEditors: zyx
+LastEditTime: 2025-03-26 17:04:36
+'''
+'''
+Descripttion: 
+version: V1.0
+Author: zyx
+Date: 2025-03-04 10:23:24
+LastEditors: zyx
+LastEditTime: 2025-03-20 17:04:55
+'''
 from compass_metrics.document_metric.doc_quarty import doc_quarty_all
 from compass_metrics.document_metric.doc_chinese_support import doc_chinexe_support_git
 from compass_metrics.document_metric.doc_num import get_documentation_links_from_repo
@@ -8,20 +23,21 @@ from compass_metrics.document_metric.organizational_contribution import organiza
 class Industry_Support:
     '''get the documentation quality, documentation number, Chinese documentation files, and organizational contribution of a repository'''
 
-    def __init__(self,client,repo_list):
+    def __init__(self,client,repo_list,version):
         self.repo_list = repo_list
+        self.version = version
         self.client = client
         self.doc_number = {}
         self.doc_quarty = {}
         self.zh_files = {}
         for repo_url in self.repo_list:
-            self.doc_number[repo_url] = get_documentation_links_from_repo(repo_url)
+            self.doc_number[repo_url] = get_documentation_links_from_repo(repo_url,version)
             
 
     
     def get_doc_quarty(self):
         for repo_url in self.repo_list:
-            self.doc_quarty[repo_url] = doc_quarty_all(repo_url)
+            self.doc_quarty[repo_url] = doc_quarty_all(repo_url,self.version)
         get_doc_quarty = self.doc_quarty
 
         ans = {"doc_quarty":0, "doc_quarty_details":[]}
@@ -60,7 +76,7 @@ class Industry_Support:
     
     def get_zh_files_number(self):
         for repo_url in self.repo_list:
-            self.zh_files[repo_url] = doc_chinexe_support_git(repo_url)
+            self.zh_files[repo_url] = doc_chinexe_support_git(repo_url,self.version)
         get_zh_files_number = self.zh_files
 
         ans = {"zh_files_number":0, "zh_files_details":[]}
@@ -85,7 +101,7 @@ class Industry_Support:
         
         get_org_contribution = {}
         for repo_url in self.repo_list: 
-            get_org_contribution[repo_url] = organizational_contribution(self.client,repo_url)
+            get_org_contribution[repo_url] = organizational_contribution(self.client,repo_url,self.version)
 
         ans = {"org_contribution":0, "org_contribution_details":[]}
         for key,org_contribution in get_org_contribution.items():
@@ -100,9 +116,9 @@ class Industry_Support:
         return ans #{"org_contribution":organization,"personal": persion, "organization": organization}
     
 if __name__ == '__main__':
-    a = ['https://github.com/numpy/numpy']
-    dm = Industry_Support(123,a)
-
-    print(dm.get_doc_quarty())
-    print(dm.get_doc_number())
+    a = ["https://github.com/git-lfs/git-lfs"]
+    dm = Industry_Support(123,a,'v2.7.2')
+    # print(dm.get_doc_quarty())
+    # print(dm.get_doc_number())
+    print(dm.get_zh_files_number())
     # print(dm.get_zh_files())

@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 11:16:48
 LastEditors: zyx
-LastEditTime: 2025-03-27 11:29:42
+LastEditTime: 2025-03-26 11:18:56
 '''
 from compass_metrics.security_metric.vul_detect_time import vul_detect_time
 from compass_metrics.security_metric.vulnerability_feedback_channels import vulnerablity_feedback_channels
@@ -12,7 +12,8 @@ from compass_metrics.security_metric.get_vul_level import get_vul_levels_metrics
 from compass_metrics.security_metric.utils import get_github_token,get_gitee_token,save_json
 
 class VulnerabilityMetrics:
-    def __init__(self, repo_list):
+    def __init__(self, repo_list,version):
+        self.version = version
         self.repo_list = repo_list
         self.vul_detect_time = {}
         self.vulnerablity_feedback_channels = {}
@@ -21,13 +22,15 @@ class VulnerabilityMetrics:
         
     def get_vul_detect_time(self):
         for repo_url in self.repo_list:
-            self.vul_detect_time[repo_url] = vul_detect_time(repo_url)
+            self.vul_detect_time[repo_url] = vul_detect_time(repo_url,self.version)
         get_vul_detect_time = self.vul_detect_time
 
         ans = {
             "vul_detect_time": 0,
             "vul_detect_time_details": []
         }
+
+        
 
         for key,avg_time in get_vul_detect_time.items():
             if avg_time is None:
@@ -45,7 +48,8 @@ class VulnerabilityMetrics:
             ans.append(
                 {
                     "repo_url": key,
-                    "vul_detect_time_details": avg_time.days
+                    "vul_detect_time_details": avg_time.days,
+                    "error": None
                 }
             )
             # if ans["vul_detect_time_details"].get(key) is None:
@@ -57,7 +61,7 @@ class VulnerabilityMetrics:
     
     def get_vulnerablity_feedback_channels(self):
         for repo_url in self.repo_list:
-            self.vulnerablity_feedback_channels[repo_url] = vulnerablity_feedback_channels(repo_url)
+            self.vulnerablity_feedback_channels[repo_url] = vulnerablity_feedback_channels(repo_url,self.version)
         get_vulnerablity_feedback_channels = self.vulnerablity_feedback_channels
         ans = {
             "vulnerablity_feedback_channels": 0,
@@ -83,7 +87,7 @@ class VulnerabilityMetrics:
     
     def get_vul_levels(self,client):
         for repo_url in self.repo_list:
-            self.vul_levels_metrics[repo_url] = get_vul_levels_metrics(repo_url,client)
+            self.vul_levels_metrics[repo_url] = get_vul_levels_metrics(repo_url,client,self.version)
         get_vul_levels = self.vul_levels_metrics
 
         ans = {
@@ -107,8 +111,12 @@ class VulnerabilityMetrics:
 
     
 if __name__ == "__main__":
-    repo_url =['https://github.com/numpy/numpy']
-    metrics = VulnerabilityMetrics(x for x in repo_url).get_vul_levels("123")
+    repo_url =["https://github.com/qier222/YesPlayMusic"]
+    metrics = VulnerabilityMetrics(repo_url,"v0.4.8-2")
+    metrics.get_vul_levels("http://admin:admin@159.138.38.244:9200/")
+    metrics.get_vul_detect_time()
+    metrics.get_vulnerablity_feedback_channels()
+
     # print(metrics.get_vul_detect_time())
     # save_json(metrics.get_vul_detect_time(), 'vul_detect_time.json')
     # save_json(metrics.get_vulnerablity_feedback_channels(), 'vulnerablity_feedback_channels.json')
