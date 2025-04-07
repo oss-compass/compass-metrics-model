@@ -597,12 +597,8 @@ class BaseMetricsModel:
             "vul_levels": lambda: VulnerabilityMetrics(repo_list).get_vul_levels(self.client),
 
             # activity
-<<<<<<< HEAD
             "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, self.custom_fields['version_number']),
-=======
-            "activity_quarterly_contribution": lambda: activity_quarterly_contribution(self.client, self.contributors_index, repo_list, date),
 
->>>>>>> 97a7588d4d451fb50d006e48ee3f7f83a66166ab
             # license
             "license_conflicts_exist": lambda: license_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             "license_dep_conflicts_exist": lambda: license_dep_conflicts_exist(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
