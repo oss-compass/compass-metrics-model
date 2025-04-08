@@ -13,59 +13,217 @@ from compass_common.opensearch_utils import get_client
 from opensearchpy import OpenSearch
 import requests
 from compass_metrics.document_metric.utils import get_gitee_token,get_github_token
-
+from compass_metrics.document_metric.utils import save_json,JSON_REPOPATH,load_json
+import os
 
 def get_github_versions(repo_url,version):
     api_url = repo_url.replace("github.com", "api.github.com/repos") + "/releases"
+    repo_name_releases = repo_url.split("/")[-1] + "-" + version + "-releases.json"
+    repo_name_tags = repo_url.split("/")[-1] + "-"+ version + "-tags.json"
+
+    
     headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
     response = requests.get(api_url, headers=headers)
+    
     if response.status_code == 200:
         releases = response.json()
-        versions = [(release["tag_name"], release["published_at"]) for release in releases]
-        versions.sort(key=lambda x: x[1])
-        strart_time = None
-        end_time = None
+        # 如果本地存在版本信息，则直接读取
+        if repo_name_releases in os.listdir(JSON_REPOPATH):
+            versions = load_json(repo_name_releases)
+            
+        else:
+            versions = {}
+            while 'next' in response.links.keys():
+                next_url = response.links['next']['url']
+                response = requests.get(next_url, headers=headers)
+                if response.status_code == 200:
+                    releases += response.json()
+                else:
+                    break
+
+            # 处理每个版本的发布时间和版本号
+            for release in releases:
+                if release["published_at"] not in versions.keys():
+                    versions[release["published_at"]] = [release["tag_name"]]
+                else:
+                    versions[release["published_at"]].append(release["tag_name"])
+
+
+            #对版本进行排序
+            versions = sorted(versions.items(), key=lambda x: x[0])
+
+            # with open(os.path.join(JSON_REPOPATH, repo_name_releases), "w") as f:
+            save_json(versions, os.path.join(JSON_REPOPATH, repo_name_releases))
+
+        #时间初始化
+        start_time = datetime.datetime(2020,1,1,0,0,0).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        flag = False
 
         for i in range(len(versions)):
-            if versions[i][0] == version:
-                start_time = versions[i][1]
-                if i+1 < len(versions):
-                    end_time = versions[i+1][1]
-                else:
-                    end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            if version in versions[i][1]:
+                end_time = versions[i][0]
+                start_time = versions[i-1][0]
+                flag = True
                 break
+       
 
+        if len(versions) == 0 or not flag: #针对tags做查询
+            api_url = repo_url.replace("github.com", "api.github.com/repos") + "/tags"
+            response = requests.get(api_url, headers=headers)
+            if response.status_code == 200:
+                if repo_name_tags in os.listdir(JSON_REPOPATH):
+                    tags = load_json(repo_name_tags)
+
+                else:#没有重新处理
+                    tags = response.json()
+                    versions = {}
+                    #获取所有的版本信息
+                    while 'next' in response.links.keys():
+                        next_url = response.links['next']['url']
+                        response = requests.get(next_url, headers=headers)
+                        if response.status_code == 200:
+                            tags += response.json()
+                        else:
+                            break
+
+                    #对每个tag进行处理
+                    for tag in tags:#通过二次发送获取commit
+                        api_tags_url = tag["commit"]["url"]
+                        response = requests.get(api_tags_url, headers=headers)
+                        if response.status_code == 200:
+                            commit_date = response.json()["commit"]["committer"]["date"]
+                        else:
+                            continue
+                        
+                        if commit_date not in versions.keys():
+                            versions[commit_date] = [tag["name"]]
+                        else:
+                            versions[commit_date].append(tag["name"])
+                    
+                    versions = sorted(versions.items(), key=lambda x: x[0])
+                    save_json(versions, os.path.join(JSON_REPOPATH, repo_name_tags))
+
+                start_time = datetime.datetime(2020,1,1,0,0,0).strftime("%Y-%m-%dT%H:%M:%SZ")
+                end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+                for i in range(len(versions)):
+                    if version in versions[i][1]:
+                        end_time = versions[i][0]
+                        start_time = versions[i-1][0]
+                
+                return start_time,end_time
+            else:
+                raise Exception(f"Failed to get tags. Status code: {response.status_code}")
         return start_time,end_time
-    else:
-        return None
 
 def get_gitee_versions(repo_url,version):
-    api_url = repo_url.replace("gitee.com", "gitee.com/api/v5/repos") + "releases"
+    api_url = repo_url.replace("gitee.com", "gitee.com/api/v5/repos") + "/releases"
+    repo_name_releases = repo_url.split("/")[-1] + "-" + version + "-releases.json"
+    repo_name_tags = repo_url.split("/")[-1] + "-"+ version + "-tags.json"
+
+    
     headers = {
-        'Accept': 'application/json',
-        'Authorization': f'token {get_gitee_token()}'
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': f'token {get_github_token()}'
     }
     response = requests.get(api_url, headers=headers)
+    
     if response.status_code == 200:
         releases = response.json()
-        versions = [(release["tag_name"], release["published_at"]) for release in releases]
-        versions.sort(key=lambda x: x[1])
+        # 如果本地存在版本信息，则直接读取
+        if repo_name_releases in os.listdir(JSON_REPOPATH):
+            versions = load_json(repo_name_releases)
+            
+        else:
+            versions = {}
+            while 'next' in response.links.keys():
+                next_url = response.links['next']['url']
+                response = requests.get(next_url, headers=headers)
+                if response.status_code == 200:
+                    releases += response.json()
+                else:
+                    break
+
+            # 处理每个版本的发布时间和版本号
+            for release in releases:
+                if release["published_at"] not in versions.keys():
+                    versions[release["published_at"]] = [release["tag_name"]]
+                else:
+                    versions[release["published_at"]].append(release["tag_name"])
+
+
+            #对版本进行排序
+            versions = sorted(versions.items(), key=lambda x: x[0])
+
+            # with open(os.path.join(JSON_REPOPATH, repo_name_releases), "w") as f:
+            save_json(versions, os.path.join(JSON_REPOPATH, repo_name_releases))
+
+        #时间初始化
+        start_time = datetime.datetime(2020,1,1,0,0,0).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        flag = False
 
         for i in range(len(versions)):
-            if versions[i][0] == version:
-                start_time = versions[i][1]
-                if i+1 < len(versions):
-                    end_time = versions[i+1][1]
-                else:
-                    end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            if version in versions[i][1]:
+                end_time = versions[i][0]
+                start_time = versions[i-1][0]
+                flag = True
                 break
+       
 
+        if len(versions) == 0 or not flag: #针对tags做查询
+            api_url = repo_url.replace("gitee.com", "gitee.com/api/v5/repos") + "/tags"
+            response = requests.get(api_url, headers=headers)
+            if response.status_code == 200:
+                if repo_name_tags in os.listdir(JSON_REPOPATH):
+                    tags = load_json(repo_name_tags)
+
+                else:#没有重新处理
+                    tags = response.json()
+                    versions = {}
+                    #获取所有的版本信息
+                    while 'next' in response.links.keys():
+                        next_url = response.links['next']['url']
+                        response = requests.get(next_url, headers=headers)
+                        if response.status_code == 200:
+                            tags += response.json()
+                        else:
+                            break
+
+                    #对每个tag进行处理
+                    for tag in tags:#通过二次发送获取commit
+                        api_tags_url = tag["commit"]["url"]
+                        response = requests.get(api_tags_url, headers=headers)
+                        if response.status_code == 200:
+                            commit_date = response.json()["commit"]["committer"]["date"]
+                        else:
+                            continue
+                        
+                        if commit_date not in versions.keys():
+                            versions[commit_date] = [tag["name"]]
+                        else:
+                            versions[commit_date].append(tag["name"])
+                    
+                    versions = sorted(versions.items(), key=lambda x: x[0])
+                    save_json(versions, os.path.join(JSON_REPOPATH, repo_name_tags))
+
+                start_time = datetime.datetime(2020,1,1,0,0,0).strftime("%Y-%m-%dT%H:%M:%SZ")
+                end_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+                for i in range(len(versions)):
+                    if version in versions[i][1]:
+                        end_time = versions[i][0]
+                        start_time = versions[i-1][0]
+                
+                return start_time,end_time
+            else:
+                raise Exception(f"Failed to get tags. Status code: {response.status_code}")
         return start_time,end_time
-    else:
-        return None
+
     
 
 def organizational_contribution(client,repo_name,verision):
