@@ -4,7 +4,7 @@ version: V1.0
 Author: zyx
 Date: 2025-03-04 11:16:48
 LastEditors: zyx
-LastEditTime: 2025-03-26 11:18:56
+LastEditTime: 2025-04-08 09:41:30
 '''
 from compass_metrics.security_metric.vul_detect_time import vul_detect_time
 from compass_metrics.security_metric.vulnerability_feedback_channels import vulnerablity_feedback_channels
@@ -43,12 +43,12 @@ class VulnerabilityMetrics:
                     }
                 )
                 continue
-            ans["vul_detect_time"] += avg_time.days / len(self.repo_list)
+            ans["vul_detect_time"] += avg_time["vul_detect_time"] / len(self.repo_list)
 
             ans.append(
                 {
                     "repo_url": key,
-                    "vul_detect_time_details": avg_time.days,
+                    "vul_detect_time_details": avg_time["vul_detect_time"],
                     "error": None
                 }
             )
