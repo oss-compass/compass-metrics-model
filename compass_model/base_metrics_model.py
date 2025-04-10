@@ -330,10 +330,7 @@ class BaseMetricsModel:
                              self.metrics_model_enrich_year([repo], repo, self.level)
                          if 'license' in metric_field or 'security' in metric_field or 'activity_quarterly_' in metric_field:
                              self.metrics_model_enrich_version([repo], repo, self.level)
-                         if 'doc_' in metric_field or 'org_contribution' or 'vul_' in metric_field:
-                             self.metrics_model_enrich_version([repo], repo, self.level)
-
-                         if 'doc_' in metric_field or 'org_contribution' or 'vul_' in metric_field:
+                         if 'doc_' in metric_field or metric_field == 'org_contribution' or 'vul_' in metric_field:
                              self.metrics_model_enrich_version([repo], repo, self.level)
                          else:
                              self.metrics_model_enrich([repo], repo, self.level)
