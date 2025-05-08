@@ -398,7 +398,7 @@ class BaseMetricsModel:
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
         last_metrics_data = {}
         add_release_message(self.client, repo_list, self.repo_index, self.release_index)
-        metrics = self.get_metrics(None, repo_list)
+        metrics,metrics_list = self.get_metrics(None, repo_list)
         metrics_uuid = get_uuid(self.community, level, label, self.model_name, type,
                                 self.custom_fields_hash)
         metrics_data = {
@@ -419,6 +419,27 @@ class BaseMetricsModel:
             "_source": metrics_data
         }
         helpers().bulk(client=self.client, actions=[item_data])
+
+        self.save_single_metric(metrics_list,level,label,self.custom_fields['version_number'],datetime_utcnow().isoformat())
+
+    def save_single_metric(self,metrics_list,level,label,version_number,metadata__enriched_on):
+        actions = []
+
+        for metric_name, metric_detail in metrics_list.items():
+            item_data = {
+                "_index": "compass_metric_model_custom_v2",
+                "_source": {
+                    "level": level,
+                    "label": label,
+                    "metric_type": "software_artifict_portrait",
+                    "metric_name": metric_name,
+                    "metric_detail": metric_detail,
+                    "version_number": version_number,
+                    "grimoire_creation_date": metadata__enriched_on
+                }
+            }
+            actions.append(item_data)
+        helpers().bulk(client=self.client, actions=actions)
 
     def metrics_model_enrich_year(self, repo_list, label, level, type=None):
         """ Calculate the metrics model data of the repo list, and output the metrics model data once a year """
@@ -615,12 +636,14 @@ class BaseMetricsModel:
         
         
         metrics = {}
+        metric_list = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field in metrics_switch:
                 metrics.update(metrics_switch[metric_field]())
+                metric_list[metric_field] = metrics_switch[metric_field]()
             else:
                 raise Exception("Invalid metric")
-        return metrics     
+        return metrics, metric_list
 
     def get_metrics_score(self, metrics_data):
         """ get model scores based on metric values """
