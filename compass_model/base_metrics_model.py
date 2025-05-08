@@ -427,7 +427,7 @@ class BaseMetricsModel:
 
         for metric_name, metric_detail in metrics_list.items():
             item_data = {
-                "_index": "compass_metric",
+                "_index": "compass_metric_model_custom_v2",
                 "_source": {
                     "level": level,
                     "label": label,
