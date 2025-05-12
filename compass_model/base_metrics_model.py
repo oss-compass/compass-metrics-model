@@ -367,7 +367,8 @@ class BaseMetricsModel:
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
             if created_since_metric is None:
                 continue
-            metrics = self.get_metrics(date, repo_list)
+            metrics, _ = self.get_metrics(date, repo_list)
+
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
                                     self.custom_fields_hash)
             metrics_data = {
@@ -452,7 +453,7 @@ class BaseMetricsModel:
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
             if created_since_metric is None:
                 continue
-            metrics = self.get_metrics(date, repo_list)
+            metrics, _ = self.get_metrics(date, repo_list)
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
                                     self.custom_fields_hash,"year")
             metrics_data = {
@@ -490,7 +491,7 @@ class BaseMetricsModel:
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
             if created_since_metric is None:
                 continue
-            metrics = self.get_metrics(date, repo_list)
+            metrics, _ = self.get_metrics(date, repo_list)
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
                                     self.custom_fields_hash,"year")
             metrics_data = {
