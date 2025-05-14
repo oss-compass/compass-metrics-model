@@ -548,14 +548,14 @@ class BaseMetricsModel:
             _, metrics_list = self.get_metrics(date, repo_list)
 
             for metric_name, metric_detail in metrics_list.items():
-                uuid = get_uuid(str(date), self.community, level, label, self.model_name, type, metric_name,
-                                self.custom_fields_hash)
+                uuid = get_uuid(str(date), level, label, self.model_name, metric_name)
 
                 metric_type = None
                 if metric_name in COMMUNITY_PORTRAIT_METRICS:
                     metric_type = 'community_portrait'
                 elif metric_name in SOFTWARE_ARTIFACT_PROTRAIT_METRICS:
                     metric_type = 'software_artifact_portrait'
+                metric_value = metric_detail.get(metric_name)
                 item_data = {
                     "_index": self.out_index,
                     "_id": uuid,
@@ -565,12 +565,14 @@ class BaseMetricsModel:
                         "label": label,
                         "metric_type": metric_type,
                         "metric_name": metric_name,
+                        "metric_value": metric_value,
                         "metric_detail": metric_detail,
                         "version_number": version_number,
                         'grimoire_creation_date': date.isoformat(),
                         'metadata__enriched_on': datetime_utcnow().isoformat()
                     }
                 }
+
                 item_datas.append(item_data)
                 if len(item_datas) > MAX_BULK_UPDATE_SIZE:
                     helpers().bulk(client=self.client, actions=item_datas)
