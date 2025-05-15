@@ -100,6 +100,7 @@ from typing import Dict, Any
 from compass_metrics.code_readability import evaluate_code_readability
 from compass_metrics.document_metric import Industry_Support
 from compass_metrics.security_metric import VulnerabilityMetrics
+from compass_metrics_model.metric_constants import COMMUNITY_PORTRAIT_METRICS, SOFTWARE_ARTIFACT_PROTRAIT_METRICS
 
 
 logger = logging.getLogger(__name__)
@@ -355,6 +356,18 @@ class BaseMetricsModel:
                     if len(governance_repo_list) > 0:
                         self.metrics_model_enrich(governance_repo_list, self.community, self.level, GOVERNANCE)
 
+    def metrics_model_custom(self, elastic_url):
+        self.client = get_client(elastic_url)
+        if self.level == "repo":
+            repo_list = get_repo_list(self.json_file, self.source)
+            if len(repo_list) > 0:
+                for repo in repo_list:
+                    self.metrics_model_enrich_custom([repo], repo, self.level)
+        if self.level == "community":
+            software_artifact_repo_list, governance_repo_list = get_community_repo_list(self.json_file, self.source)
+            combined_repo_list = software_artifact_repo_list + governance_repo_list
+            if len(combined_repo_list) > 0:
+                self.metrics_model_enrich_custom(combined_repo_list, self.community, self.level)
 
     def metrics_model_enrich(self, repo_list, label, level, type=None):
         """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
@@ -519,6 +532,53 @@ class BaseMetricsModel:
                 item_datas = []
         helpers().bulk(client=self.client, actions=item_datas)
 
+    def metrics_model_enrich_custom(self, repo_list, label, level, type=None):
+        """Calculate the metrics model data of the repo list, and output the metrics model data once a week on Monday"""
+
+        add_release_message(self.client, repo_list, self.repo_index, self.release_index)
+        date_list = get_date_list(self.from_date, self.end_date)
+        item_datas = []
+        version_number = self.custom_fields.get("version_number")
+
+        for date in date_list:
+            logger.info(f"{str(date)}--{self.model_name}--{label}")
+            created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
+            if created_since_metric is None:
+                continue
+            _, metrics_list = self.get_metrics(date, repo_list)
+
+            for metric_name, metric_detail in metrics_list.items():
+                uuid = get_uuid(str(date), level, label, self.model_name, metric_name)
+
+                metric_type = None
+                if metric_name in COMMUNITY_PORTRAIT_METRICS:
+                    metric_type = 'community_portrait'
+                elif metric_name in SOFTWARE_ARTIFACT_PROTRAIT_METRICS:
+                    metric_type = 'software_artifact_portrait'
+                metric_value = metric_detail.get(metric_name)
+                item_data = {
+                    "_index": self.out_index,
+                    "_id": uuid,
+                    "_source": {
+                        "uuid": uuid,
+                        "level": level,
+                        "label": label,
+                        "metric_type": metric_type,
+                        "metric_name": metric_name,
+                        "metric_value": metric_value,
+                        "metric_detail": metric_detail,
+                        "version_number": version_number,
+                        'grimoire_creation_date': date.isoformat(),
+                        'metadata__enriched_on': datetime_utcnow().isoformat()
+                    }
+                }
+
+                item_datas.append(item_data)
+                if len(item_datas) > MAX_BULK_UPDATE_SIZE:
+                    helpers().bulk(client=self.client, actions=item_datas)
+                    item_datas = []
+            helpers().bulk(client=self.client, actions=item_datas)
+
     def get_metrics(self, date, repo_list):
         """ Get the corresponding metrics data according to the metrics field """
         metrics_switch = {
@@ -640,8 +700,9 @@ class BaseMetricsModel:
         metric_list = {}
         for metric_field in self.metrics_weights_thresholds.keys():
             if metric_field in metrics_switch:
-                metrics.update(metrics_switch[metric_field]())
-                metric_list[metric_field] = metrics_switch[metric_field]()
+                result = metrics_switch[metric_field]()
+                metrics.update(result)
+                metric_list[metric_field] = result
             else:
                 raise Exception("Invalid metric")
         return metrics, metric_list
