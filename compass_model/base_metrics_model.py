@@ -396,7 +396,11 @@ class BaseMetricsModel:
                 **self.custom_fields
             }
             cache_last_metrics_data(metrics_data, last_metrics_data)
-            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
+            try:
+                metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
+            except Exception as e:
+                print(f"[Warning] Failed to compute score for {metrics_data.get('label')}: {e}")
+                metrics_data["score"] = 0
             item_data = {
                 "_index": self.out_index,
                 "_id": metrics_uuid,
