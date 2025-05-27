@@ -32,7 +32,7 @@ def get_github_versions(repo_url,version):
         releases = response.json()
         # 如果本地存在版本信息，则直接读取
         if repo_name_releases in os.listdir(JSON_REPOPATH):
-            versions = load_json(repo_name_releases)
+            versions = load_json(os.path.join(JSON_REPOPATH,repo_name_releases))
             
         else:
             versions = {}
@@ -77,7 +77,7 @@ def get_github_versions(repo_url,version):
             response = requests.get(api_url, headers=headers)
             if response.status_code == 200:
                 if repo_name_tags in os.listdir(JSON_REPOPATH):
-                    tags = load_json(repo_name_tags)
+                    tags = load_json(os.path.join(JSON_REPOPATH,repo_name_tags))
 
                 else:#没有重新处理
                     tags = response.json()
@@ -136,7 +136,7 @@ def get_gitee_versions(repo_url,version):
         releases = response.json()
         # 如果本地存在版本信息，则直接读取
         if repo_name_releases in os.listdir(JSON_REPOPATH):
-            versions = load_json(repo_name_releases)
+            versions = load_json(os.path.join(JSON_REPOPATH,repo_name_releases))
             
         else:
             versions = {}
@@ -181,7 +181,7 @@ def get_gitee_versions(repo_url,version):
             response = requests.get(api_url, headers=headers)
             if response.status_code == 200:
                 if repo_name_tags in os.listdir(JSON_REPOPATH):
-                    tags = load_json(repo_name_tags)
+                    tags = load_json(os.path.join(JSON_REPOPATH,repo_name_tags))
 
                 else:#没有重新处理
                     tags = response.json()
