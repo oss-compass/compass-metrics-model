@@ -2,7 +2,7 @@ from compass_model.base_metrics_model import BaseMetricsModel
 from compass_metrics_model.metric_constants import COMMUNITY_PORTRAIT_METRICS
 
 DEFAULT_WEIGHT = 1.0
-DEFAULT_THRESHOLD = None
+DEFAULT_THRESHOLD = 1.0
 
 
 class MetricsModelCustom(BaseMetricsModel):
