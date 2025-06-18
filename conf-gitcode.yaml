@@ -1,0 +1,29 @@
+url:
+  "https://admin:pass@ip:9200"
+ 
+params:
+  {
+    'repo_index':'gitcode-repo_enriched',
+    'git_index': 'gitcode-git_enriched',
+    'issue_index': 'gitcode-issues_enriched',
+    'pr_index':'gitcode-pulls_enriched',
+    'issue_comments_index':'gitcode2-issues_enriched',
+    'pr_comments_index':'gitcode2-pulls_enriched',
+    'contributors_index':'gitcode-contributors_org_repo',
+    'contributors_enriched_index':'gitcode-contributors_org_repo_enriched',
+    'release_index': 'gitcode-releases_enriched',
+    'stargazer_index': 'gitcode-stargazer_enriched',
+    'fork_index': 'gitcode-fork_enriched',
+    'event_index': 'gitcode-event_enriched',
+    'out_index': 'metric_model',
+    'from_date': '2020-01-01',
+    'end_date': '2023-04-15',
+    'level': 'repo',
+    'community': 'pytorch',
+    'company': 'Facebook',
+    'source': 'gitcode',
+    'json_file': './projects-gitcode.json',
+    'contributors_org_index':'contributor_org',
+    'organizations_index': 'organizations',
+    'bots_index': 'bots'
+  }

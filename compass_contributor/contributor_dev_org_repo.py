@@ -91,6 +91,14 @@ def get_email_prefix_domain(email):
         return email_prefix, domain
     return email_prefix, domain
 
+def get_source(issue_index):
+    source_list = ["github", "gitee", "gitcode"]
+    for source in source_list:
+        if source in issue_index:
+            return source 
+    return "github"
+    
+
 
 class ContributorDevOrgRepo:
     def __init__(self, json_file, issue_index, pr_index, issue_comments_index, pr_comments_index, git_index, 
@@ -140,7 +148,7 @@ class ContributorDevOrgRepo:
         self.level = level
         self.community = community
         self.client = None
-        self.source = 'gitee' if 'gitee' in issue_index else 'github'
+        self.source = get_source(issue_index)
         self.all_repo = get_all_repo(json_file, self.source)
 
         self.platform_item_id_dict = {}
@@ -331,7 +339,7 @@ class ContributorDevOrgRepo:
         logger.info(repo + " finish count:" + str(len(all_items_dict)) + " " + str(datetime.now() - start_time))
 
     def processing_platform_data(self, index, repo, from_date, to_date, date_field, type="issue"):
-        """ Start processing data, generate gitee or github contributor profiles """
+        """ Start processing data, generate gitee, github, gitcode contributor profiles """
         logger.info(f"{repo} {index}  {type} processing...")
         start_time = datetime.now()
         results = []
@@ -513,7 +521,7 @@ class ContributorDevOrgRepo:
             author_list = get_author_list(source)
             for author_item in author_list:
                 author_name = author_item["author_name"]
-                if not author_name or not isinstance(author_name, str) or author_name in ["GitHub", "Gitee"]:
+                if not author_name or not isinstance(author_name, str) or author_name in ["GitHub", "Gitee", "GitCode"]:
                     continue
                 author_type = author_item["type"]
                 date_field = author_type + "_date_list"
@@ -833,9 +841,12 @@ class ContributorDevOrgRepo:
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"event_type": type}})
-        gitee_event_creatable_by_creator = ["RenamedTitleEvent", "ChangeDescriptionEvent", "ChangeIssueStateEvent", "ChangeIssueTypeEvent"]
-        github_event_creatable_by_creator = ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"]
-        if (self.source == "gitee" and type in gitee_event_creatable_by_creator) or (self.source == "github" and type in github_event_creatable_by_creator):
+        event_creatable_by_creator = {
+            "gitee": ["RenamedTitleEvent", "ChangeDescriptionEvent", "ChangeIssueStateEvent", "ChangeIssueTypeEvent"],
+            "github": ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"],
+            "gitcode": ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent", "ChangeDescriptionEvent"]
+        }
+        if self.source in event_creatable_by_creator and type in event_creatable_by_creator[self.source]:
             query_dsl["query"]["bool"]["must"].append({
                 "script": {
                     "script": "doc['actor_username'].size() > 0 && doc['reporter_user_name'].size() > 0 &&  doc['actor_username'].value != doc['reporter_user_name'].value"
@@ -849,11 +860,14 @@ class ContributorDevOrgRepo:
         query_dsl = self.get_enrich_dsl("tag", repo, from_date, to_date, page_size)
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
         query_dsl["query"]["bool"]["must"].append({"match_phrase": {"event_type": type}})
-        gitee_event_creatable_by_creator = ["LabeledEvent", "UnlabeledEvent", "ClosedEvent", "ReopenedEvent", "AssignedEvent", 
+        event_creatable_by_creator = {
+            "gitee": ["LabeledEvent", "UnlabeledEvent", "ClosedEvent", "ReopenedEvent", "AssignedEvent", 
                 "MilestonedEvent", "DemilestonedEvent", "RenamedTitleEvent", "ChangeDescriptionEvent", "SettingPriorityEvent",
-                "ChangePriorityEvent", "SetTesterEvent", "LinkIssueEvent", "UnlinkIssueEvent"]
-        github_event_creatable_by_creator = ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"]
-        if (self.source == "gitee" and type in gitee_event_creatable_by_creator) or (self.source == "github" and type in github_event_creatable_by_creator):
+                "ChangePriorityEvent", "SetTesterEvent", "LinkIssueEvent", "UnlinkIssueEvent"],
+            "github": ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent"],
+            "gitcode": ["ClosedEvent", "ReopenedEvent", "RenamedTitleEvent", "ChangeDescriptionEvent"]
+        }
+        if self.source in event_creatable_by_creator and type in event_creatable_by_creator[self.source]:
             query_dsl["query"]["bool"]["must"].append({
                 "script": {
                     "script": "doc['actor_username'].size() > 0 && doc['reporter_user_name'].size() > 0 &&  doc['actor_username'].value != doc['reporter_user_name'].value"
