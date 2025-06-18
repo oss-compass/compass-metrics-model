@@ -1,0 +1,10 @@
+{
+  "gitcode-test": {
+          "gitcode-software-artifact": [
+             "https://gitcode.com/openharmony-sig/ohos_react_native"
+          ],
+          "gitcode-governance": [
+            
+          ]
+  }
+}

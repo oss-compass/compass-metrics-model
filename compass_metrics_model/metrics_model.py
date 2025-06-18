@@ -253,6 +253,13 @@ def check_repo_active(client, contributors_index, repo, date):
     contributor_c = contributor_count(client, contributors_index, date, [repo], from_date)["contributor_count"]
     return contributor_c > 0
 
+def get_source(issue_index):
+    source_list = ["github", "gitee", "gitcode"]
+    for source in source_list:
+        if source in issue_index:
+            return source 
+    return "github"
+
 class MetricsModel:
     def __init__(self, json_file, from_date, end_date, out_index=None, community=None, level=None, weights=None, custom_fields=None):
         """Metrics Model is designed for the integration of multiple CHAOSS metrics.
@@ -294,7 +301,7 @@ class MetricsModel:
             software_artifact_repos_list = []
             governance_repos_list = []
             for project in all_repo_json:
-                origin = 'gitee' if 'gitee' in self.issue_index else 'github'
+                origin = get_source(self.issue_index)
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
                 for key in all_repo_json[project].keys():
@@ -324,7 +331,7 @@ class MetricsModel:
             for project in all_repo_json:
                 software_artifact_repos_list = []
                 governance_repos_list = []
-                origin = 'gitee' if 'gitee' in self.issue_index else 'github'
+                origin = get_source(self.issue_index)
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
                 for key in all_repo_json[project].keys():
@@ -352,7 +359,7 @@ class MetricsModel:
                     self.metrics_model_enrich(governance_repos_list, project, "governance")
         if self.level == "repo":
             for project in all_repo_json:
-                origin = 'gitee' if 'gitee' in self.issue_index else 'github'
+                origin = get_source(self.issue_index)
                 origin_software_artifact = origin + "-software-artifact"
                 origin_governance = origin + "-governance"
                 for key in all_repo_json[project].keys():
