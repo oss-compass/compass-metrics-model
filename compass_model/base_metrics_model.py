@@ -195,7 +195,7 @@ def add_release_message(es_client, all_repo, repo_index, release_index):
                     "_id": get_uuid(str(item["id"])),
                     "_source": {
                         "uuid": get_uuid(str(item["id"])),
-                        "id": item["id"],
+                        "id": item["id"] if isinstance(item["id"], int) else None,
                         "tag": repo_url,
                         "tag_name": item["tag_name"],
                         "target_commitish": item["target_commitish"],
