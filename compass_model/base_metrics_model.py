@@ -17,7 +17,9 @@ from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_q
 from compass_metrics.git_metrics import (created_since,
                                          updated_since,
                                          commit_frequency,
+                                         commit_frequency_last_year,
                                          org_count,
+                                         org_count_all,
                                          is_maintained,
                                          commit_pr_linked_ratio,
                                          commit_count,
@@ -33,6 +35,7 @@ from compass_metrics.git_metrics import (created_since,
                                          )
 from compass_metrics.repo_metrics import recent_releases_count
 from compass_metrics.contributor_metrics import (contributor_count,
+                                                 contributor_count_all,
                                                  code_contributor_count, 
                                                  commit_contributor_count,
                                                  pr_authors_contributor_count,
@@ -588,9 +591,11 @@ class BaseMetricsModel:
         metrics_switch = {
             # git metadata
             "commit_frequency": lambda: commit_frequency(self.client, self.contributors_index, date, repo_list),
+            "commit_frequency_last_year": lambda: commit_frequency_last_year(self.client, self.contributors_index, date, repo_list),
             "created_since": lambda: created_since(self.client, self.git_index, date, repo_list),
             "updated_since": lambda: updated_since(self.client, self.git_index, self.contributors_index, date, repo_list, self.level),
             "org_count": lambda: org_count(self.client, self.contributors_index, date, repo_list),
+            "org_count_all": lambda: org_count_all(self.client, self.contributors_index, date, repo_list),
             "lines_of_code_frequency": lambda: lines_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_remove_of_code_frequency": lambda: lines_remove_of_code_frequency(self.client, self.git_index, date, repo_list),
@@ -638,6 +643,7 @@ class BaseMetricsModel:
             "recent_releases_count": lambda: recent_releases_count(self.client, self.release_index, date, repo_list),
             # contributor
             "contributor_count": lambda: contributor_count(self.client, self.contributors_index, date, repo_list),
+            "contributor_count_all": lambda: contributor_count_all(self.client, self.contributors_index, date, repo_list),
             "code_contributor_count": lambda: code_contributor_count(self.client, self.contributors_index, date, repo_list),
             "commit_contributor_count": lambda: commit_contributor_count(self.client, self.contributors_index, date, repo_list),
             "pr_authors_contributor_count": lambda: pr_authors_contributor_count(self.client, self.contributors_index, date, repo_list),

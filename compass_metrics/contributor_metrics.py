@@ -4,6 +4,7 @@ from compass_common.opensearch_utils import get_all_index_data
 from datetime import timedelta
 from itertools import groupby
 import pandas as pd
+import datetime
 from dateutil.relativedelta import relativedelta
 
 
@@ -22,6 +23,23 @@ def contributor_count(client, contributors_index, date, repo_list, from_date=Non
         "contributor_count": contributor_count,
         "contributor_count_bot": contributor_count_bot,
         "contributor_count_without_bot": contributor_count_without_bot,
+    }
+    return result
+
+def contributor_count_all(client, contributors_index, date, repo_list):
+    """ Determine how many active code commit authors, pr authors, review participants, issue authors,
+    and issue comments participants there are """
+    from_date = datetime.date(2000, 1, 1)
+    to_date = date
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list", 
+                        "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                    
+    result = {
+        "contributor_count_all": contributor_count,
+        "contributor_count_all_bot": contributor_count_bot,
+        "contributor_count_all_without_bot": contributor_count_without_bot,
     }
     return result
 
