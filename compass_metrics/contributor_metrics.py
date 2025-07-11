@@ -34,12 +34,12 @@ def contributor_count_all(client, contributors_index, date, repo_list):
     date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list", 
                         "pr_creation_date_list", "pr_comments_date_list"]
     contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list)
-    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
-    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                    
+    # contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    # contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                    
     result = {
         "contributor_count_all": contributor_count,
-        "contributor_count_all_bot": contributor_count_bot,
-        "contributor_count_all_without_bot": contributor_count_without_bot,
+        # "contributor_count_all_bot": contributor_count_bot,
+        # "contributor_count_all_without_bot": contributor_count_without_bot,
     }
     return result
 
@@ -186,6 +186,55 @@ def org_contributor_count(client, contributors_index, date, repo_list):
         'org_contributor_count_bot': len(org_contributor_bot_set),
         'org_contributor_count_without_bot': len(org_contributor_without_bot_set),
         'org_contributor_count_list': org_contributor_count_list
+    }
+    return result
+
+def contributors(client, contributors_enriched_index, repo_list):
+    """ Does the project have contributors from at least two different organizations? """
+    query = {
+        "size": 0,
+        "aggregations": {
+            "org_count": {
+                "terms": {
+                    "field": "organization.keyword",
+                    "size": 100
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "repo_name.keyword": repo_list
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "contribution_type_list.contribution_type.keyword": "code_author"
+                        }
+                    },
+                    {
+                        "exists": {
+                            "field": "organization"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    resp = client.search(index=contributors_enriched_index, body=query)
+    buckets = resp["aggregations"]["org_count"]["buckets"]
+    org_list = [bucket["key"] for bucket in buckets]
+    score = {
+        0: 0,
+        1: 3.33, 
+        2: 6.66
+        }.get(len(org_list), 10)
+        
+    result = {
+        'contributors': score,
+        'contributors_detail': org_list
     }
     return result
 

@@ -20,6 +20,26 @@ def get_score_by_criticality_score(metrics_data, metrics_weights_thresholds):
     except ZeroDivisionError:
         return 0.0
 
+
+def get_score_by_aggregate_score(metrics_data, metrics_weights_thresholds):
+    """ GetAggregateScore returns the aggregate score. 
+    total_score = Σ(score × weight) / Σ(weight) 
+    """
+    total_weight = 0
+    total_score = 0
+    for metrics, weights_thresholds in metrics_weights_thresholds.items():
+        score = metrics_data[metrics]
+        if score is not None:
+            weight = weights_thresholds["weight"]
+            total_score += (score * weight)
+            total_weight += weight
+    try:
+        return round(total_score / total_weight, 2)
+    except ZeroDivisionError:
+        return 0.0
+    
+
+
 def get_param_score(param, max_value, weight=1):
     """Return paramater score given its current value, max value and parameter weight."""
     return (math.log(1 + param) / math.log(1 + max(param, max_value))) * weight

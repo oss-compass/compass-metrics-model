@@ -74,15 +74,15 @@ def commit_frequency(client, contributors_index, date, repo_list):
     return result
 
 def commit_frequency_last_year(client, contributors_index, date, repo_list):
-    """ Determine the average number of commits per week in the past 90 days. """
+    """ Determine the average number of commits per week in the past 365 days. """
     from_date = date - timedelta(days=365)
     to_date = date
     commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
                                                    "code_author_date_list")
     result = {
-        'commit_frequency_last_year': get_commit_count(from_date, to_date, commit_contributor_list)/12.85,
-        'commit_frequency_last_year_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True)/12.85,
-        'commit_frequency_last_year_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)/12.85
+        'commit_frequency_last_year': get_commit_count(from_date, to_date, commit_contributor_list)/52.14,
+        # 'commit_frequency_last_year_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True)/52.14,
+        # 'commit_frequency_last_year_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)/52.14
     }
     return result
 
@@ -254,6 +254,28 @@ def is_maintained(client, git_index, contributors_index, date, repos_list, level
         'is_maintained': round(is_maintained, 4)
     }
     return result
+
+
+def maintained(client, git_index, issue_index, date, repos_list):
+    """ Is the project at least 90 days old, and maintained? """
+    git_repos_list = [repo_url+'.git' for repo_url in repos_list]
+    commit_query = get_uuid_count_query("cardinality", git_repos_list, "hash", size=0, from_date=date-timedelta(days=90), to_date=date)
+    commit_count = client.search(index=git_index, body=commit_query)['aggregations']["count_of_uuid"]['value']
+    
+    issue_query = get_uuid_count_query("cardinality", repos_list, "uuid", size=0, from_date=date-timedelta(days=90), to_date=date)
+    issue_count = client.search(index=issue_index, body=issue_query)['aggregations']["count_of_uuid"]['value']
+    
+    score = min(int((commit_count + issue_count) * 10 / 13), 10)
+    
+    result = {
+        "maintained": score,
+        "maintained_detail": {
+            "commit_count": commit_count,
+            "issue_count": issue_count
+        }
+    }
+    return result
+
 
 
 def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list):

@@ -12,7 +12,7 @@ from compass_common.datetime import (get_date_list,
                                      get_last_three_years_dates,
                                      get_last_four_quarters_dates)
 from compass_common.uuid_utils import get_uuid
-from compass_common.algorithm_utils import get_score_by_criticality_score, normalize
+from compass_common.algorithm_utils import get_score_by_criticality_score, normalize, get_score_by_aggregate_score
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
 from compass_metrics.git_metrics import (created_since,
                                          updated_since,
@@ -21,6 +21,7 @@ from compass_metrics.git_metrics import (created_since,
                                          org_count,
                                          org_count_all,
                                          is_maintained,
+                                         maintained,
                                          commit_pr_linked_ratio,
                                          commit_count,
                                          commit_pr_linked_count,
@@ -33,7 +34,25 @@ from compass_metrics.git_metrics import (created_since,
                                          lines_of_code_frequency_year,
                                          LOC_frequency_year
                                          )
-from compass_metrics.repo_metrics import recent_releases_count
+from compass_metrics.repo_metrics import (recent_releases_count, 
+                                          branch_protection)
+from compass_metrics.opencheck_metrics import (binary_artifacts, 
+                                               license,
+                                               signed_releases,
+                                               sbom,
+                                               vulnerabilities,
+                                               cii_best_practices,
+                                               dangerous_workflow,
+                                               fuzzing,
+                                               packaging,
+                                               pinned_dependencies,
+                                               sast,
+                                               security_policy,
+                                               token_permissions,
+                                               webhooks,
+                                               dependents_count,
+                                               ci_tests,
+                                               dependency_update_tool)
 from compass_metrics.contributor_metrics import (contributor_count,
                                                  contributor_count_all,
                                                  code_contributor_count, 
@@ -43,6 +62,7 @@ from compass_metrics.contributor_metrics import (contributor_count,
                                                  issue_authors_contributor_count,
                                                  issue_comments_contributor_count,
                                                  org_contributor_count,
+                                                 contributors,
                                                  bus_factor,
                                                  activity_casual_contributor_count,
                                                  activity_regular_contributor_count,
@@ -74,6 +94,7 @@ from compass_metrics.issue_metrics import (comment_frequency,
                                            issue_completion_ratio_year,
                                            comment_frequency_year)
 from compass_metrics.pr_metrics import (code_review_count,
+                                        code_review,
                                         pr_open_time,
                                         close_pr_count,
                                         code_review_ratio,
@@ -241,7 +262,7 @@ class BaseMetricsModel:
     def __init__(self, repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                  contributors_index, release_index, out_index, from_date, end_date, level, community, source,
                  json_file, model_name, metrics_weights_thresholds, algorithm="criticality_score", custom_fields=None,
-                 contributors_enriched_index=None):
+                 contributors_enriched_index=None, openchecker_index=None):
         """ Metrics Model is designed for the integration of multiple CHAOSS metrics.
         :param repo_index: repo index
         :param git_index: git index
@@ -263,6 +284,7 @@ class BaseMetricsModel:
         :param algorithm: The algorithm chosen by the model,include criticality_score.
         :param custom_fields: custom_fields
         :param contributors_enriched_index: contributor enrich index
+        :param openchecker_index: openchecker index
         """
         self.repo_index = repo_index
         self.git_index = git_index
@@ -282,9 +304,9 @@ class BaseMetricsModel:
         self.json_file = json_file
         self.model_name = model_name
         self.algorithm = algorithm
-        self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
         self.client = None
         self.compass_metric_model_opencheck = "compass_metric_model_opencheck"
+        self.openchecker_index = openchecker_index
 
         if type(metrics_weights_thresholds) == dict:
             default_metrics_thresholds = self.get_default_metrics_thresholds()
@@ -600,6 +622,7 @@ class BaseMetricsModel:
             "lines_add_of_code_frequency": lambda: lines_add_of_code_frequency(self.client, self.git_index, date, repo_list),
             "lines_remove_of_code_frequency": lambda: lines_remove_of_code_frequency(self.client, self.git_index, date, repo_list),
             "is_maintained": lambda: is_maintained(self.client, self.git_index, self.contributors_index, date, repo_list, self.level),
+            "maintained": lambda: maintained(self.client, self.git_index, self.issue_index, date, repo_list),
             "commit_pr_linked_ratio": lambda: commit_pr_linked_ratio(self.client, self.contributors_index, self.git_index, self.pr_index, date, repo_list),
             "commit_count": lambda: commit_count(self.client, self.contributors_index, date, repo_list),
             "commit_pr_linked_count": lambda: commit_pr_linked_count(self.client, self.git_index, self.pr_index, date, repo_list),
@@ -622,6 +645,7 @@ class BaseMetricsModel:
             "close_pr_count": lambda: close_pr_count(self.client, self.pr_index, date, repo_list),
             "code_review_count": lambda: code_review_count(self.client, self.pr_index, date, repo_list),
             "code_review_ratio": lambda: code_review_ratio(self.client, self.pr_index, date, repo_list),
+            "code_review": lambda: code_review(self.client, self.pr_index, repo_list),
             "pr_count": lambda: pr_count(self.client, self.pr_index, date, repo_list),
             "pr_count_with_review": lambda: pr_count_with_review(self.client, self.pr_index, date, repo_list),
             "code_merge_ratio": lambda: code_merge_ratio(self.client, self.pr_index, date, repo_list),
@@ -641,6 +665,7 @@ class BaseMetricsModel:
 
             # repo
             "recent_releases_count": lambda: recent_releases_count(self.client, self.release_index, date, repo_list),
+            "branch_protection": lambda: branch_protection(self.client, self.repo_index, repo_list),
             # contributor
             "contributor_count": lambda: contributor_count(self.client, self.contributors_index, date, repo_list),
             "contributor_count_all": lambda: contributor_count_all(self.client, self.contributors_index, date, repo_list),
@@ -651,6 +676,7 @@ class BaseMetricsModel:
             "issue_authors_contributor_count": lambda: issue_authors_contributor_count(self.client, self.contributors_index, date, repo_list),
             "issue_comments_contributor_count": lambda: issue_comments_contributor_count(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count": lambda: org_contributor_count(self.client, self.contributors_index, date, repo_list),
+            "contributors": lambda: contributors(self.client, self.contributors_enriched_index, repo_list),
             "bus_factor": lambda: bus_factor(self.client, self.contributors_index, date, repo_list),
             "activity_casual_contributor_count": lambda: activity_casual_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
             "activity_regular_contributor_count": lambda: activity_regular_contributor_count(self.client, self.contributors_enriched_index, date, repo_list),
@@ -701,7 +727,24 @@ class BaseMetricsModel:
             "security_vul_stat": lambda: security_vul_stat(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             "security_vul_fixed": lambda: security_vul_fixed(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
             "security_scanned": lambda: security_scanned(self.client, self.compass_metric_model_opencheck, self.custom_fields['version_number'], repo_list),
-
+            # opencheck
+            "binary_artifacts": lambda: binary_artifacts(self.client, self.openchecker_index, repo_list),
+            "license": lambda: license(self.client, self.openchecker_index, repo_list),
+            "signed_releases": lambda: signed_releases(self.client, self.openchecker_index, repo_list),
+            "sbom": lambda: sbom(self.client, self.openchecker_index, repo_list),
+            "vulnerabilities": lambda: vulnerabilities(self.client, self.openchecker_index, repo_list),
+            "cii_best_practices": lambda: cii_best_practices(self.client, self.openchecker_index, repo_list),
+            "dangerous_workflow": lambda: dangerous_workflow(self.client, self.openchecker_index, repo_list),
+            "fuzzing": lambda: fuzzing(self.client, self.openchecker_index, repo_list),
+            "packaging": lambda: packaging(self.client, self.openchecker_index, repo_list),
+            "pinned_dependencies": lambda: pinned_dependencies(self.client, self.openchecker_index, repo_list),
+            "sast": lambda: sast(self.client, self.openchecker_index, repo_list),
+            "security_policy": lambda: security_policy(self.client, self.openchecker_index, repo_list),
+            "token_permissions": lambda: token_permissions(self.client, self.openchecker_index, repo_list),
+            "webhooks": lambda: webhooks(self.client, self.openchecker_index, repo_list),
+            "dependents_count": lambda: dependents_count(self.client, self.openchecker_index, repo_list),
+            "ci_tests": lambda: ci_tests(self.client, self.openchecker_index, repo_list),
+            "dependency_update_tool": lambda: dependency_update_tool(self.client, self.openchecker_index, repo_list),
         }
 
         
@@ -733,6 +776,8 @@ class BaseMetricsModel:
             min_metrics_data = {key: None for key in new_metrics_weights_thresholds.keys()}
             min_score = round(get_score_by_criticality_score(min_metrics_data, new_metrics_weights_thresholds), 5)
             return normalize(score, min_score, 1 - min_score)
+        elif self.algorithm == "aggregate_score":
+            return get_score_by_aggregate_score(metrics_data, new_metrics_weights_thresholds)
         else:
             raise Exception("Invalid algorithm param.")
 
