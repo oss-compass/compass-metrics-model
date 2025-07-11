@@ -7,6 +7,7 @@ from compass_metrics.db_dsl import (get_uuid_count_query,
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
+from compass_common.dict_utils import deep_get
 from compass_common.algorithm_utils import get_medium
 from compass_common.opensearch_utils import get_all_index_data
 from dateutil.relativedelta import relativedelta
@@ -55,6 +56,55 @@ def code_review_count(client, pr_index, date, repo_list):
         comment_count = prs['aggregations']["count_of_uuid"]['value']
     result = {
         'code_review_count': round(comment_count, 4) if comment_count is not None else None
+    }
+    return result
+
+def code_review(client, pr_index, repo_list):
+    """ Does the project conduct code review before merging code? 
+    Check whether the code review was conducted for the last 30 PR merges. """
+    query = {
+        "size": 30,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "tag": repo_list
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "state": "merged"
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "pull_request": "true"
+                        }
+                    }
+                ]
+            }
+        },
+        "sort": [
+            {
+                "merged_at": {
+                    "order": "desc"
+                }
+            }
+        ]
+    }
+    hits = client.search(index=pr_index, body=query)["hits"]["hits"]
+    recent_pr_count = len(hits)
+    recent_code_review_count = sum(1 for hit in hits
+                                   if (deep_get(hit, ["_source", "num_review_comments_without_bot"], 0) > 0)
+                                   or (deep_get(hit, ["_source", "assignees_accept_count"], 0) > 0))
+    
+    result = {
+        'code_review': int(recent_code_review_count / recent_pr_count) * 10 if recent_pr_count > 0 else 0,
+        'code_review_detail': {
+            "recent_pr_count": recent_pr_count,
+            "recent_code_review_count": recent_code_review_count
+        }
     }
     return result
 

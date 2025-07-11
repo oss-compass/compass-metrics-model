@@ -16,6 +16,7 @@ from datetime import timedelta
 from compass_common.opensearch_utils import get_all_index_data
 import numpy as np
 import math
+import datetime
 from dateutil.relativedelta import relativedelta
 
 
@@ -72,6 +73,19 @@ def commit_frequency(client, contributors_index, date, repo_list):
     }
     return result
 
+def commit_frequency_last_year(client, contributors_index, date, repo_list):
+    """ Determine the average number of commits per week in the past 365 days. """
+    from_date = date - timedelta(days=365)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    result = {
+        'commit_frequency_last_year': get_commit_count(from_date, to_date, commit_contributor_list)/52.14,
+        # 'commit_frequency_last_year_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=True)/52.14,
+        # 'commit_frequency_last_year_without_bot': get_commit_count(from_date, to_date, commit_contributor_list, is_bot=False)/52.14
+    }
+    return result
+
 
 def org_count(client, contributors_index, date, repo_list):
     """ Number of organizations to which active code contributors belong in the past 90 days """
@@ -87,6 +101,23 @@ def org_count(client, contributors_index, date, repo_list):
                 org_name_set.add(org.get("org_name"))
     result = {
         'org_count': len(org_name_set)
+    }
+    return result
+
+def org_count_all(client, contributors_index, date, repo_list):
+    """ Number of organizations to which active code contributors belong """
+    from_date = datetime.date(2000, 1, 1)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    org_name_set = set()
+    for contributor in commit_contributor_list:
+        for org in contributor["org_change_date_list"]:
+            if org.get("org_name") is not None and check_times_has_overlap(
+                    org["first_date"], org["last_date"], from_date.strftime("%Y-%m-%d"), to_date.strftime("%Y-%m-%d")):
+                org_name_set.add(org.get("org_name"))
+    result = {
+        'org_count_all': len(org_name_set)
     }
     return result
 
@@ -223,6 +254,28 @@ def is_maintained(client, git_index, contributors_index, date, repos_list, level
         'is_maintained': round(is_maintained, 4)
     }
     return result
+
+
+def maintained(client, git_index, issue_index, date, repos_list):
+    """ Is the project at least 90 days old, and maintained? """
+    git_repos_list = [repo_url+'.git' for repo_url in repos_list]
+    commit_query = get_uuid_count_query("cardinality", git_repos_list, "hash", size=0, from_date=date-timedelta(days=90), to_date=date)
+    commit_count = client.search(index=git_index, body=commit_query)['aggregations']["count_of_uuid"]['value']
+    
+    issue_query = get_uuid_count_query("cardinality", repos_list, "uuid", size=0, from_date=date-timedelta(days=90), to_date=date)
+    issue_count = client.search(index=issue_index, body=issue_query)['aggregations']["count_of_uuid"]['value']
+    
+    score = min(int((commit_count + issue_count) * 10 / 13), 10)
+    
+    result = {
+        "maintained": score,
+        "maintained_detail": {
+            "commit_count": commit_count,
+            "issue_count": issue_count
+        }
+    }
+    return result
+
 
 
 def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list):
