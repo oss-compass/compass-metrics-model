@@ -35,7 +35,7 @@ def get_spdx_license():
         spdx_license_dict = {}
         spdx_license_file_data = pkg_resources.resource_string('compass_metrics', 'resources/spdx_licenses.json')
         spdx_license_data = json.loads(spdx_license_file_data.decode('utf-8'))
-        for license in spdx_license_data["licenses"]:
+        for license in spdx_license_data.get("licenses", []):
             spdx_license_dict[license["licenseId"]] = {
                 "isOsiApproved": license.get("isOsiApproved", False),
                 "isFsfLibre": license.get("isFsfLibre", False),
@@ -93,6 +93,8 @@ def license(client, openchecker_index, repo_list):
     }
     if license_data is not None:
         score = 9
+        license_detail["license_path"] = license_data.get("path")
+        license_detail["license_name"] = license_data.get("detected_license_expression_spdx") or license_data.get("detected_license_expression")
         if license_detail["license_name"] in spdx_license_dict and \
             (spdx_license_dict[license_detail["license_name"]]["isOsiApproved"] or spdx_license_dict[license_detail["license_name"]]["isFsfLibre"]):
             score += 1
@@ -351,11 +353,11 @@ def pinned_dependencies(client, openchecker_index, repo_list):
     if openchecker_data is not None:
         command_result = deep_get(openchecker_data, ["_source", "command_result"], {})
         analysis_results = command_result.get('analysis_results', {})
-        detail["total_dependencies"] = analysis_results["total_dependencies"]
-        detail["pinned_count"] = analysis_results["pinned_count"]
-        detail["unpinned_count"] = analysis_results["unpinned_count"]
+        detail["total_dependencies"] = analysis_results.get("total_dependencies", 0)
+        detail["pinned_count"] = analysis_results.get("pinned_count", 0)
+        detail["unpinned_count"] = analysis_results.get("unpinned_count", 0)
         
-        if len(analysis_results) > 0 and analysis_results['total_dependencies'] > 0:
+        if len(analysis_results) > 0 and analysis_results.get("total_dependencies", 0) > 0:
               score = calculate_score(analysis_results)
         
     result = {
