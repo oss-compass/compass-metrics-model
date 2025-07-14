@@ -100,7 +100,7 @@ def code_review(client, pr_index, repo_list):
                                    or (deep_get(hit, ["_source", "assignees_accept_count"], 0) > 0))
     
     result = {
-        'code_review': int(recent_code_review_count / recent_pr_count) * 10 if recent_pr_count > 0 else 0,
+        'code_review': round(recent_code_review_count * 10 / recent_pr_count, 2) if recent_pr_count > 0 else 0,
         'code_review_detail': {
             "recent_pr_count": recent_pr_count,
             "recent_code_review_count": recent_code_review_count
