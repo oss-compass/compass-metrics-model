@@ -542,6 +542,7 @@ def webhooks(client, openchecker_index, repo_list):
     """ 
     
     access_token = False
+    error_msg = None
     webhooks_hooks = []
     webhooks_hooks_secret = []
 
@@ -549,7 +550,7 @@ def webhooks(client, openchecker_index, repo_list):
     if openchecker_data is not None:
         command_result = deep_get(openchecker_data, ["_source", "command_result"], {})
         access_token = command_result.get('access_token', False)
-        error_msg = command_result.get('error_msg', "")
+        error_msg = command_result.get('error_msg')
         webhooks_hooks = command_result.get('webhooks_hooks', [])
         
     score = None
