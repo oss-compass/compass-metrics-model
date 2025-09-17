@@ -313,16 +313,16 @@ class MetricsModel:
                             governance_repos_list.append(j)
             software_artifact_repos_list = list(set(software_artifact_repos_list))
             governance_repos_list = list(set(governance_repos_list))
-            all_repo_list = software_artifact_repos_list + governance_repos_list
-            if len(all_repo_list) > 0:
-                for repo in all_repo_list:
-                    last_time = self.last_metrics_model_time(repo, self.model_name, "repo")
-                    if last_time is None:
-                        self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
-                                                  date_list=get_date_list(self.from_date, self.end_date))
-                    if last_time is not None and last_time < self.end_date:
-                        self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
-                                                  date_list=get_date_list(get_latest_date(self.from_date, last_time), self.end_date))
+            # all_repo_list = software_artifact_repos_list + governance_repos_list
+            # if len(all_repo_list) > 0:
+            #     for repo in all_repo_list:
+            #         last_time = self.last_metrics_model_time(repo, self.model_name, "repo")
+            #         if last_time is None:
+            #             self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
+            #                                       date_list=get_date_list(self.from_date, self.end_date))
+            #         if last_time is not None and last_time < self.end_date:
+            #             self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
+            #                                       date_list=get_date_list(get_latest_date(self.from_date, last_time), self.end_date))
             if len(software_artifact_repos_list) > 0:
                 self.metrics_model_enrich(software_artifact_repos_list, self.community, "software-artifact")
             if len(governance_repos_list) > 0:
@@ -343,16 +343,16 @@ class MetricsModel:
                             governance_repos_list.append(j)
                 software_artifact_repos_list = list(set(software_artifact_repos_list))
                 governance_repos_list = list(set(governance_repos_list))
-                all_repo_list = software_artifact_repos_list + governance_repos_list
-                if len(all_repo_list) > 0:
-                    for repo in all_repo_list:
-                        last_time = self.last_metrics_model_time(repo, self.model_name, "repo")
-                        if last_time is None:
-                            self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
-                                                      date_list=get_date_list(self.from_date, self.end_date))
-                        if last_time is not None and last_time < self.end_date:
-                            self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
-                                                      date_list=get_date_list(get_latest_date(self.from_date, last_time), self.end_date))
+                # all_repo_list = software_artifact_repos_list + governance_repos_list
+                # if len(all_repo_list) > 0:
+                #     for repo in all_repo_list:
+                #         last_time = self.last_metrics_model_time(repo, self.model_name, "repo")
+                #         if last_time is None:
+                #             self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
+                #                                       date_list=get_date_list(self.from_date, self.end_date))
+                #         if last_time is not None and last_time < self.end_date:
+                #             self.metrics_model_enrich(repos_list=[repo], label=repo, level="repo",
+                #                                       date_list=get_date_list(get_latest_date(self.from_date, last_time), self.end_date))
                 if len(software_artifact_repos_list) > 0:
                     self.metrics_model_enrich(software_artifact_repos_list, project, "software-artifact")
                 if len(governance_repos_list) > 0:
