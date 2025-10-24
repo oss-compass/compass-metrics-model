@@ -8,10 +8,13 @@ from compass_common.opensearch_utils import get_all_index_data
 from dateutil.relativedelta import relativedelta
 
 
-def issue_first_reponse(client, issue_index, date, repos_list):
+def issue_first_reponse(client, issue_index, date, repos_list, from_date=None):
+    if from_date is None:
+        from_date = date - timedelta(days=90)
     query_issue_first_reponse_avg = get_uuid_count_query(
-        "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
     query_issue_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    query_issue_first_reponse_avg["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
 
     issue_first_reponse = client.search(index=issue_index, body=query_issue_first_reponse_avg)
     if issue_first_reponse["hits"]["total"]["value"] == 0:
@@ -19,10 +22,11 @@ def issue_first_reponse(client, issue_index, date, repos_list):
     issue_first_reponse_avg = issue_first_reponse['aggregations']["count_of_uuid"]['value']
 
     query_issue_first_reponse_mid = get_uuid_count_query(
-        "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
+        "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
     query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
         50]
     query_issue_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
+    query_issue_first_reponse_mid["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
     issue_first_reponse_mid = client.search(index=issue_index, body=query_issue_first_reponse_mid)[
         'aggregations']["count_of_uuid"]['values']['50.0']
 
@@ -33,9 +37,11 @@ def issue_first_reponse(client, issue_index, date, repos_list):
     return result
 
 
-def bug_issue_open_time(client, issue_index, date, repos_list):
+def bug_issue_open_time(client, issue_index, date, repos_list, from_date=None):
+    if from_date is None:
+        from_date = date - timedelta(days=90)
     query_issue_opens = get_uuid_count_query("avg", repos_list, "time_to_first_attention_without_bot",
-                                                    "grimoire_creation_date", size=1000, from_date=date-timedelta(days=90), to_date=date)
+                                                    "grimoire_creation_date", size=10000, from_date=from_date, to_date=date)
     query_issue_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
     bug_query = {
         "bool": {
@@ -60,12 +66,15 @@ def bug_issue_open_time(client, issue_index, date, repos_list):
     date_str = date.isoformat()
     for item in issue_opens_items:
         if 'state' in item['_source']:
-            if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str:
+            if item['_source']['closed_at'] and item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str and item['_source']['created_at'] < item['_source']['closed_at']:
                 issue_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['closed_at']))
             else:
                 issue_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'],date_str))
+    issue_open_time_repo = list(filter(lambda x: x >= 0, issue_open_time_repo))
+    if len(issue_open_time_repo) == 0:
+        return { "bug_issue_open_time_avg": None, "bug_issue_open_time_mid": None }
     issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
     issue_open_time_repo_mid = get_medium(issue_open_time_repo)
     result = {
@@ -248,14 +257,16 @@ def issue_comment_distribution(client, issue_index, date, repo_list, from_date=N
     }
     return result
 
-def time_to_close(client, issue_index, date, repos_list):
+def time_to_close(client, issue_index, date, repos_list, from_date=None):
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query_close_time = get_uuid_count_query(
         "avg",
         repos_list,
         "time_to_close",
         "grimoire_creation_date",
         size=1000,
-        from_date=date - timedelta(days=90),
+        from_date=from_date,
         to_date=date
     )
     close_time_items = get_all_index_data(client, issue_index, query_close_time)

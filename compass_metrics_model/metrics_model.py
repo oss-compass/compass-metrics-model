@@ -918,6 +918,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_issue_first_reponse_avg = self.get_uuid_count_query(
             "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_issue_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+        query_issue_first_reponse_avg["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
         issue_first_reponse = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_avg)
         if issue_first_reponse["hits"]["total"]["value"] == 0:
             return None, None
@@ -927,6 +928,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_issue_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
             50]
         query_issue_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false" }})
+        query_issue_first_reponse_mid["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
         issue_first_reponse_mid = self.es_in.search(index=self.issue_index, body=query_issue_first_reponse_mid)[
             'aggregations']["count_of_uuid"]['values']['50.0']
         return issue_first_reponse_avg, issue_first_reponse_mid
@@ -942,11 +944,12 @@ class CommunitySupportMetricsModel(MetricsModel):
         for item in issue_opens_items:
             if 'state' in item['_source']:
                 if item['_source']['closed_at']:
-                    if item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str:
+                    if item['_source']['state'] in ['closed', 'rejected'] and item['_source']['closed_at'] < date_str and item['_source']['created_at'] < item['_source']['closed_at']:
                         issue_open_time_repo.append(get_time_diff_days(
                             item['_source']['created_at'], item['_source']['closed_at']))
                 else:
                     issue_open_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
+        issue_open_time_repo = list(filter(lambda x: x >= 0, issue_open_time_repo))
         if len(issue_open_time_repo) == 0:
             return None, None
         issue_open_time_repo_avg = sum(issue_open_time_repo)/len(issue_open_time_repo)
@@ -1000,10 +1003,13 @@ class CommunitySupportMetricsModel(MetricsModel):
         else:
             bug_issue_open_time_list = []
             for item in bug_issue_open_time_dict.values():
-                if item['closed_at'] and item['closed_at'] < date_str:
+                if item['closed_at'] and item['closed_at'] < date_str and item['created_at'] <= item['closed_at']:
                     bug_issue_open_time_list.append(get_time_diff_days(item['created_at'], item['closed_at']))
                 else:
                     bug_issue_open_time_list.append(get_time_diff_days(item['created_at'], date_str))
+            bug_issue_open_time_list = list(filter(lambda x: x >= 0, bug_issue_open_time_list))
+            if len(bug_issue_open_time_list) == 0:
+                return None, None
             issue_open_time_repo_avg = sum(bug_issue_open_time_list) / len(bug_issue_open_time_list)
             issue_open_time_repo_mid = get_medium(bug_issue_open_time_list)
             return issue_open_time_repo_avg, issue_open_time_repo_mid
@@ -1028,6 +1034,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
                         item['_source']['created_at'], date_str))
+        pr_open_time_repo = list(filter(lambda x: x >= 0, pr_open_time_repo))
         if len(pr_open_time_repo) == 0:
             return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))
@@ -1038,6 +1045,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_pr_first_reponse_avg = self.get_uuid_count_query(
             "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_pr_first_reponse_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_first_reponse_avg["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
         pr_first_reponse = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_avg)
         if pr_first_reponse["hits"]["total"]["value"] == 0:
             return None, None
@@ -1045,6 +1053,7 @@ class CommunitySupportMetricsModel(MetricsModel):
         query_pr_first_reponse_mid = self.get_uuid_count_query(
             "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0, from_date=date-timedelta(days=90), to_date=date)
         query_pr_first_reponse_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
+        query_pr_first_reponse_mid["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
         query_pr_first_reponse_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
             50]
         pr_first_reponse_mid = self.es_in.search(index=self.pr_index, body=query_pr_first_reponse_mid)[

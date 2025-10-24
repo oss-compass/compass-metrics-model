@@ -14,10 +14,12 @@ from dateutil.relativedelta import relativedelta
 
 
 
-def pr_open_time(client, pr_index, date, repos_list):
+def pr_open_time(client, pr_index, date, repos_list,  from_date=None):
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query_pr_opens = get_uuid_count_query(
         "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=1000,
-        from_date=date-timedelta(days=90), to_date=date)
+        from_date=from_date, to_date=date)
     query_pr_opens["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     pr_opens_items = get_all_index_data(client, pr_index, query_pr_opens)
     if len(pr_opens_items) == 0:
@@ -34,7 +36,9 @@ def pr_open_time(client, pr_index, date, repos_list):
                     item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
             else:
                 pr_open_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
-
+    pr_open_time_repo = list(filter(lambda x: x >= 0, pr_open_time_repo))
+    if len(pr_open_time_repo) == 0:
+        return { "pr_open_time_avg": None, "pr_open_time_mid": None }
     pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo)) if len(pr_open_time_repo) > 0 else None
     pr_open_time_repo_mid = get_medium(pr_open_time_repo) if len(pr_open_time_repo) > 0 else None
 
@@ -45,9 +49,11 @@ def pr_open_time(client, pr_index, date, repos_list):
     return result
 
 
-def code_review_count(client, pr_index, date, repo_list):
+def code_review_count(client, pr_index, date, repo_list, from_date=None):
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     query_pr_comments_count = get_uuid_count_query(
-            "avg", repo_list, "num_review_comments_without_bot", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+            "avg", repo_list, "num_review_comments_without_bot", size=0, from_date=from_date, to_date=date)
     query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
     prs = client.search(index=pr_index, body=query_pr_comments_count)
     if prs["hits"]["total"]["value"] == 0:
@@ -129,6 +135,7 @@ def pr_time_to_first_response(client, pr_index, date, repos_list):
         "avg", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0,
         from_date=date - timedelta(days=90), to_date=date)
     query_pr_first_response_avg["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    query_pr_first_response_avg["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
     pr_first_response = client.search(index=pr_index, body=query_pr_first_response_avg)
     pr_first_response_avg = pr_first_response['aggregations']["count_of_uuid"]['value']
 
@@ -136,6 +143,7 @@ def pr_time_to_first_response(client, pr_index, date, repos_list):
         "percentiles", repos_list, "time_to_first_attention_without_bot", "grimoire_creation_date", size=0,
         from_date=date - timedelta(days=90), to_date=date)
     query_pr_first_response_mid["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
+    query_pr_first_response_mid["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
     query_pr_first_response_mid["aggs"]["count_of_uuid"]["percentiles"]["percents"] = [
         50]
     pr_first_response_mid = client.search(index=pr_index, body=query_pr_first_response_mid)[
@@ -215,10 +223,12 @@ def pr_count_with_review(client, pr_index, date, repos_list, from_date=None):
     return result 
 
 
-def code_merge_ratio(client, pr_index, date, repos_list):
+def code_merge_ratio(client, pr_index, date, repos_list, from_date=None):
     """ Determine the percentage of PR Mergers and PR authors who are not the same person in the last 90 days of commits. """
-    merge_count_with_non_author = code_merge_count_with_non_author(client, pr_index, date, repos_list)["code_merge_count_with_non_author"]
-    merge_count = code_merge_count(client, pr_index, date, repos_list)["code_merge_count"]
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    merge_count_with_non_author = code_merge_count_with_non_author(client, pr_index, date, repos_list, from_date)["code_merge_count_with_non_author"]
+    merge_count = code_merge_count(client, pr_index, date, repos_list, from_date)["code_merge_count"]
     
     result = {
         "code_merge_ratio": merge_count_with_non_author/merge_count if merge_count > 0 else None
@@ -226,10 +236,12 @@ def code_merge_ratio(client, pr_index, date, repos_list):
     return result
 
 
-def pr_issue_linked_ratio(client, pr_index, pr_comments_index, date, repos_list):
+def pr_issue_linked_ratio(client, pr_index, pr_comments_index, date, repos_list, from_date=None):
     """ Determine the percentage of new pull request link issues in the last 90 days. """
-    code_pr_count = pr_count(client, pr_index, date, repos_list)["pr_count"]
-    code_pr_issue_linked_count = pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list)["pr_issue_linked_count"]
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    code_pr_count = pr_count(client, pr_index, date, repos_list, from_date)["pr_count"]
+    code_pr_issue_linked_count = pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list, from_date)["pr_issue_linked_count"]
     result = {
         "pr_issue_linked_ratio": code_pr_issue_linked_count/code_pr_count if code_pr_count > 0 else None
     }
@@ -298,9 +310,11 @@ def create_close_pr_count(client, pr_index, date, repos_list, from_date=None):
     return result
 
 
-def code_merge_count_with_non_author(client, pr_index, date, repos_list):
+def code_merge_count_with_non_author(client, pr_index, date, repos_list, from_date=None):
     """ Determine the Numbers of PR Mergers and PR authors who are not the same person in the last 90 days of commits. """
-    query_pr_body = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query_pr_body = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
     query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"merged": "true"}})
     query_pr_body["query"]["bool"]["must"].append({
@@ -317,9 +331,11 @@ def code_merge_count_with_non_author(client, pr_index, date, repos_list):
     return result
 
 
-def code_merge_count(client, pr_index, date, repos_list):
+def code_merge_count(client, pr_index, date, repos_list, from_date=None):
     """ Determine the Numbers of PR merge in the last 90 days of commits. """
-    query_pr_body = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=(date-timedelta(days=90)), to_date=date)
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
+    query_pr_body = get_uuid_count_query("cardinality", repos_list, "uuid", "grimoire_creation_date", size=0, from_date=from_date, to_date=date)
     query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     query_pr_body["query"]["bool"]["must"].append({"match_phrase": {"merged": "true"}})
     pr_merged_count = client.search(index=pr_index, body=query_pr_body)[
@@ -330,12 +346,14 @@ def code_merge_count(client, pr_index, date, repos_list):
     return result
 
 
-def pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list):
+def pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list, from_date=None):
     """ Determine the Numbers of new pull request link issues in the last 90 days. """
+    if from_date is None:
+        from_date = (date-timedelta(days=90))
     pr_linked_issue = 0
     for repo in repos_list:
         query_pr_linked_issue = get_pr_linked_issue_count(
-            repo, from_date=date-timedelta(days=90), to_date=date)
+            repo, from_date=from_date, to_date=date)
         pr_linked_issue += client.search(index=(pr_index, pr_comments_index), body=query_pr_linked_issue)[
             'aggregations']["count_of_uuid"]['value']
     result = {
@@ -433,10 +451,12 @@ def pr_count_year(client, pr_index, date, repos_list, from_date=None):
     return result
 
 
-def close_pr_ratio_year(client, pr_index, date, repos_list):
+def close_pr_ratio_year(client, pr_index, date, repos_list, from_date=None):
     """ The ratio of PR accepted and declined in the last 3 years. """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
     query_pr_closed = get_pr_closed_uuid_count(
-        "cardinality", repos_list, "uuid", from_date=(date - relativedelta(years=3)).replace(month=1, day=1),
+        "cardinality", repos_list, "uuid", from_date=from_date,
         to_date=date)
     pr_closed = client.search(index=pr_index, body=query_pr_closed)[
         'aggregations']["count_of_uuid"]['value']
