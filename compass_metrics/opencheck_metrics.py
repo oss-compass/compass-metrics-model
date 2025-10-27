@@ -602,9 +602,14 @@ def ci_tests(client, openchecker_index, repo_list):
     return result
 
 def dependency_update_tool(client, openchecker_index, repo_list):
-    # TODO
+    bedependent_tools = []
+
+    openchecker_data = get_openchecker_data(client, openchecker_index, repo_list[0], "dependency-update-tool-checker")
+    if openchecker_data is not None:
+        bedependent_tools = deep_get(openchecker_data, ["_source", "command_result"], [])
+    
     result = {
-        "dependency_update_tool": None
+        "dependency_update_tool": 10 if len(bedependent_tools) > 0 else 0
     }
     return result
 
