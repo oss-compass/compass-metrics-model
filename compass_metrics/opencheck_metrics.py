@@ -126,7 +126,7 @@ def signed_releases(client, openchecker_index, repo_list):
                 if any(suffix in sig_file for suffix in file_suffix)
             ]
             if len(matched_files) > 0:
-                signed_release_list.appned(item["release_name"])
+                signed_release_list.append(item["release_name"])
     score = None
     if len(release_list) > 0:
         score = int(len(signed_release_list) * 10 / len(release_list))
@@ -151,7 +151,7 @@ def sbom(client, openchecker_index, repo_list):
         for item in command_result_list[:5]:
             release_list.append(item["release_name"]) 
             if len(item["content_files"]) > 0:
-                sbom_release_list.appned(item["release_name"])
+                sbom_release_list.append(item["release_name"])
     result = {
         "sbom": 10 if len(sbom_release_list) > 0 else 0,
         "sbom_detail": {
@@ -177,7 +177,7 @@ def vulnerabilities(client, openchecker_index, repo_list):
                 vulnerabilities = [vulnerability["id"] for vulnerability in package["vulnerabilities"]]
                 if len(vulnerabilities) > 0:
                     vulnerabilities_detail.append({
-                        "package_name": package["name"],
+                        "package_name": deep_get(package, ["package", "name"], ""),
                         "vulnerabilities": vulnerabilities
                     })
                     vulnerabilities_set.update(vulnerabilities)
