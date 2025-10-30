@@ -176,7 +176,7 @@ def vulnerabilities(client, openchecker_index, repo_list):
             for package in item["packages"]:
                 vulnerabilities = [vulnerability["id"] for vulnerability in package["vulnerabilities"]]
                 if len(vulnerabilities) > 0:
-                    vulnerabilities_detail.appned({
+                    vulnerabilities_detail.append({
                         "package_name": package["name"],
                         "vulnerabilities": vulnerabilities
                     })
