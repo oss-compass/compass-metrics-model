@@ -45,7 +45,16 @@ metrics_default_threshold:
     - metric: 'lines_of_code_frequency_year'
       repo_threshold: 3000000
       multiple_threshold: 3000000
-  issue: 
+    - metric: 'commit_count_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'lines_changed_by_period'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+
+
+
+  issue:
     - metric: 'issue_first_reponse'
       repo_threshold: 15
       multiple_threshold: 15
@@ -70,6 +79,22 @@ metrics_default_threshold:
     - metric: 'comment_frequency_year'
       repo_threshold: 60
       multiple_threshold: 60
+    - metric: 'issue_new_first_response_time_by_period'
+      repo_threshold: 60
+      multiple_threshold: 60
+    - metric: 'issue_new_handle_time_by_period'
+      repo_threshold: 60
+      multiple_threshold: 60
+    - metric: 'issue_new_unresponsive_ratio_by_period'
+      repo_threshold: 60
+      multiple_threshold: 60
+    - metric: 'issue_new_count_by_period'
+      repo_threshold: 60
+      multiple_threshold: 60
+    - metric: 'issue_comment_activity_by_period'
+      repo_threshold: 60
+      multiple_threshold: 60
+
   pr:
     - metric: 'pr_open_time'
       repo_threshold: 30
@@ -131,10 +156,45 @@ metrics_default_threshold:
     - metric: 'code_review_count_year'
       repo_threshold: 96
       multiple_threshold: 96
+    - metric: 'pr_new_handle_time_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_new_first_response_time_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_new_unresponsive_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_issue_linked_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_review_participation_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_non_author_merge_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_avg_interactions_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_review_time_by_size_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'pr_comment_count_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+
   repo:
     - metric: 'recent_releases_count'
       repo_threshold: 12
       multiple_threshold: 12
+    - metric: 'repo_forks_by_period'
+      repo_threshold: 12
+      multiple_threshold: 12
+    - metric: 'repo_stars_by_period'
+      repo_threshold: 12
+      multiple_threshold: 12
+
   contributor:
     - metric: 'contributor_count' 
       repo_threshold: 2000
@@ -219,6 +279,81 @@ metrics_default_threshold:
       multiple_threshold: 3000
     - metric: 'org_contributor_count_year'
       repo_threshold: 2000
+      multiple_threshold: 3000
+    - metric: 'total_active_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'non_code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'participating_orgs_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_code_contributors_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_non_code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_non_code_contributors_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'governance_orgs_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_managers_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_managers_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'individual_code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'individual_code_contributors_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'individual_non_code_contributors_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'individual_non_code_contributors_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
+    - metric: 'org_code_contribution_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'org_code_contribution_ratio_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_code_contribution_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_code_contribution_ratio_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'org_non_code_contribution_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'org_non_code_contribution_ratio_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_managers_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_managers_ratio_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_non_code_contribution_by_period'
+      repo_threshold: 3000
+      multiple_threshold: 3000
+    - metric: 'individual_non_code_contribution_ratio_by_period'
+      repo_threshold: 3000
       multiple_threshold: 3000
 
   Industry_support:

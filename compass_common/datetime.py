@@ -216,6 +216,40 @@ def get_date_list(begin_date, end_date, freq='W-MON'):
         str_to_datetime(begin_date)), end=datetime_to_utc(str_to_datetime(end_date))))]
     return date_list
 
+def get_date_list_by_period(begin_date, end_date,period):
+    '''
+        根据 period 获取从 begin_date 到 end_date 的时间列表
+        period: 'day', 'week', 'month', 'year'
+        '''
+
+    # 1. 定义 period 到 Pandas freq 的映射关系
+    # Pandas Freq 参考:
+    # 'D': 每日
+    # 'W-MON': 每周 (周一开始)
+    # 'MS': 每月 (月初开始, Month Start) -> 注意：用 'M' 会是月末
+    # 'YS': 每年 (年初开始, Year Start)
+    print(f"period: {period}")
+    freq_map = {
+
+        'month': 'MS',
+        'quarter': 'QS',
+        'year': 'YS'
+    }
+
+    # 2. 获取对应的 freq，如果没传或者找不到，默认设为 'W-MON' (按周)
+    # 这里的 .get(period, 'W-MON') 意味着如果 period 是乱写的，就默认按周处理
+    freq = freq_map.get(period, 'MS')
+
+    # 3. 生成时间列表 (保留了你原有的转换逻辑)
+    # 建议直接用 .tolist()，比 [x for x in list(...)] 更快更简洁
+    date_list = pd.date_range(
+        freq=freq,
+        start=datetime_to_utc(str_to_datetime(begin_date)),
+        end=datetime_to_utc(str_to_datetime(end_date))
+    ).tolist()
+
+    return date_list
+
 def parse(date_str):
     try:
         time_format = "%Y-%m-%dT%H:%M:%S"
@@ -254,3 +288,38 @@ def get_last_four_quarters_dates():
 
     return quarter_end_dates
 
+
+def get_period_range(date, period):
+    """
+    根据给定的维度计算起始时间（按自然月/季/年对齐）
+    period: 'month', 'quarter', 'year', '3years'
+    返回: (周期起始日, 当前日期)
+    """
+    to_date = date
+    from_date = date
+
+    if period == 'month':
+        # 自然月：当月1号
+        # 例如：1月15日 -> 1月1日
+        from_date = date.replace(day=1)
+
+    elif period == 'quarter':
+        # 自然季：当季度的第一个月1号
+        # 逻辑：((当前月 - 1) // 3 * 3 + 1) 可以算出 1, 4, 7, 10
+        start_month = (date.month - 1) // 3 * 3 + 1
+        from_date = date.replace(month=start_month, day=1)
+
+    elif period == 'year':
+        # 自然年：当年1月1日
+        from_date = date.replace(month=1, day=1)
+
+    # elif period == '3years':
+    #     # 过去3个自然年 (包含当年)
+    #     # 通常理解为：当前年份 - 2年的1月1日 (即：前年+去年+今年)
+    #     # 例如 2024-05-20 -> 2022-01-01
+    #     from_date = (date - relativedelta(years=2)).replace(month=1, day=1)
+    # zhe
+    else:
+        from_date = date.replace(day=1)
+
+    return from_date, to_date
