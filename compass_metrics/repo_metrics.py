@@ -43,7 +43,7 @@ def branch_protection(client, repo_index, repo_list):
     if len(hits) > 0:
         branches = deep_get(hits[0], ["_source", "branches"], [])
         releases = deep_get(hits[0], ["_source", "releases"], [])
-        release_name_list = [release["name"].replace("v", "") for release in releases] 
+        release_name_list = [release["tag_name"].replace("v", "") for release in releases] 
         
         for branch in branches:
             if branch["name"] in ["master", "main"]:

@@ -278,10 +278,12 @@ def maintained(client, git_index, issue_index, date, repos_list):
 
 
 
-def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list):
+def commit_pr_linked_ratio(client, contributors_index, git_index, pr_index, date, repos_list, from_date=None):
     """ Determine the percentage of new code commit link pull request in the last 90 days """
-    code_commit_count = commit_count(client, contributors_index, date, repos_list)["commit_count"]
-    code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list)["commit_pr_linked_count"]
+    if from_date is None:
+        from_date = date - timedelta(days=90)
+    code_commit_count = commit_count(client, contributors_index, date, repos_list, from_date)["commit_count"]
+    code_commit_pr_linked_count = commit_pr_linked_count(client, git_index, pr_index, date, repos_list, from_date)["commit_pr_linked_count"]
 
     result = {
         'commit_pr_linked_ratio': code_commit_pr_linked_count/code_commit_count if code_commit_count > 0 else None
@@ -313,7 +315,7 @@ def commit_count_quarterly(client, contributors_index, to_date, repo_list, from_
     }
     return result
 
-def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
+def commit_pr_linked_count(client, git_index, pr_index, date, repos_list, from_date=None):
     """ Determine the numbers of new code commit link pull request in the last 90 days. """
     def get_pr_list_by_commit_hash(hash_list):
         pr_hits = []
@@ -323,8 +325,11 @@ def commit_pr_linked_count(client, git_index, pr_index, date, repos_list):
             pr_hits = pr_hits + pr_hit
         return pr_hits
     
+    if from_date is None:
+        from_date = date - timedelta(days=90)
+    
     repo_git_list = [repo+".git" for repo in repos_list]
-    commit_message_list = get_message_list(client, git_index, date - timedelta(days=90), date, repo_git_list)
+    commit_message_list = get_message_list(client, git_index, from_date, date, repo_git_list)
     commit_hash_set = {message["hash"] for message in commit_message_list}
     commit_hash_list = list(commit_hash_set)
     if len(commit_hash_list) == 0:

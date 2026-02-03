@@ -23,7 +23,7 @@ class ScorecardMetricsModel(BaseMetricsModel):
             "code_review": { "weight": HIGH, "threshold": THRESHOLD }, 
             "contributors": { "weight": HIGH, "threshold": THRESHOLD }, 
             "dangerous_workflow": { "weight": CRITICAL, "threshold": THRESHOLD },  
-            "dependency_update_tool": { "weight": HIGH, "threshold": THRESHOLD },  #不支持
+            "dependency_update_tool": { "weight": HIGH, "threshold": THRESHOLD },
             "fuzzing": { "weight": MEDIUM, "threshold": THRESHOLD },
             "license": { "weight": LOW, "threshold": THRESHOLD },  
             "maintained": { "weight": HIGH, "threshold": THRESHOLD }, 
