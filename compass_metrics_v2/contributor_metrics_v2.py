@@ -1,0 +1,1927 @@
+from compass_metrics.db_dsl import get_contributor_query, get_uuid_count_query
+from compass_common.datetime import check_times_has_overlap
+from compass_common.opensearch_utils import get_all_index_data
+from datetime import timedelta
+from itertools import groupby
+import pandas as pd
+import datetime
+from dateutil.relativedelta import relativedelta
+
+
+def contributor_count(client, contributors_index, date, repo_list, from_date=None):
+    """ Determine how many active code commit authors, pr authors, review participants, issue authors,
+    and issue comments participants there are in the past 90 days """
+    if from_date is None:
+        from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list",
+                       "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "contributor_count": contributor_count,
+        "contributor_count_bot": contributor_count_bot,
+        "contributor_count_without_bot": contributor_count_without_bot,
+    }
+    return result
+
+
+def contributor_count_all(client, contributors_index, date, repo_list):
+    """ Determine how many active code commit authors, pr authors, review participants, issue authors,
+    and issue comments participants there are """
+    from_date = datetime.date(2000, 1, 1)
+    to_date = date
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list",
+                       "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    # contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=True)
+    # contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list, date_field_list, is_bot=False)                    
+    result = {
+        "contributor_count_all": contributor_count,
+        # "contributor_count_all_bot": contributor_count_bot,
+        # "contributor_count_all_without_bot": contributor_count_without_bot,
+    }
+    return result
+
+
+def code_contributor_count(client, contributors_index, date, repo_list):
+    """  Determine how many active pr creators, code reviewers, commit authors there are in the past 90 days. """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["code_author_date_list", "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "code_contributor_count": contributor_count,
+        "code_contributor_count_bot": contributor_count_bot,
+        "code_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def commit_contributor_count(client, contributors_index, date, repo_list):
+    """ Determine how many active code commit authors participants there are in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["code_author_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "commit_contributor_count": contributor_count,
+        "commit_contributor_count_bot": contributor_count_bot,
+        "commit_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def pr_authors_contributor_count(client, contributors_index, date, repo_list):
+    """ Determine how many active pr authors participants there are in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["pr_creation_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "pr_authors_contributor_count": contributor_count,
+        "pr_authors_contributor_count_bot": contributor_count_bot,
+        "pr_authors_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def pr_review_contributor_count(client, contributors_index, date, repo_list):
+    """ Determine how many active pr review participants there are in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "pr_review_contributor_count": contributor_count,
+        "pr_review_contributor_count_bot": contributor_count_bot,
+        "pr_review_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def issue_authors_contributor_count(client, contributors_index, date, repo_list):
+    """ Determine how many active issue authors participants there are in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["issue_creation_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "issue_authors_contributor_count": contributor_count,
+        "issue_authors_contributor_count_bot": contributor_count_bot,
+        "issue_authors_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def issue_comments_contributor_count(client, contributors_index, date, repo_list):
+    """ Determine how many active issue comments participants there are in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    date_field_list = ["issue_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "issue_comments_contributor_count": contributor_count,
+        "issue_comments_contributor_count_bot": contributor_count_bot,
+        "issue_comments_contributor_count_without_bot": contributor_count_without_bot
+    }
+    return result
+
+
+def org_contributor_count(client, contributors_index, date, repo_list):
+    """ Number of active code contributors with organization affiliation in the past 90 days """
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    org_contributor_set = set()
+    org_contributor_bot_set = set()
+    org_contributor_without_bot_set = set()
+    org_contributor_detail_dict = {}
+
+    for contributor in commit_contributor_list:
+        for org in contributor["org_change_date_list"]:
+            author_name = contributor["id_git_author_name_list"][0]
+            if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                if org.get("org_name") is not None:
+                    org_contributor_set.add(author_name)
+                    if contributor["is_bot"]:
+                        org_contributor_bot_set.add(author_name)
+                    else:
+                        org_contributor_without_bot_set.add(author_name)
+
+                org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                is_org = True if org.get("org_name") else False
+                org_contributor_detail_count_set = org_contributor_detail_dict.get(org_name, {}).get(
+                    "org_contributor_count_set", set())
+                org_contributor_detail_count_set.add(author_name)
+                org_contributor_detail_dict[org_name] = {
+                    "org_name": org_name,
+                    "is_org": is_org,
+                    "org_contributor_count_set": org_contributor_detail_count_set,
+                    "org_contributor_count": len(org_contributor_detail_count_set)
+                }
+    org_contributor_count_list = []
+    for x in org_contributor_detail_dict.values():
+        if "org_contributor_count_set" in x:
+            del x["org_contributor_count_set"]
+        org_contributor_count_list.append(x)
+    org_contributor_count_list = sorted(org_contributor_count_list, key=lambda x: x["org_contributor_count"],
+                                        reverse=True)
+
+    result = {
+        'org_contributor_count': len(org_contributor_set),
+        'org_contributor_count_bot': len(org_contributor_bot_set),
+        'org_contributor_count_without_bot': len(org_contributor_without_bot_set),
+        'org_contributor_count_list': org_contributor_count_list
+    }
+    return result
+
+
+def contributors(client, contributors_enriched_index, repo_list):
+    """ Does the project have contributors from at least two different organizations? """
+    query = {
+        "size": 0,
+        "aggregations": {
+            "org_count": {
+                "terms": {
+                    "field": "organization.keyword",
+                    "size": 100
+                }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "terms": {
+                            "repo_name.keyword": repo_list
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "contribution_type_list.contribution_type.keyword": "code_author"
+                        }
+                    },
+                    {
+                        "exists": {
+                            "field": "organization"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    resp = client.search(index=contributors_enriched_index, body=query)
+    buckets = resp["aggregations"]["org_count"]["buckets"]
+    org_list = [bucket["key"] for bucket in buckets]
+    score = {
+        0: 0,
+        1: 3.33,
+        2: 6.66
+    }.get(len(org_list), 10)
+
+    result = {
+        'contributors': score,
+        'contributors_detail': org_list
+    }
+    return result
+
+
+def bus_factor(client, contributors_index, date, repo_list):
+    """Determine the smallest number of people that make 50% of contributions in the past 90 days."""
+    from_date = date - timedelta(days=90)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    bus_factor_count = 0
+    author_name_dict = {}  # {"author_name:" commit_count}
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    for item in commit_contributor_list:
+        if item["is_bot"]:
+            continue
+        name = item["id_git_author_name_list"][0]
+        commit_date_list = [x for x in sorted(item["code_author_date_list"]) if from_date_str <= x < to_date_str]
+        author_name_dict[name] = author_name_dict.get(name, 0) + len(commit_date_list)
+    commit_count_list = [commit_count for commit_count in author_name_dict.values()]
+    commit_count_list.sort(reverse=True)
+    commit_count_threshold = sum(commit_count_list) * 0.5
+    front_commit_count = 0
+    for index, commit_count in enumerate(commit_count_list):
+        front_commit_count += commit_count
+        if commit_count_threshold < front_commit_count:
+            bus_factor_count = index + 1
+            break
+    result = {
+        'bus_factor': bus_factor_count
+    }
+    return result
+
+
+def get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field, page_size=500):
+    """ Get the contributors who have contributed in the from_date,to_date time period. """
+    result_list = []
+    if isinstance(date_field, str):
+        date_field_list = [date_field]
+    elif isinstance(date_field, list):
+        date_field_list = date_field
+    query = get_contributor_query(repo_list, date_field_list, from_date, to_date, page_size)
+    contributor_list = get_all_index_data(client, index=contributors_index, body=query)
+    if len(contributor_list) > 0:
+        result_list = result_list + [contributor["_source"] for contributor in contributor_list]
+    return result_list
+
+
+def get_contributor_count(client, contributors_index, from_date, to_date, repos_list, date_field, is_bot=None):
+    if isinstance(date_field, str):
+        date_field_list = [date_field]
+    elif isinstance(date_field, list):
+        date_field_list = date_field
+    query = get_contributor_query(repos_list, date_field_list, from_date, to_date, 0)
+    query["aggs"] = {
+        "contributor_count": {
+            "cardinality": {
+                "script": {
+                    "source": "if(doc['id_platform_login_name_list.keyword'].size() > 0) {doc['id_platform_login_name_list.keyword'][0]} else {doc['id_git_author_name_list.keyword'][0]}"
+                },
+                "precision_threshold": 100000
+            }
+        }
+    }
+    if is_bot is not None:
+        query["query"]["bool"]["must"].append(
+            {
+                "match_phrase": {
+                    "is_bot": "true" if is_bot else "false"
+                }
+            }
+        )
+    contributor_count = client.search(index=contributors_index, body=query)["aggregations"]["contributor_count"][
+        "value"]
+    return contributor_count
+
+
+def contributor_eco_type_list(client, contributors_index, from_date, to_date, repo_list):
+    """ Get an itemized list of contributors in the from_date, to_date time period. """
+
+    def get_eco_contributor_dict(from_date, to_date, contributor_list):
+        from_date_str = from_date.isoformat()
+        to_date_str = to_date.isoformat()
+        eco_contributor_dict = {}
+        for contributor in contributor_list:
+            is_admin = False
+            if contributor.get("admin_date_list") and len(contributor.get("admin_date_list")) > 0 \
+                    and contributor["admin_date_list"][0]["first_date"] <= to_date_str:
+                is_admin = True
+            is_org = False
+            org_name = None
+            for org in contributor["org_change_date_list"]:
+                if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                    if org.get("org_name") is not None:
+                        is_org = True
+                        org_name = org.get("org_name")
+                    break
+            contributor_name = None
+            if contributor.get("id_platform_login_name_list") and len(
+                    contributor.get("id_platform_login_name_list")) > 0:
+                contributor_name = contributor["id_platform_login_name_list"][0]
+            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                contributor_name = contributor["id_git_author_name_list"][0]
+
+            if is_admin and is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "organization manager",
+                    "organization": org_name
+                }
+            elif is_admin and not is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "individual manager",
+                    "organization": org_name
+                }
+            elif not is_admin and is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "organization participant",
+                    "organization": org_name
+                }
+            elif not is_admin and not is_org:
+                eco_contributor_dict[contributor_name] = {
+                    "ecological_type": "individual participant",
+                    "organization": org_name
+                }
+            eco_contributor_dict[contributor_name]["is_bot"] = contributor["is_bot"]
+        return eco_contributor_dict
+
+    def get_type_contributor_dict(from_date, to_date, contributor_list):
+        from_date_str = from_date.isoformat()
+        to_date_str = to_date.isoformat()
+        type_contributor_dict = {}
+        for contributor in contributor_list:
+            contributor_name = None
+            type_list = []
+            if contributor.get("id_platform_login_name_list") and len(
+                    contributor.get("id_platform_login_name_list")) > 0:
+                contributor_name = contributor["id_platform_login_name_list"][0]
+            elif contributor.get("id_git_author_name_list") and len(contributor.get("id_git_author_name_list")) > 0:
+                contributor_name = contributor["id_git_author_name_list"][0]
+
+            for date_field in date_field_list:
+                contribution_count = len(
+                    list(filter(lambda x: from_date_str <= x < to_date_str, contributor.get(date_field, []))))
+                if contribution_count > 0:
+                    type_list.append({
+                        "contribution_type": date_field.replace("_date_list", ""),
+                        "contribution": contribution_count
+                    })
+
+            type_contributor_dict[contributor_name] = type_list
+        return type_contributor_dict
+
+    observe_date_field = ["fork_date_list", "star_date_list"]
+    issue_date_field = ["issue_creation_date_list", "issue_comments_date_list"]
+    code_date_field = ["pr_creation_date_list", "pr_comments_date_list", "code_author_date_list",
+                       "code_committer_date_list"]
+    issue_admin_date_field = ["issue_labeled_date_list", "issue_unlabeled_date_list", "issue_closed_date_list",
+                              "issue_reopened_date_list",
+                              "issue_assigned_date_list", "issue_unassigned_date_list", "issue_milestoned_date_list",
+                              "issue_demilestoned_date_list",
+                              "issue_marked_as_duplicate_date_list", "issue_transferred_date_list",
+                              "issue_renamed_title_date_list", "issue_change_description_date_list",
+                              "issue_setting_priority_date_list", "issue_change_priority_date_list",
+                              "issue_link_pull_request_date_list", "issue_unlink_pull_request_date_list",
+                              "issue_assign_collaborator_date_list", "issue_unassign_collaborator_date_list",
+                              "issue_change_issue_state_date_list", "issue_change_issue_type_date_list",
+                              "issue_setting_branch_date_list", "issue_change_branch_date_list", ]
+    code_admin_date_field = ["pr_labeled_date_list", "pr_unlabeled_date_list", "pr_closed_date_list",
+                             "pr_assigned_date_list",
+                             "pr_unassigned_date_list", "pr_reopened_date_list", "pr_milestoned_date_list",
+                             "pr_demilestoned_date_list",
+                             "pr_marked_as_duplicate_date_list", "pr_transferred_date_list",
+                             "pr_renamed_title_date_list", "pr_change_description_date_list",
+                             "pr_setting_priority_date_list", "pr_change_priority_date_list",
+                             "pr_merged_date_list", "pr_review_date_list", "pr_set_tester_date_list",
+                             "pr_unset_tester_date_list", "pr_check_pass_date_list",
+                             "pr_test_pass_date_list", "pr_reset_assign_result_date_list",
+                             "pr_reset_test_result_date_list", "pr_link_issue_date_list",
+                             "pr_unlink_issue_date_list"]
+    date_field_list = observe_date_field + issue_date_field + code_date_field + issue_admin_date_field + code_admin_date_field
+
+    contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list, date_field_list)
+
+    eco_contributor_dict = get_eco_contributor_dict(from_date, to_date, contributor_list)
+    type_contributor_dict = get_type_contributor_dict(from_date, to_date, contributor_list)
+    result_list = []
+    for contributor_name in eco_contributor_dict:
+        contribution_type_list = type_contributor_dict.get(contributor_name, [])
+        contribution = 0
+        contribution_without_observe = 0
+        for contribution_type in contribution_type_list:
+            count = contribution_type.get("contribution", 0)
+            contribution += count
+            if contribution_type.get("contribution_type") not in ["star", "fork"]:
+                contribution_without_observe += count
+        if contribution == 0:
+            continue
+        result = {
+            "contributor": contributor_name,
+            "contribution": contribution,
+            "contribution_without_observe": contribution_without_observe,
+            "is_bot": eco_contributor_dict.get(contributor_name).get("is_bot"),
+            "ecological_type": eco_contributor_dict.get(contributor_name).get("ecological_type"),
+            "organization": eco_contributor_dict.get(contributor_name).get("organization"),
+            "contribution_type_list": contribution_type_list
+        }
+        result_list.append(result)
+    return {"contributor_eco_type_list": result_list}
+
+
+def contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False,
+                            filter_mileage=None):
+    """ Get detailed list of contributors in from_date, to_date time range.
+    :param filter_mileage: Filter by mileage role, choose from core, regular, casual
+    """
+
+    # get detailed list of contributors in from_date, to_date time range
+    #  made ka zheme gui
+
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    # Largest year in time span
+    if (from_date + timedelta(days=365)) < date:
+        date = from_date + timedelta(days=365)
+
+    def get_core_contributor(contributor_dict):
+        """
+            50% of all contributions in this timeframe,
+            done by the smallest group of contribution (excluding star, fork contributions)
+        """
+        contribution_count_dict = {k: v["contribution_without_observe"] for k, v in contributor_dict.items()}
+        sorted_dict = {k: v for k, v in
+                       sorted(contribution_count_dict.items(), key=lambda item: item[1], reverse=True)}
+        target_sum = sum(sorted_dict.values()) * 0.5
+        current_sum = 0
+        core_contributor = {}
+        for k, v in sorted_dict.items():
+            current_sum += v
+            core_contributor[k] = {**contributor_dict[k], "mileage_type": "core"}
+            if current_sum >= target_sum:
+                break
+        return core_contributor
+
+    def get_regular_contributor(contributor_dict, core_contributor):
+        """
+            Throw out the first 50% (core) of contributions, and the next 30% will be done by the smallest group
+            or the group that contributes 3/4 of the time in this timeframe (excluding star and fork contributions).
+        """
+        date_list = [x for x in list(pd.date_range(freq='W-MON', start=from_date, end=date))]
+        if len(date_list) >= 4:
+            weeks = len(date_list) * 3 / 4
+        contribution_count_dict = {k: v["contribution_without_observe"] for k, v in contributor_dict.items()}
+        sorted_dict = {k: v for k, v in
+                       sorted(contribution_count_dict.items(), key=lambda item: item[1], reverse=True)}
+        target_sum = sum(sorted_dict.values()) * 0.8
+        current_sum = 0
+        result_contributor = {}
+        for k, v in sorted_dict.items():
+            current_sum += v
+            result_contributor[k] = {**contributor_dict[k], "mileage_type": "regular"}
+            if current_sum >= target_sum:
+                break
+        for k, v in contributor_dict.items():
+            if v["contribution_weeks"] >= weeks:
+                result_contributor[k] = {**v, "mileage_type": "regular"}
+        core_name = core_contributor.keys()
+        return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
+
+    def get_casual_contributor(contributor_dict, core_contributor, regular_contributor):
+        core_name = core_contributor.keys()
+        regular_name = regular_contributor.keys()
+        casual_contributor = {}
+        for k, v in contributor_dict.items():
+            if k not in core_name and k not in regular_name:
+                casual_contributor[k] = {**contributor_dict[k], "mileage_type": "casual"}
+        return casual_contributor
+
+    contributor_list = get_contributor_list(client, contributors_enriched_index, from_date, date, \
+                                            repo_list, ["grimoire_creation_date"], 1000)
+    sorted_contributor_list = sorted(contributor_list, key=lambda x: x["contributor"])
+    contributor_groups = groupby(sorted_contributor_list, key=lambda x: x["contributor"])
+    contributor_dict = {}
+    ecological_type_order = [
+        "organization manager",
+        "organization participant",
+        "individual manager",
+        "individual participant"
+    ]
+    for key, group in contributor_groups:
+        contribution = 0
+        contribution_without_observe = 0
+        ecological_type_set = set()
+        organization_set = set()
+        contribution_type_dict = {}
+        is_bot_set = set()
+        repo_name_set = set()
+        for item in list(group):
+            contribution += item["contribution"]
+            contribution_without_observe += item["contribution_without_observe"]
+            ecological_type_set.add(item["ecological_type"])
+            organization_set.add(item["organization"])
+            is_bot_set.add(item["is_bot"])
+            repo_name_set.add(item["repo_name"])
+            for contribution_type in item["contribution_type_list"]:
+                contribution_type_item = contribution_type_dict.get(contribution_type["contribution_type"], {})
+                contribution_type_contribution = contribution_type_item.get("contribution", 0)
+                contribution_type_item = {
+                    "contribution_type": contribution_type["contribution_type"],
+                    "contribution": contribution_type_contribution + contribution_type["contribution"]
+                }
+                contribution_type_dict[contribution_type["contribution_type"]] = contribution_type_item
+        for type in ecological_type_order:
+            if type in ecological_type_set:
+                ecological_type = type
+                break
+        contributor_item = {
+            "contributor": key,
+            "contribution": contribution,
+            "contribution_without_observe": contribution_without_observe,
+            "ecological_type": ecological_type,
+            "organization": list(organization_set)[0] if len(organization_set) > 0 else None,
+            "contribution_type_list": list(contribution_type_dict.values()),
+            "is_bot": True if True in is_bot_set else False,
+            "repo_name": list(repo_name_set),
+            "contribution_weeks": len(list(group))
+        }
+        if is_bot is contributor_item["is_bot"]:
+            if key not in "openharmony_ci":
+                contributor_dict[key] = contributor_item
+
+    core_contributor = get_core_contributor(contributor_dict)
+    regular_contributor = get_regular_contributor(contributor_dict, core_contributor)
+    casual_contributor = get_casual_contributor(contributor_dict, core_contributor, regular_contributor)
+    if filter_mileage is None:
+        contributor_detail_list = list(core_contributor.values()) + list(regular_contributor.values()) + list(
+            casual_contributor.values())
+    elif filter_mileage == "core":
+        contributor_detail_list = list(core_contributor.values())
+    elif filter_mileage == "regular":
+        contributor_detail_list = list(regular_contributor.values())
+    elif filter_mileage == "casual":
+        contributor_detail_list = list(casual_contributor.values())
+
+    return {
+        "contributor_detail_list": contributor_detail_list,
+        "core_count": len(core_contributor),
+        "regular_count": len(regular_contributor),
+        "casual_count": len(casual_contributor)
+    }
+
+
+#  def
+def org_all_count(client, contributors_enriched_index, date, repo_list, from_date=None):
+    """All organization counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="organization.keyword",
+                                 from_date=from_date,
+                                 to_date=date, repo_field="repo_name.keyword")
+    count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"org_all_count": count}
+
+
+def contributor_all_count(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False):
+    """All contributor counts(include commit, issue all actions, PR all actions) in the from_date, to_date time period."""
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword",
+                                 from_date=from_date,
+                                 to_date=date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "true" if is_bot else "false"
+        }
+    })
+    count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"contributor_all_count": count}
+
+
+def highest_contribution_organization(client, contributors_enriched_index, date, repo_list, from_date=None,
+                                      is_bot=False):
+    """ Name of the organization with the highest contribution in the range from_date and to_date """
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="terms", repo_list=repo_list, field="organization.keyword", from_date=from_date,
+                                 to_date=date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "ecological_type": "organization"
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "true" if is_bot else "false"
+        }
+    })
+    query["aggs"]["count_of_uuid"]["aggs"] = {
+        "sum_contribution": {
+            "sum": {
+                "field": "contribution"
+            }
+        }
+    }
+    query["aggs"]["max_sum_contribution"] = {
+        "max_bucket": {
+            "buckets_path": "count_of_uuid>sum_contribution"
+        }
+    }
+    keys = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['max_sum_contribution']['keys']
+    organization = None
+    if len(keys) > 0:
+        organization = keys[0]
+    return {"highest_contribution_organization": organization}
+
+
+def highest_contribution_contributor(client, contributors_enriched_index, date, repo_list, from_date=None,
+                                     is_bot=False):
+    """ Name of the contributor with the highest contribution in the range from_date and to_date """
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="terms", repo_list=repo_list, field="contributor.keyword", from_date=from_date,
+                                 to_date=date, repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "true" if is_bot else "false"
+        }
+    })
+    query["aggs"]["count_of_uuid"]["aggs"] = {
+        "sum_contribution": {
+            "sum": {
+                "field": "contribution"
+            }
+        }
+    }
+    query["aggs"]["max_sum_contribution"] = {
+        "max_bucket": {
+            "buckets_path": "count_of_uuid>sum_contribution"
+        }
+    }
+    keys = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['max_sum_contribution']['keys']
+    individual = None
+    if len(keys) > 0:
+        individual = keys[0]
+    return {"highest_contribution_contributor": individual}
+
+
+def contribution_distribution(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False,
+                              filter_mileage=None):
+    """ Show the distribution of contributions for each ecologically role in the time range from_date, date.
+    :param filter_mileage: Filter by mileage role, choose from core, regular
+    """
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    # Largest year in time span
+    if (from_date + timedelta(days=365)) < date:
+        date = from_date + timedelta(days=365)
+    contributor_list = contributor_detail_list(client, contributors_enriched_index, date, repo_list,
+                                               from_date, is_bot, filter_mileage)["contributor_detail_list"]
+    if len(contributor_list) == 0:
+        return {"contribution_distribution": None}
+    total_contribution = sum([item["contribution"] for item in contributor_list])
+    sorted_contributor_list = sorted(contributor_list, key=lambda x: x["ecological_type"])
+    contributor_groups = groupby(sorted_contributor_list, key=lambda x: x["ecological_type"])
+
+    contribution_data = {}
+    for key, group in contributor_groups:
+        group = list(group)
+        contribution = sum(item["contribution"] for item in group)
+        sorted_group = sorted(group, key=lambda x: x["contribution"], reverse=True)
+        top_contributor = sorted_group[:10]
+        other_contributor = sorted_group[10:]
+        detail = [{
+            "contributor": item["contributor"],
+            "contribution": item["contribution"]
+        } for item in top_contributor]
+        other_contribution = sum([item["contribution"] for item in other_contributor])
+        if other_contribution > 0:
+            detail.append({
+                "other": "other",
+                "contribution": other_contribution
+            })
+
+        contribution_data[key] = {
+            "ecological_type": key,
+            "contribution": contribution,
+            "ratio": contribution / total_contribution,
+            "detail": detail
+        }
+
+    contribution_distribution_data = {
+        "total_contribution": total_contribution,
+        "organization manager": contribution_data.get("organization manager", None),
+        "organization participant": contribution_data.get("organization participant", None),
+        "individual manager": contribution_data.get("individual manager", None),
+        "individual participant": contribution_data.get("individual participant", None),
+    }
+    return {"contribution_distribution": contribution_distribution_data}
+
+
+def organization_distribution(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False,
+                              filter_mileage=None):
+    """ Show the distribution of contributions for each organization in the time range from_date, date.
+    :param filter_mileage: Filter by mileage role, choose from core, regular
+    """
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    # Largest year in time span
+    if (from_date + timedelta(days=365)) < date:
+        date = from_date + timedelta(days=365)
+    contributor_list = contributor_detail_list(client, contributors_enriched_index, date, repo_list,
+                                               from_date, is_bot, filter_mileage)["contributor_detail_list"]
+    org_contributor_list = [item for item in contributor_list if item["organization"] is not None]
+    if len(org_contributor_list) == 0:
+        return {"organization_distribution": None}
+    total_contribution = sum([item["contribution"] for item in contributor_list])
+    sorted_contributor_list = sorted(org_contributor_list, key=lambda x: x["organization"])
+    contributor_groups = groupby(sorted_contributor_list, key=lambda x: x["organization"])
+
+    contribution_data = {}
+    for key, group in contributor_groups:
+        group = list(group)
+        contribution = sum(item["contribution"] for item in group)
+        sorted_group = sorted(group, key=lambda x: x["contribution"], reverse=True)
+        top_contributor = sorted_group[:10]
+        other_contributor = sorted_group[10:]
+        detail = [{
+            "contributor": item["contributor"],
+            "contribution": item["contribution"]
+        } for item in top_contributor]
+        other_contribution = sum([item["contribution"] for item in other_contributor])
+        if other_contribution > 0:
+            detail.append({
+                "other": "other",
+                "contribution": other_contribution
+            })
+
+        contribution_data[key] = {
+            "organization": key,
+            "contribution": contribution,
+            "ratio": contribution / total_contribution,
+            "detail": detail
+        }
+    contribution_data = dict(sorted(contribution_data.items(), key=lambda x: x[1]["contribution"], reverse=True))
+    organization_distribution_data = {
+        "total_contribution": total_contribution,
+        **contribution_data
+    }
+    return {"organization_distribution": organization_distribution_data}
+
+
+def contributor_distribution(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False,
+                             filter_mileage=None):
+    """ Show the distribution of contributor for each ecologically role in the time range from_date, date.
+    :param filter_mileage: Filter by mileage role, choose from core, regular
+    """
+    if from_date is None:
+        from_date = (date - timedelta(days=90))
+    # Largest year in time span
+    if (from_date + timedelta(days=365)) < date:
+        date = from_date + timedelta(days=365)
+    contributor_list = contributor_detail_list(client, contributors_enriched_index, date, repo_list,
+                                               from_date, is_bot, filter_mileage)["contributor_detail_list"]
+    if len(contributor_list) == 0:
+        return {"contributor_distribution": None}
+    total_contributor_count = len(contributor_list)
+    sorted_contributor_list = sorted(contributor_list, key=lambda x: x["ecological_type"])
+    contributor_groups = groupby(sorted_contributor_list, key=lambda x: x["ecological_type"])
+
+    contributor_data = {}
+    for key, group in contributor_groups:
+        group = list(group)
+        contributor_count = len(group)
+        sorted_group = sorted(group, key=lambda x: x["contribution"], reverse=True)
+        top_contributor = sorted_group[:10]
+        other_contributor = sorted_group[10:]
+        detail = [{
+            "contributor": item["contributor"],
+            "contributor_count": 1
+        } for item in top_contributor]
+        other_contributor_count = len(other_contributor)
+        if other_contributor_count > 0:
+            detail.append({
+                "other": "other",
+                "contributor_count": other_contributor_count
+            })
+
+        contributor_data[key] = {
+            "ecological_type": key,
+            "contributor_count": contributor_count,
+            "ratio": contributor_count / total_contributor_count,
+            "detail": detail
+        }
+
+    contributor_distribution_data = {
+        "total_contributor_count": total_contributor_count,
+        "organization manager": contributor_data.get("organization manager", None),
+        "organization participant": contributor_data.get("organization participant", None),
+        "individual manager": contributor_data.get("individual manager", None),
+        "individual participant": contributor_data.get("individual participant", None),
+    }
+    return {"contributor_distribution": contributor_distribution_data}
+
+
+def activity_casual_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days Individuals who contribute to the remaining contributions in the community after excluding core
+    and regular contributions (including observation contributions).
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_casual_contributor_count": contributor_data["casual_count"]}
+
+
+def activity_casual_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active casual contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date,
+                                               filter_mileage="casual")
+    contributor_count = contributor_data["casual_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution"] for contributor_item in
+                                   contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_casual_contribution_per_person": contribution_per_person}
+
+
+def activity_regular_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days After excluding the contributions of core contributors,
+    the next 30% (excluding observation contributions) of contributions made by at least one group of people,
+    including those who have been involved in contributing at least 3/4 of the time in the last 90 days,
+    These individuals are referred to as regular contributors.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_regular_contributor_count": contributor_data["regular_count"]}
+
+
+def activity_regular_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active regular contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date,
+                                               filter_mileage="regular")
+    contributor_count = contributor_data["regular_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution_without_observe"] for contributor_item in
+                                   contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_regular_contribution_per_person": contribution_per_person}
+
+
+def activity_core_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defining the last 90 days contributors who contribute 50% (excluding observation contributions like star, fork, watch) of
+    all domain-specific contributions in the current year, achieved by at least one group of people.
+    This group is referred to as core contributors. Contributions across domains are not weighted,
+    only counted by frequency.
+    """
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date)
+    return {"activity_core_contributor_count": contributor_data["core_count"]}
+
+
+def activity_core_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active core contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    contributor_data = contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date,
+                                               filter_mileage="core")
+    contributor_count = contributor_data["core_count"]
+    if contributor_count > 0:
+        contribution_count_list = [contributor_item["contribution_without_observe"] for contributor_item in
+                                   contributor_data["contributor_detail_list"]]
+        contribution_count = sum(contribution_count_list)
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_core_contribution_per_person": contribution_per_person}
+
+
+def activity_organization_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Define the number of active contributors in the last 90 days, counting the number of contributors who are organizations.
+    """
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "ecological_type.keyword": ["organization manager", "organization participant"]
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"activity_organization_contributor_count": contributor_count}
+
+
+def activity_organization_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active organization contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "ecological_type.keyword": ["organization manager", "organization participant"]
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    contributor_count = activity_organization_contributor_count(client, contributors_enriched_index, date, repo_list)[
+        "activity_organization_contributor_count"]
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_organization_contribution_per_person": contribution_per_person}
+
+
+def activity_individual_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Define the number of active contributors in the past 90 days, counting those who are individuals.
+    """
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "ecological_type.keyword": ["individual manager", "individual participant"]
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return {"activity_individual_contributor_count": contributor_count}
+
+
+def activity_individual_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active individual contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "ecological_type.keyword": ["individual manager", "individual participant"]
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    contributor_count = activity_individual_contributor_count(client, contributors_enriched_index, date, repo_list)[
+        "activity_individual_contributor_count"]
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_individual_contribution_per_person": contribution_per_person}
+
+
+def activity_observation_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ observation_contributor: contributors show interest in projects through actions
+    such as starring and forking repositories.
+    Define the number of contributors that are starring and forking in the last 90 days.
+    """
+    observation_type = ["fork", "star"]
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list,
+                                                    observation_type)
+    return {"activity_observation_contributor_count": contributor_count}
+
+
+def activity_observation_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active observation contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    observation_type = ["fork", "star"]
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list,
+                                                      observation_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list,
+                                                    observation_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_observation_contribution_per_person": contribution_per_person}
+
+
+def activity_code_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributors with code behavior
+    (e.g. creation, comments, code commit, pull request events) in the last 90 days.
+    """
+    code_type = ["pr_creation", "pr_comments", "code_author", "code_committer", "code_review",
+                 "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
+                 "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned",
+                 "pr_marked_as_duplicate", "pr_transferred",
+                 "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority",
+                 "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass",
+                 "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue",
+                 "pr_unlink_issue"]
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, code_type)
+    return {"activity_code_contributor_count": contributor_count}
+
+
+def activity_code_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active code contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    code_type = ["pr_creation", "pr_comments", "code_author", "code_committer", "code_review",
+                 "pr_labeled", "pr_unlabeled", "pr_closed", "pr_assigned",
+                 "pr_unassigned", "pr_reopened", "pr_milestoned", "pr_demilestoned",
+                 "pr_marked_as_duplicate", "pr_transferred",
+                 "pr_renamed_title", "pr_change_description", "pr_setting_priority", "pr_change_priority",
+                 "pr_merged", "pr_review", "pr_set_tester", "pr_unset_tester", "pr_check_pass",
+                 "pr_test_pass", "pr_reset_assign_result", "pr_reset_test_result", "pr_link_issue",
+                 "pr_unlink_issue"]
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list, code_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, code_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_code_contribution_per_person": contribution_per_person}
+
+
+def activity_issue_contributor_count(client, contributors_enriched_index, date, repo_list):
+    """ Issue Contributions: Contributions related to issues can be categorized into types such as usage inquiries,
+    bug reports, and task planning.
+    Defines the number of contributors with issue behavior (e.g. creation, comments,issue events) in the last 90 days.
+    """
+    issue_type = ["issue_creation", "issue_comments",
+                  "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
+                  "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
+                  "issue_marked_as_duplicate", "issue_transferred",
+                  "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
+                  "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator",
+                  "issue_unassign_collaborator",
+                  "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, issue_type)
+    return {"activity_issue_contributor_count": contributor_count}
+
+
+def activity_issue_contribution_per_person(client, contributors_enriched_index, date, repo_list):
+    """ Defines the number of contributions per active issue contributor in the last 90 days.
+    """
+    contribution_per_person = 0
+    issue_type = ["issue_creation", "issue_comments",
+                  "issue_labeled", "issue_unlabeled", "issue_closed", "issue_reopened",
+                  "issue_assigned", "issue_unassigned", "issue_milestoned", "issue_demilestoned",
+                  "issue_marked_as_duplicate", "issue_transferred",
+                  "issue_renamed_title", "issue_change_description", "issue_setting_priority", "issue_change_priority",
+                  "issue_link_pull_request", "issue_unlink_pull_request", "issue_assign_collaborator",
+                  "issue_unassign_collaborator",
+                  "issue_change_issue_state", "issue_change_issue_type", "issue_setting_branch", "issue_change_branch"]
+    contribution_count = activity_domain_contribution(client, contributors_enriched_index, date, repo_list, issue_type)
+    contributor_count = activity_domain_contributor(client, contributors_enriched_index, date, repo_list, issue_type)
+    if contributor_count > 0:
+        contribution_per_person = contribution_count / contributor_count
+    return {"activity_issue_contribution_per_person": contribution_per_person}
+
+
+def activity_domain_contribution(client, contributors_enriched_index, date, repo_list, contribution_type):
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="sum", repo_list=repo_list, field="contribution",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["sum"] = {
+        "script": {
+            "source": """
+          int sum = 0;
+          List targetValue = params.targetValue;
+          for(def item : params._source.contribution_type_list){
+            if(targetValue.contains(item.contribution_type)){
+              sum += item.contribution;
+            } 
+          }
+          return sum;
+          """,
+            "params": {
+                "targetValue": contribution_type
+            }
+        }
+    }
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "contribution_type_list.contribution_type.keyword": contribution_type
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contribution_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return contribution_count
+
+
+def activity_domain_contributor(client, contributors_enriched_index, date, repo_list, contribution_type):
+    from_date = (date - timedelta(days=90))
+    query = get_uuid_count_query(option="cardinality", repo_list=repo_list, field="contributor.keyword",
+                                 date_field="grimoire_creation_date", size=0, from_date=from_date, to_date=date,
+                                 repo_field="repo_name.keyword")
+    query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
+    query["query"]["bool"]["must"].append({
+        "terms": {
+            "contribution_type_list.contribution_type.keyword": contribution_type
+        }
+    })
+    query["query"]["bool"]["must"].append({
+        "match_phrase": {
+            "is_bot": "false"
+        }
+    })
+    contributor_count = client.search(index=contributors_enriched_index, body=query)[
+        'aggregations']['count_of_uuid']['value']
+    return contributor_count
+
+
+def types_of_contributions(client, contributors_enriched_index, date, repo_list):
+    """ Define the types of contributions and their contributions over the past 90 days.  """
+    from_date = date - timedelta(days=90)
+    query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"terms": {"repo_name.keyword": repo_list}},
+                    {"range": {"grimoire_creation_date": {"gte": from_date.isoformat(), "lte": date.isoformat()}}}
+                ]
+            }
+        },
+        "size": 0,
+        "aggs": {
+            "contribution_types": {
+                "terms": {
+                    "field": "contribution_type_list.contribution_type.keyword",
+                    "size": 50
+                },
+                "aggs": {
+                    "total_contributions": {
+                        "sum": {
+                            "field": "contribution_type_list.contribution"
+                        }
+                    },
+                    "unique_contributors": {
+                        "cardinality": {
+                            "field": "contributor.keyword"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    response = client.search(index=contributors_enriched_index, body=query)
+    contribution_detail = []
+    total_contribution_types = 0
+    for bucket in response['aggregations']['contribution_types']['buckets']:
+        contribution_type = bucket['key']
+        total_contributions = bucket['total_contributions']['value']
+        unique_contributors = bucket['unique_contributors']['value']
+        contribution_detail.append({
+            "contribution_type": contribution_type,
+            "contributor": unique_contributors,
+            "contribution": total_contributions
+        })
+        total_contribution_types += 1
+    result = {
+        'types_of_contributions': total_contribution_types,
+        'types_of_contributions_detail': contribution_detail
+    }
+    return result
+
+
+def org_contributor_count_year(client, contributors_index, date, repo_list):
+    """ Number of active code contributors with organization affiliation in the past 3 years """
+
+    from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    to_date = date
+    commit_contributor_list = get_contributor_list(client, contributors_index, from_date, to_date, repo_list,
+                                                   "code_author_date_list")
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+    org_contributor_set = set()
+    org_contributor_bot_set = set()
+    org_contributor_without_bot_set = set()
+    org_contributor_detail_dict = {}
+
+    for contributor in commit_contributor_list:
+        for org in contributor["org_change_date_list"]:
+            author_name = contributor["id_git_author_name_list"][0]
+            if check_times_has_overlap(org["first_date"], org["last_date"], from_date_str, to_date_str):
+                if org.get("org_name") is not None:
+                    org_contributor_set.add(author_name)
+                    if contributor["is_bot"]:
+                        org_contributor_bot_set.add(author_name)
+                    else:
+                        org_contributor_without_bot_set.add(author_name)
+
+                org_name = org.get("org_name") if org.get("org_name") else org.get("domain")
+                is_org = True if org.get("org_name") else False
+                org_contributor_detail_count_set = org_contributor_detail_dict.get(org_name, {}).get(
+                    "org_contributor_count_set", set())
+                org_contributor_detail_count_set.add(author_name)
+                org_contributor_detail_dict[org_name] = {
+                    "org_name": org_name,
+                    "is_org": is_org,
+                    "org_contributor_count_set": org_contributor_detail_count_set,
+                    "org_contributor_count": len(org_contributor_detail_count_set)
+                }
+    org_contributor_count_list = []
+    for x in org_contributor_detail_dict.values():
+        if "org_contributor_count_set" in x:
+            del x["org_contributor_count_set"]
+        org_contributor_count_list.append(x)
+    org_contributor_count_list = sorted(org_contributor_count_list, key=lambda x: x["org_contributor_count"],
+                                        reverse=True)
+
+    result = {
+        'org_contributor_count_year': len(org_contributor_set),
+        'org_contributor_count_bot_year': len(org_contributor_bot_set),
+        'org_contributor_count_without_bot_year': len(org_contributor_without_bot_set),
+        'org_contributor_count_list_year': org_contributor_count_list
+    }
+    return result
+
+
+def contributor_count_year(client, contributors_index, date, repo_list, from_date=None):
+    """ Determine how many active code commit authors, pr authors, review participants, issue authors,
+    and issue comments participants there are in the past 3 years """
+    if from_date is None:
+        from_date = (date - relativedelta(years=3)).replace(month=1, day=1)
+    to_date = date
+    date_field_list = ["code_author_date_list", "issue_creation_date_list", "issue_comments_date_list",
+                       "pr_creation_date_list", "pr_comments_date_list"]
+    contributor_count = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                              date_field_list)
+    contributor_count_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                  date_field_list, is_bot=True)
+    contributor_count_without_bot = get_contributor_count(client, contributors_index, from_date, to_date, repo_list,
+                                                          date_field_list, is_bot=False)
+    result = {
+        "contributor_count_year": contributor_count,
+        "contributor_count_bot_year": contributor_count_bot,
+        "contributor_count_without_bot_year": contributor_count_without_bot,
+    }
+    return result
+
+
+# =========================
+# v2: 按周期（月 / 季度 / 年）的 Contributor 指标
+# =========================
+
+from datetime import datetime
+
+
+def get_period_range(end_date: datetime, period: str):
+    if period not in ("month", "quarter", "year"):
+        raise ValueError("period must be one of: month, quarter, year")
+
+    # 1. 确定 start_date (逻辑保持不变)
+    if period == "month":
+        start_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == "year":
+        start_date = end_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:  # quarter
+        month = ((end_date.month - 1) // 3) * 3 + 1
+        start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # 2. 修改 end_date 为该周期的最后一天
+    if period == "month":
+        # 下个月的第一天减去 1 秒（或1天）
+        if end_date.month == 12:
+            next_month = end_date.replace(year=end_date.year + 1, month=1, day=1)
+        else:
+            next_month = end_date.replace(month=end_date.month + 1, day=1)
+        actual_end_date = next_month - timedelta(seconds=1)
+
+    elif period == "year":
+        actual_end_date = end_date.replace(month=12, day=31, hour=23, minute=59, second=59)
+
+    else:  # quarter
+        quarter_end_month = ((end_date.month - 1) // 3) * 3 + 3
+        if quarter_end_month == 12:
+            next_start = end_date.replace(year=end_date.year + 1, month=1, day=1)
+        else:
+            next_start = end_date.replace(month=quarter_end_month + 1, day=1)
+        actual_end_date = next_start - timedelta(seconds=1)
+
+    return start_date, actual_end_date
+
+def get_period_range2(end_date: datetime, period: str):
+    if period not in ("month", "quarter", "year"):
+        raise ValueError("period must be one of: month, quarter, year")
+
+    if period == "month":
+        start_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == "year":
+        start_date = end_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:  # quarter
+        month = ((end_date.month - 1) // 3) * 3 + 1
+        start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
+    return start_date, end_date
+
+
+def _base_contributor_query(repo_list, from_date, to_date, additional_filters=None):
+    """基础贡献者查询，过滤机器人和时间范围"""
+    query = {
+        "size": 0,
+        "query": {
+            "bool": {
+                "must": [
+                    {"terms": {"repo_name.keyword": repo_list}},
+                    {"range": {"grimoire_creation_date": {"gte": from_date.isoformat(), "lt": to_date.isoformat()}}},
+                    {"match_phrase": {"is_bot": "false"}}
+                ]
+            }
+        }
+    }
+    if additional_filters:
+        query["query"]["bool"]["must"].extend(additional_filters)
+    return query
+
+
+def _get_contributor_cardinality(client, index, query, field="contributor.keyword"):
+    """获取贡献者去重数量"""
+    query_copy = query.copy()
+    query_copy["aggs"] = {
+        "count": {
+            "cardinality": {
+                "field": field,
+                "precision_threshold": 100000
+            }
+        }
+    }
+
+    result = client.search(index=index, body=query_copy)
+
+    return result["aggregations"]["count"]["value"]
+
+
+def _get_contribution_sum(client, index, query):
+    """获取贡献量总和"""
+    query_copy = query.copy()
+    query_copy["aggs"] = {
+        "total_contribution": {
+            "sum": {"field": "contribution"}
+        }
+    }
+    result = client.search(index=index, body=query_copy)
+    return result["aggregations"]["total_contribution"]["value"]
+
+
+def total_active_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    总活跃贡献者数：周期内有任何贡献行为的去重用户数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date)
+
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+
+    return {"total_active_contributors": count, "period": period}
+
+
+def code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    活跃代码贡献者：周期内有代码提交或PR合并或PR评论的去重用户数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ])
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"code_contributors": count, "period": period}
+
+
+def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    活跃非代码贡献者：周期内仅参与讨论但未提交代码的用户数。
+    计算：总活跃贡献者 - 代码贡献者
+    """
+    total = total_active_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "total_active_contributors"]
+    code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "code_contributors"]
+    non_code = total - code
+    return {"non_code_contributors": max(0, non_code), "period": period}
+
+
+def participating_orgs_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    参与贡献的组织个数：周期内参与贡献的组织个数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"exists": {"field": "organization"}},
+        {"match_phrase": {"ecological_type": "organization"}}
+    ])
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query, "organization.keyword")
+    return {"participating_orgs": count, "period": period}
+
+
+def org_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织代码贡献者数量：周期内参与代码贡献的组织贡献者个数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}},
+        {"match_phrase": {"ecological_type": "organization"}}
+    ])
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"org_code_contributors": count, "period": period}
+
+
+def org_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织代码贡献者数量占比：周期内组织代码贡献者数量占总代码贡献者数量的比例。
+    """
+    total_code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "code_contributors"]
+    org_code = org_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "org_code_contributors"]
+    ratio = (org_code / total_code) if total_code > 0 else None
+    return {
+        "org_code_contributors_ratio": ratio,
+        "org_code_contributors": org_code,
+        "total_code_contributors": total_code,
+        "period": period
+    }
+
+
+def org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织非代码贡献者数量：周期内参与非代码贡献的组织贡献者个数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    # 非代码贡献类型：排除代码相关的贡献类型
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "organization"}}
+    ])
+    # 使用脚本过滤掉有代码贡献的用户
+    query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"org_non_code_contributors": count, "period": period}
+
+
+def org_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织非代码贡献者数量占比：周期内组织非代码贡献者占总非代码贡献者数量的比例。
+    """
+    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "non_code_contributors"]
+    org_non_code = \
+    org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "org_non_code_contributors"]
+    ratio = (org_non_code / total_non_code) if total_non_code > 0 else None
+    return {
+        "org_non_code_contributors_ratio": ratio,
+        "org_non_code_contributors": org_non_code,
+        "total_non_code_contributors": total_non_code,
+        "period": period
+    }
+
+
+def org_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织非代码贡献量：周期内组织非代码贡献量。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "organization"}}
+    ])
+    query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    return {"org_non_code_contribution": total, "period": period}
+
+
+def org_non_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织非代码贡献量占比：周期内组织非代码贡献量占总非代码贡献量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    # 总非代码贡献量
+    total_query = _base_contributor_query(repo_list, from_date, to_date)
+    total_query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+
+    # 组织非代码贡献量
+    org_non_code = \
+    org_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "org_non_code_contribution"]
+
+    ratio = (org_non_code / total_non_code) if total_non_code > 0 else None
+    return {
+        "org_non_code_contribution_ratio": ratio,
+        "org_non_code_contribution": org_non_code,
+        "total_non_code_contribution": total_non_code,
+        "period": period
+    }
+
+
+def org_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织代码贡献量：周期内组织代码贡献量。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    # 定义代码类贡献类型
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+
+    # 基础查询：限定组织类型
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "organization"}},
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ])
+
+    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    return {"org_code_contribution": total, "period": period}
+def org_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    组织代码贡献量占比：周期内组织代码贡献量占总代码贡献量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+
+    total_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ])
+    total_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+
+    org_code_data = org_code_contribution_by_period(
+        client, contributors_enriched_index, end_date, repo_list, period
+    )
+    org_code = org_code_data["org_code_contribution"]
+
+    ratio = (org_code / total_code) if total_code > 0 else None
+
+    return {
+        "org_code_contribution_ratio": ratio,
+        "org_code_contribution": org_code,
+        "total_code_contribution": total_code,
+        "period": period
+    }
+
+def governance_orgs_by_period(client, contributors_enriched_index, end_date, repo_list, period="month",
+                              exclude_orgs=None):
+    """
+    参与治理的组织数：周期内在社区治理角色中，来自非社区发起组织的去重组织数量。
+    exclude_orgs: 社区发起组织的名单列表
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"ecological_type.keyword": ["organization manager", "organization participant"]}}
+    ])
+    if exclude_orgs:
+        query["query"]["bool"]["must_not"] = [
+            {"terms": {"organization.keyword": exclude_orgs}}
+        ]
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query, "organization.keyword")
+    return {"governance_orgs": count, "period": period}
+
+
+def org_managers_by_period(client, contributors_enriched_index, end_date, repo_list, period="month", exclude_orgs=None):
+    """
+    组织管理者数量：周期内在社区治理角色中，来自非社区发起组织的去重管理者数量。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "organization manager"}}
+    ])
+    if exclude_orgs:
+        query["query"]["bool"]["must_not"] = [
+            {"terms": {"organization.keyword": exclude_orgs}}
+        ]
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"org_managers": count, "period": period}
+
+
+def org_managers_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month",
+                                 exclude_orgs=None):
+    """
+    组织管理者数量占比：周期内在社区治理角色中，来自组织的管理者数量占总管理者数量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    # 总管理者数量
+    total_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"ecological_type.keyword": ["organization manager", "individual manager"]}}
+    ])
+    if exclude_orgs:
+        total_query["query"]["bool"]["must_not"] = [
+            {"terms": {"organization.keyword": exclude_orgs}}
+        ]
+    total_managers = _get_contributor_cardinality(client, contributors_enriched_index, total_query)
+
+    # 组织管理者数量
+    org_managers = \
+    org_managers_by_period(client, contributors_enriched_index, end_date, repo_list, period, exclude_orgs)[
+        "org_managers"]
+
+    ratio = (org_managers / total_managers) if total_managers > 0 else None
+    return {
+        "org_managers_ratio": ratio,
+        "org_managers": org_managers,
+        "total_managers": total_managers,
+        "period": period
+    }
+
+
+def individual_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    个人代码贡献者数量：周期内有代码贡献行为的个人贡献者数量。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}},
+        {"match_phrase": {"ecological_type": "individual participant"}}
+    ])
+
+    print (query)
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"individual_code_contributors": count, "period": period}
+
+
+def individual_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                                 period="month"):
+    """
+    个人代码贡献者数量占比：周期内个人代码贡献者数量占总代码贡献者数量的比例。
+    """
+    total_code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "code_contributors"]
+    individual_code = \
+    individual_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "individual_code_contributors"]
+    ratio = (individual_code / total_code) if total_code > 0 else None
+    return {
+        "individual_code_contributors_ratio": ratio,
+        "individual_code_contributors": individual_code,
+        "total_code_contributors": total_code,
+        "period": period
+    }
+
+
+def individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                               period="month"):
+    """
+    个人非代码贡献者数量：周期内仅参与非代码贡献行为的个人贡献者数量。
+
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "individual participant"}}
+    ])
+    query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"individual_non_code_contributors": count, "period": period}
+
+
+def individual_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                                     period="month"):
+    """
+    个人非代码贡献者数量占比：周期内个人非代码贡献者数量占总非代码贡献者数量的比例。
+    """
+    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "non_code_contributors"]
+    individual_non_code = \
+    individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "individual_non_code_contributors"]
+    ratio = (individual_non_code / total_non_code) if total_non_code > 0 else None
+    return {
+        "individual_non_code_contributors_ratio": ratio,
+        "individual_non_code_contributors": individual_non_code,
+        "total_non_code_contributors": total_non_code,
+        "period": period
+    }
+
+#
+
+def individual_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                               period="month"):
+    """
+    个人非代码贡献量：周期内个人贡献者提交的非代码贡献总次数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "individual participant"}}
+    ])
+    query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    return {"individual_non_code_contribution": total, "period": period}
+
+
+def individual_non_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                                     period="month"):
+    """
+    个人非代码贡献量占比：周期内个人非代码贡献量占非代码总贡献量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+    # 总非代码贡献量
+    total_query = _base_contributor_query(repo_list, from_date, to_date)
+    total_query["query"]["bool"]["must_not"] = [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ]
+    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+
+    # 个人非代码贡献量
+    individual_non_code = \
+    individual_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "individual_non_code_contribution"]
+
+    ratio = (individual_non_code / total_non_code) if total_non_code > 0 else None
+    return {
+        "individual_non_code_contribution_ratio": ratio,
+        "individual_non_code_contribution": individual_non_code,
+        "total_non_code_contribution": total_non_code,
+        "period": period
+    }
+
+
+def individual_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    个人代码贡献量：周期内个人贡献者提交的代码贡献总次数。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+
+    # 基础查询：限定为个人参与者，并且贡献类型在 code_types 列表中
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "individual participant"}},
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ])
+
+    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    return {"individual_code_contribution": total, "period": period}
+def individual_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    个人代码贡献量占比：周期内个人代码贡献量占总代码贡献量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
+
+    total_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
+    ])
+    total_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+
+    individual_code_res = individual_code_contribution_by_period(
+        client, contributors_enriched_index, end_date, repo_list, period
+    )
+    individual_code = individual_code_res["individual_code_contribution"]
+
+    ratio = (individual_code / total_code) if total_code > 0 else None
+
+    return {
+        "individual_code_contribution_ratio": ratio,
+        "individual_code_contribution": individual_code,
+        "total_code_contribution": total_code,
+        "period": period
+    }
+
+def individual_managers_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    个人管理者数量：周期内在社区治理角色中，来自个人的去重管理者数量。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"match_phrase": {"ecological_type": "individual manager"}}
+    ])
+    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
+    return {"individual_managers": count, "period": period}
+
+
+def individual_managers_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    个人管理者数量占比：周期内在社区治理角色中，来自个人的管理者数量占总管理者数量的比例。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    # 总管理者数量
+    total_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"ecological_type.keyword": ["organization manager", "individual manager"]}}
+    ])
+    total_managers = _get_contributor_cardinality(client, contributors_enriched_index, total_query)
+
+    # 个人管理者数量
+    individual_managers = \
+    individual_managers_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
+        "individual_managers"]
+
+    ratio = (individual_managers / total_managers) if total_managers > 0 else None
+    return {
+        "individual_managers_ratio": ratio,
+        "individual_managers": individual_managers,
+        "total_managers": total_managers,
+        "period": period
+    }
+
+
+def contributor_list_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    Contributor 列表：周期内在社区治理角色中，来自个人的管理者列表。
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"terms": {"ecological_type.keyword": ["organization manager", "individual manager"]}}
+    ])
+    query["size"] = 1000
+    query["_source"] = ["contributor", "organization", "ecological_type", "contribution"]
+
+    result = client.search(index=contributors_enriched_index, body=query)
+    contributors = []
+    for hit in result["hits"]["hits"]:
+        src = hit["_source"]
+        contributors.append({
+            "contributor": src.get("contributor"),
+            "organization": src.get("organization"),
+            "ecological_type": src.get("ecological_type"),
+            "contribution": src.get("contribution")
+        })
+
+    return {
+        "contributor_list": contributors,
+        "total_managers": len(contributors),
+        "period": period
+    }
