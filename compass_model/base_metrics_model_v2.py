@@ -454,8 +454,8 @@ class BaseMetricsModel:
         for date in date_list:
             logger.info(f"{str(date)}--{self.model_name}--{label}")
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
-            # if created_since_metric is None:
-            #     continue
+            if created_since_metric is None:
+                continue
             metrics, _ = self.get_metrics(date, repo_list,period)
 
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,

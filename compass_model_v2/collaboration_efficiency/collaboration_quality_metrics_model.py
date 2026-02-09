@@ -37,28 +37,28 @@ class CollaborationQualityMetricsModel(BaseMetricsModel):
         model_name = 'Collaboration Quality'
         metrics_weights_thresholds = {
 
+            "pr_merge_ratio_by_period": {
+                "weight": WEIGHT,
+                "threshold": None
+            },
 
-            "issue_new_first_response_time_by_period": {
+            "pr_issue_linked_ratio_by_period": {
                 "weight": WEIGHT,
                 "threshold": None
             },
-            "issue_new_unresponsive_ratio_by_period": {
+            "pr_review_participation_ratio_by_period": {
                 "weight": WEIGHT,
                 "threshold": None
             },
-            "issue_new_handle_time_by_period": {
+            "pr_non_author_merge_ratio_by_period": {
                 "weight": WEIGHT,
                 "threshold": None
             },
-            "pr_new_unresponsive_ratio_by_period": {
+            "pr_avg_interactions_by_period": {
                 "weight": WEIGHT,
                 "threshold": None
             },
-            "pr_new_handle_time_by_period": {
-                "weight": WEIGHT,
-                "threshold": None
-            },
-            "pr_new_first_response_time_by_period": {
+            "pr_review_time_by_size_by_period": {
                 "weight": WEIGHT,
                 "threshold": None
             }
