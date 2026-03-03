@@ -1,8 +1,6 @@
 url:
 #  "https://user:password@ip:port"
 
-
-# http://admin:admin@119.8.41.180:9200
  
 params:
   {
