@@ -13,12 +13,9 @@
 from compass_model.base_metrics_model_v2 import BaseMetricsModel
 
 # 权重常量
-STARS_WEIGHT = 0.1667
-FORKS_WEIGHT = 0.1667
-SOCIAL_MENTIONS_WEIGHT = 0.1667
-GITHUB_MENTIONS_WEIGHT = 0.1667
-MEDIA_COVERAGE_WEIGHT = 0.1667
-SEARCH_QUERIES_WEIGHT = 0.1665
+STARS_WEIGHT = 0.5
+FORKS_WEIGHT = 0.5
+
 
 
 class CommunityPopularityMetricsModel(BaseMetricsModel):
