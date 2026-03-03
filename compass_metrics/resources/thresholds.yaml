@@ -183,6 +183,9 @@ metrics_default_threshold:
     - metric: 'pr_comment_count_by_period'
       repo_threshold: 96
       multiple_threshold: 96
+    - metric: 'pr_merge_ratio_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96
 
   repo:
     - metric: 'recent_releases_count'

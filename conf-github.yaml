@@ -1,29 +1,31 @@
 url:
-  "https://user:password@ip:port"
+#  "https://user:password@ip:port"
+
  
 params:
   {
     'repo_index':'github-repo_enriched',
-    'git_index': 'git_demo_enriched',
-    'issue_index': 'github_enriched',
-    'pr_index':'github-pull_enriched',
+    'git_index': 'github-git_enriched',
+    'issue_index': 'github-issues_enriched',
+    'pr_index':'github-pulls_enriched',
     'issue_comments_index':'github2-issues_enriched',
-    'pr_comments_index':'github2-pull_enriched',
-    'contributors_index':'github_contributors_org_repo',
+    'pr_comments_index':'github2-pulls_enriched',
+    'contributors_index':'github-contributors_org_repo',
     'contributors_enriched_index':'github-contributors_org_repo_enriched',
     'release_index': 'github-repo_release_enriched',
     'stargazer_index': 'github-stargazer_enriched',
     'fork_index': 'github-fork_enriched',
     'event_index': 'github-event_enriched',
-    'out_index': 'pytorch_metric_model_test',
-    'from_date': '2020-01-01',
-    'end_date': '2023-04-15',
+    'out_index': 'v2_metric_model_test',
+    'from_date': '2024-01-01',
+    'end_date': '2024-12-31',
     'level': 'repo',
     'community': 'pytorch',
     'company': 'Facebook',
     'source': 'github',
-    'json_file': '',
+    'json_file': 'projects-github-pytorch.json',
     'contributors_org_index':'github-contributors_org',
     'organizations_index': 'organizations',
+    'custom_fields': {'period': 'month'},
     'bots_index': 'bots'
   }
