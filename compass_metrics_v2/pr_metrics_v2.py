@@ -339,7 +339,7 @@ def pr_merge_ratio_by_period(client, pr_index, end_date, repos_list, period="mon
 
     merged_query = build_base_pr_query("cardinality", repos_list, "uuid", "grimoire_creation_date", from_date, to_date)
     merged_query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
-    merged_query["query"]["bool"]["must"].append({"match_phrase": {"state": "merged"}})
+    merged_query["query"]["bool"]["must"].append({"match_phrase": {"merged": "true"}})
     merged = client.search(index=pr_index, body=merged_query)["aggregations"]["count_of_uuid"]["value"]
 
     return {
@@ -374,6 +374,15 @@ def pr_issue_linked_ratio_by_period(client, pr_index, pr_comments_index, end_dat
         "period": period,
     }
 
+#     """ Determine the percentage of new pull request link issues in the last 90 days. """
+#     if from_date is None:
+#         from_date = (date-timedelta(days=90))
+#     code_pr_count = pr_count(client, pr_index, date, repos_list, from_date)["pr_count"]
+#     code_pr_issue_linked_count = pr_issue_linked_count(client, pr_index, pr_comments_index, date, repos_list, from_date)["pr_issue_linked_count"]
+#     result = {
+#         "pr_issue_linked_ratio": code_pr_issue_linked_count/code_pr_count if code_pr_count > 0 else None
+#     }
+#     return result
 
 def pr_review_participation_ratio_by_period(client, pr_index, end_date, repos_list, period="month"):
     """

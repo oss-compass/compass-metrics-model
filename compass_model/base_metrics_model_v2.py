@@ -12,7 +12,7 @@ from compass_common.datetime import (get_date_list,
                                      get_last_three_years_dates,
                                      get_last_four_quarters_dates, get_date_list_by_period)
 from compass_common.uuid_utils import get_uuid
-from compass_common.algorithm_utils import get_score_by_criticality_score, normalize, get_score_by_aggregate_score
+from compass_common.algorithm_utils import get_score_by_criticality_score,get_score_by_criticality_score_with_mapping, normalize, get_score_by_aggregate_score
 from compass_metrics.db_dsl import get_release_index_mapping, get_repo_message_query
 from compass_metrics.git_metrics import (created_since,
                                          updated_since,
@@ -809,9 +809,9 @@ class BaseMetricsModel:
             "pr_merge_ratio_by_period": lambda: pr_merge_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
             "pr_issue_linked_ratio_by_period": lambda: pr_issue_linked_ratio_by_period(self.client, self.pr_index, self.pr_comments_index,date, repo_list,period),
             "pr_review_participation_ratio_by_period": lambda: pr_review_participation_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
-            "pr_review_time_by_size_by_period": lambda: pr_review_participation_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
-            "pr_non_author_merge_ratio_by_period": lambda: pr_review_participation_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
-            "pr_avg_interactions_by_period": lambda: pr_review_participation_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
+            "pr_review_time_by_size_by_period": lambda: pr_review_time_by_size_by_period(self.client, self.pr_index, date, repo_list,period),
+            "pr_non_author_merge_ratio_by_period": lambda: pr_non_author_merge_ratio_by_period(self.client, self.pr_index, date, repo_list,period),
+            "pr_avg_interactions_by_period": lambda: pr_avg_interactions_by_period(self.client, self.pr_index, date, repo_list,period),
 
             "total_active_contributors_by_period": lambda: total_active_contributors_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
             "code_contributors_by_period": lambda: code_contributors_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
@@ -884,9 +884,9 @@ class BaseMetricsModel:
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
         if self.algorithm == "criticality_score":
-            score = get_score_by_criticality_score(metrics_data, new_metrics_weights_thresholds)
+            score = get_score_by_criticality_score_with_mapping(metrics_data, new_metrics_weights_thresholds)
             min_metrics_data = {key: None for key in new_metrics_weights_thresholds.keys()}
-            min_score = round(get_score_by_criticality_score(min_metrics_data, new_metrics_weights_thresholds), 5)
+            min_score = round(get_score_by_criticality_score_with_mapping(min_metrics_data, new_metrics_weights_thresholds), 5)
             return normalize(score, min_score, 1 - min_score)
         elif self.algorithm == "aggregate_score":
             return get_score_by_aggregate_score(metrics_data, new_metrics_weights_thresholds)
