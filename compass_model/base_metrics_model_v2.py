@@ -875,19 +875,58 @@ class BaseMetricsModel:
     def get_metrics_score(self, metrics_data):
         """ get model scores based on metric values """
         new_metrics_weights_thresholds = {}
+
+        # 进行 _avg 和 _mid 拆分的时间相关指标配置名
+        time_metrics = [
+            "issue_new_first_response_time_by_period",
+            "pr_new_first_response_time_by_period",
+            "issue_new_handle_time_by_period",
+            "pr_new_handle_time_by_period"
+        ]
+
+        lower_is_better_bases = [
+            "issue_new_first_response",
+            "issue_new_handle_time",
+            "pr_new_handle_time",
+            "pr_new_first_response",
+            "unresponsive"
+        ]
+
         for metrics, weights_thresholds in self.metrics_weights_thresholds.items():
-            if metrics in ["issue_first_reponse", "bug_issue_open_time", "pr_open_time", "pr_time_to_first_response"]:
+            if metrics in time_metrics:
                 new_weights_thresholds = weights_thresholds.copy()
                 new_weights_thresholds["weight"] = weights_thresholds["weight"] * 0.5
-                new_metrics_weights_thresholds[metrics + "_avg"] = new_weights_thresholds
-                new_metrics_weights_thresholds[metrics + "_mid"] = new_weights_thresholds
+
+                # 动态修剪后缀，提取基础字段名
+                if "first_response_time_by_period" in metrics:
+                    base_metric_name = metrics.replace("_time_by_period", "")
+                else:
+                    base_metric_name = metrics.replace("_by_period", "")
+
+                # 拼接生成最终的 avg 和 mid 字段名
+                new_metrics_weights_thresholds[base_metric_name + "_avg"] = new_weights_thresholds
+                new_metrics_weights_thresholds[base_metric_name + "_mid"] = new_weights_thresholds
             else:
                 new_metrics_weights_thresholds[metrics] = weights_thresholds
+
+        # 为反向指标打上 is_reverse = True 标签
+        for metric_key in new_metrics_weights_thresholds.keys():
+            if any(base in metric_key for base in lower_is_better_bases):
+                new_metrics_weights_thresholds[metric_key]["is_reverse"] = True
+
         if self.algorithm == "criticality_score":
+            # 计算实际得分
             score = get_score_by_criticality_score_with_mapping(metrics_data, new_metrics_weights_thresholds)
+
+            # 计算全为空值时的底分
             min_metrics_data = {key: None for key in new_metrics_weights_thresholds.keys()}
-            min_score = round(get_score_by_criticality_score_with_mapping(min_metrics_data, new_metrics_weights_thresholds), 5)
-            return normalize(score, min_score, 1 - min_score)
+            min_score = round(
+                get_score_by_criticality_score_with_mapping(min_metrics_data, new_metrics_weights_thresholds), 5)
+
+            # 归一化处理，防止除以 0 的安全措施
+            denominator = 1 - min_score
+            return normalize(score, min_score, denominator) if denominator != 0 else 0.0
+
         elif self.algorithm == "aggregate_score":
             return get_score_by_aggregate_score(metrics_data, new_metrics_weights_thresholds)
         else:

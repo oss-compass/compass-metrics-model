@@ -80,20 +80,20 @@ metrics_default_threshold:
       repo_threshold: 60
       multiple_threshold: 60
     - metric: 'issue_new_first_response_time_by_period'
-      repo_threshold: 60
-      multiple_threshold: 60
+      repo_threshold: 15
+      multiple_threshold: 15
     - metric: 'issue_new_handle_time_by_period'
-      repo_threshold: 60
-      multiple_threshold: 60
+      repo_threshold: 15
+      multiple_threshold: 15
     - metric: 'issue_new_unresponsive_ratio_by_period'
-      repo_threshold: 60
-      multiple_threshold: 60
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'issue_new_count_by_period'
-      repo_threshold: 60
-      multiple_threshold: 60
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'issue_comment_activity_by_period'
-      repo_threshold: 60
-      multiple_threshold: 60
+      repo_threshold: 1
+      multiple_threshold: 1
 
   pr:
     - metric: 'pr_open_time'
@@ -157,46 +157,46 @@ metrics_default_threshold:
       repo_threshold: 96
       multiple_threshold: 96
     - metric: 'pr_new_handle_time_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_new_first_response_time_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_new_unresponsive_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_issue_linked_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_review_participation_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_non_author_merge_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_avg_interactions_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_review_time_by_size_by_period'
       repo_threshold: 96
       multiple_threshold: 96
     - metric: 'pr_comment_count_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'pr_merge_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
 
   repo:
     - metric: 'recent_releases_count'
       repo_threshold: 12
       multiple_threshold: 12
     - metric: 'repo_forks_by_period'
-      repo_threshold: 12
-      multiple_threshold: 12
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'repo_stars_by_period'
-      repo_threshold: 12
-      multiple_threshold: 12
+      repo_threshold: 1
+      multiple_threshold: 1
 
   contributor:
     - metric: 'contributor_count' 
