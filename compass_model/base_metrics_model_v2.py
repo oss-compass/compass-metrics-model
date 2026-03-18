@@ -172,6 +172,72 @@ from  compass_metrics_v2.git_metrics_v2 import (lines_changed_by_period,commit_c
 )
 from  compass_metrics_v2.repo_metrics_v2 import (repo_stars_by_period,repo_forks_by_period)
 
+from  compass_metrics_v2.developer_metrics_v2 import  (
+    new_org_count_by_period,
+    new_org_code_contributors_by_period,
+    new_org_non_code_contributors_by_period,
+    new_individual_code_contributors_by_period,
+    new_individual_non_code_contributors_by_period,
+    org_code_core_contributors_by_period,
+    org_issue_core_contributors_by_period,
+    org_code_regular_contributors_by_period,
+    org_issue_regular_contributors_by_period,
+    org_code_visitor_contributors_by_period,
+    org_issue_visitor_contributors_by_period,
+    individual_code_core_contributors_by_period,
+    individual_issue_core_contributors_by_period,
+    individual_code_regular_contributors_by_period,
+    individual_issue_regular_contributors_by_period,
+    individual_code_visitor_contributors_by_period,
+    individual_issue_visitor_contributors_by_period,
+    org_code_core_promotion_count_by_period,
+    org_issue_core_promotion_count_by_period,
+    individual_code_core_promotion_count_by_period,
+    individual_issue_core_promotion_count_by_period,
+    org_code_core_retention_by_period,
+    org_issue_core_retention_by_period,
+    individual_code_core_retention_by_period,
+    individual_issue_core_retention_by_period,
+    org_code_core_churn_by_period,
+    org_issue_core_churn_by_period,
+    individual_code_core_churn_by_period,
+    individual_issue_core_churn_by_period,
+    org_code_core_loss_by_period,
+    org_issue_core_loss_by_period,
+    individual_code_core_loss_by_period,
+    individual_issue_core_loss_by_period,
+)
+
+
+from  compass_metrics_v2.supply_chain_security_metrics_v2 import  (
+    compliance_license,
+    compliance_license_compatibility,
+    compliance_copyright_statement,
+    compliance_copyright_anti_tamper,
+    compliance_snippet_reference,
+    import_valid,
+    vulnerability_disclosure,
+    security_vulnerability,
+    ecology_readme,
+    ecology_build_doc,
+    ecology_interface_doc,
+    ecology_maintainer_doc,
+    dependency_reachable,
+    patent_risk_oin,
+    ecology_test_coverage,
+    trusted_build_success,
+    ci_integration,
+    build_metadata_available,
+    reproducible_build,
+    sbom_in_release,
+    security_binary_artifact,
+    security_package_sig,
+    lifecycle_release_note,
+    lifecycle_statement,
+    avg_vulnerability_fix_time,
+    declared_license,
+)
+
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
@@ -454,8 +520,8 @@ class BaseMetricsModel:
         for date in date_list:
             logger.info(f"{str(date)}--{self.model_name}--{label}")
             created_since_metric = created_since(self.client, self.git_index, date, repo_list)["created_since"]
-            if created_since_metric is None:
-                continue
+            # if created_since_metric is None:
+            #     continue
             metrics, _ = self.get_metrics(date, repo_list,period)
 
             metrics_uuid = get_uuid(str(date), self.community, level, label, self.model_name, type,
@@ -853,6 +919,77 @@ class BaseMetricsModel:
             "individual_non_code_contribution_ratio_by_period": lambda: individual_non_code_contribution_ratio_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
 
 
+            "new_org_count_by_period": lambda: new_org_count_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "new_org_code_contributors_by_period": lambda: new_org_code_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "new_org_non_code_contributors_by_period": lambda: new_org_non_code_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "new_individual_code_contributors_by_period": lambda: new_individual_code_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "new_individual_non_code_contributors_by_period": lambda: new_individual_non_code_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+            "org_code_core_promotion_count_by_period": lambda: org_code_core_promotion_count_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_core_promotion_count_by_period": lambda: org_issue_core_promotion_count_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_core_promotion_count_by_period": lambda: individual_code_core_promotion_count_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_core_promotion_count_by_period": lambda: individual_issue_core_promotion_count_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+            "org_code_core_contributors_by_period": lambda: org_code_core_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_core_contributors_by_period": lambda: org_issue_core_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_code_regular_contributors_by_period": lambda: org_code_regular_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_regular_contributors_by_period": lambda: org_issue_regular_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_code_visitor_contributors_by_period": lambda: org_code_visitor_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_visitor_contributors_by_period": lambda: org_issue_visitor_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_core_contributors_by_period": lambda: individual_code_core_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_core_contributors_by_period": lambda: individual_issue_core_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_regular_contributors_by_period": lambda: individual_code_regular_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_regular_contributors_by_period": lambda: individual_issue_regular_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_visitor_contributors_by_period": lambda: individual_code_visitor_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_visitor_contributors_by_period": lambda: individual_issue_visitor_contributors_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+
+            "org_code_core_churn_by_period": lambda: org_code_core_churn_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_core_churn_by_period": lambda: org_issue_core_churn_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_core_churn_by_period": lambda: individual_code_core_churn_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_core_churn_by_period": lambda: individual_issue_core_churn_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+            "org_code_core_loss_by_period": lambda: org_code_core_loss_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_core_loss_by_period": lambda: org_issue_core_loss_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_core_loss_by_period": lambda: individual_code_core_loss_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_core_loss_by_period": lambda: individual_issue_core_loss_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+            "org_code_core_retention_by_period": lambda: org_code_core_retention_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "org_issue_core_retention_by_period": lambda: org_issue_core_retention_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_code_core_retention_by_period": lambda: individual_code_core_retention_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+            "individual_issue_core_retention_by_period": lambda: individual_issue_core_retention_by_period(self.client,self.contributors_enriched_index, date, repo_list,period),
+
+
+            "compliance_copyright_statement": lambda: compliance_copyright_statement(self.client, self.openchecker_index, repo_list),
+            "compliance_license": lambda: compliance_license(self.client,self.openchecker_index, repo_list),
+            "compliance_license_compatibility": lambda: compliance_license_compatibility(self.client,self.openchecker_index, repo_list),
+            "compliance_copyright_anti_tamper": lambda: compliance_copyright_anti_tamper(self.client,self.openchecker_index, repo_list),
+
+            "vulnerability_disclosure": lambda: vulnerability_disclosure(self.client,self.openchecker_index, repo_list),
+            "security_vulnerability": lambda: security_vulnerability(self.client,self.openchecker_index, repo_list),
+
+            "dependency_reachable": lambda: dependency_reachable(self.client,self.openchecker_index, repo_list),
+            "compliance_snippet_reference": lambda: compliance_snippet_reference(self.client,self.openchecker_index, repo_list),
+            "patent_risk_oin": lambda: patent_risk_oin(self.client,self.openchecker_index, repo_list),
+            "ecology_test_coverage": lambda: ecology_test_coverage(self.client,self.openchecker_index, repo_list),
+
+            "ecology_readme": lambda: ecology_readme(self.client,self.openchecker_index, repo_list),
+            "ecology_build_doc": lambda: ecology_build_doc(self.client,self.openchecker_index, repo_list),
+            "ecology_interface_doc": lambda: ecology_interface_doc(self.client,self.openchecker_index, repo_list),
+            "ecology_maintainer_doc": lambda: ecology_maintainer_doc(self.client,self.openchecker_index, repo_list),
+
+            "trusted_build_success": lambda: trusted_build_success(self.client,self.openchecker_index, repo_list),
+            "ci_integration": lambda: ci_integration(self.client,self.openchecker_index, repo_list),
+            "build_metadata_available": lambda: build_metadata_available(self.client,self.openchecker_index, repo_list),
+            "reproducible_build": lambda: reproducible_build(self.client,self.openchecker_index, repo_list),
+
+            "lifecycle_statement": lambda: lifecycle_statement(self.client,self.openchecker_index, repo_list),
+            "avg_vulnerability_fix_time": lambda: avg_vulnerability_fix_time(self.client,self.openchecker_index, repo_list),
+
+            "sbom_in_release": lambda: sbom_in_release(self.client,self.openchecker_index, repo_list),
+            "security_binary_artifact": lambda: security_binary_artifact(self.client,self.openchecker_index, repo_list),
+            "security_package_sig": lambda: security_package_sig(self.client,self.openchecker_index, repo_list),
+            "lifecycle_release_note": lambda: lifecycle_release_note(self.client,self.openchecker_index, repo_list),
 
 
         }

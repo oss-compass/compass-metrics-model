@@ -43,7 +43,7 @@ def get_period_range(end_date: datetime, period: str):
     if period not in ("month", "quarter", "year"):
         raise ValueError("period must be one of: month, quarter, year")
 
-    # 1. 确定 start_date (逻辑保持不变)
+    #确定 start_date (逻辑保持不变)
     if period == "month":
         start_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     elif period == "year":
@@ -52,7 +52,7 @@ def get_period_range(end_date: datetime, period: str):
         month = ((end_date.month - 1) // 3) * 3 + 1
         start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # 2. 修改 end_date 为该周期的最后一天
+    #修改 end_date 为该周期的最后一天
     if period == "month":
         # 下个月的第一天减去 1 秒（或1天）
         if end_date.month == 12:

@@ -1,26 +1,25 @@
 """
 Compass Model v2 - 新一代开源项目健康度量模型
 
-按照5个维度组织：
-1. 协作效率 (Collaboration Efficiency)
-   - 响应及时性 (Response Timeliness)
-   - 协作开发质量 (Collaboration Quality)
+按两大评估体系组织：
 
-2. 社区活力 (Community Vitality)
-   - 开发者基数 (Developer Base)
-   - 贡献活跃度 (Contribution Activity)
-   - 社区流行度 (Community Popularity)
+1. 社区生态健康评估 (community_health)
+   - 协作效率 (collaboration_efficiency)
+   - 社区活力 (community_vitality)
+   - 生态影响力 (ecological_influence)
+   - 开发治理 (development_governance)
 
-3. 生态影响力 (Ecological Influence)
-   - 生态伙伴多样性 (Partner Diversity)
-   - 生态伙伴影响力 (Partner Influence)
-   - 技术采纳度 (Technology Adoption)
+2. 开发者旅程评估 (developer_journey)
+   - 开发者吸引 (developer_attraction)
+   - 开发者成长 (developer_growth)
+   - 开发者留存 (developer_retention)
+   - 开发者价值 (developer_value)
 
-4. 开发治理 (Development Governance)
-   - 组织开放治理 (Organizational Governance)
-   - 个人开放治理 (Personal Governance)
+3. 开源软件供应链安全评估  (supply_chain_security)
+    - 源码管理 (source_management)
+    - 开发与构建 (dev_and_build)
+    - 发布与维护 (release_and_maintenance)
 
-5. 其他指标 (Other Metrics)
 """
 
 __version__ = "2.0.0"

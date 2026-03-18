@@ -46,8 +46,8 @@ metrics_default_threshold:
       repo_threshold: 3000000
       multiple_threshold: 3000000
     - metric: 'commit_count_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 300
+      multiple_threshold: 300
     - metric: 'lines_changed_by_period'
       repo_threshold: 300000
       multiple_threshold: 300000
@@ -89,11 +89,11 @@ metrics_default_threshold:
       repo_threshold: 1
       multiple_threshold: 1
     - metric: 'issue_new_count_by_period'
-      repo_threshold: 1
-      multiple_threshold: 1
+      repo_threshold: 10
+      multiple_threshold: 10
     - metric: 'issue_comment_activity_by_period'
-      repo_threshold: 1
-      multiple_threshold: 1
+      repo_threshold: 10
+      multiple_threshold: 10
 
   pr:
     - metric: 'pr_open_time'
@@ -181,8 +181,8 @@ metrics_default_threshold:
       repo_threshold: 96
       multiple_threshold: 96
     - metric: 'pr_comment_count_by_period'
-      repo_threshold: 1
-      multiple_threshold: 1
+      repo_threshold: 10
+      multiple_threshold: 10
     - metric: 'pr_merge_ratio_by_period'
       repo_threshold: 1
       multiple_threshold: 1
@@ -293,71 +293,71 @@ metrics_default_threshold:
       repo_threshold: 96
       multiple_threshold: 96
     - metric: 'participating_orgs_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 10
+      multiple_threshold: 10
     - metric: 'org_code_contributors_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 100
+      multiple_threshold: 100
     - metric: 'org_code_contributors_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'org_non_code_contributors_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 100
+      multiple_threshold: 100
     - metric: 'org_non_code_contributors_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'governance_orgs_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 5
+      multiple_threshold: 5
     - metric: 'org_managers_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 20
+      multiple_threshold: 20
     - metric: 'org_managers_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'individual_code_contributors_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 300
+      multiple_threshold: 300
     - metric: 'individual_code_contributors_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'individual_non_code_contributors_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 300
+      multiple_threshold: 300
     - metric: 'individual_non_code_contributors_ratio_by_period'
-      repo_threshold: 96
-      multiple_threshold: 96
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'org_code_contribution_by_period'
       repo_threshold: 3000
       multiple_threshold: 3000
     - metric: 'org_code_contribution_ratio_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'individual_code_contribution_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1000
+      multiple_threshold: 1000
     - metric: 'individual_code_contribution_ratio_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'org_non_code_contribution_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1000
+      multiple_threshold: 1000
     - metric: 'org_non_code_contribution_ratio_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'individual_managers_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 10
+      multiple_threshold: 10
     - metric: 'individual_managers_ratio_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'individual_non_code_contribution_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 300
+      multiple_threshold: 300
     - metric: 'individual_non_code_contribution_ratio_by_period'
-      repo_threshold: 3000
-      multiple_threshold: 3000
+      repo_threshold: 1
+      multiple_threshold: 1
 
   Industry_support:
     - metric: 'doc_quarty'
@@ -418,3 +418,217 @@ metrics_default_threshold:
       repo_threshold: 1
       multiple_threshold: 1
 
+    # 开发者旅程评估 (developer_journey)
+  developer:
+      # 开发者画像 (developer_profile)
+      - metric: 'developer_background_profile_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      - metric: 'developer_skill_profile_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      - metric: 'developer_willingness_profile_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      # 开发者吸引 (developer_attraction)
+      - metric: 'new_org_count_by_period'
+        repo_threshold: 10
+        multiple_threshold: 20
+      - metric: 'new_org_code_contributors_by_period'
+        repo_threshold: 20
+        multiple_threshold: 50
+      - metric: 'new_org_non_code_contributors_by_period'
+        repo_threshold: 20
+        multiple_threshold: 50
+      - metric: 'new_individual_code_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      - metric: 'new_individual_non_code_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      # 开发者参与度分层 (participation_tier)
+      - metric: 'org_code_core_contributors_by_period'
+        repo_threshold: 10
+        multiple_threshold: 25
+      - metric: 'org_issue_core_contributors_by_period'
+        repo_threshold: 10
+        multiple_threshold: 25
+      - metric: 'org_code_regular_contributors_by_period'
+        repo_threshold: 15
+        multiple_threshold: 40
+      - metric: 'org_issue_regular_contributors_by_period'
+        repo_threshold: 15
+        multiple_threshold: 40
+      - metric: 'org_code_visitor_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      - metric: 'org_issue_visitor_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      - metric: 'individual_code_core_contributors_by_period'
+        repo_threshold: 20
+        multiple_threshold: 50
+      - metric: 'individual_issue_core_contributors_by_period'
+        repo_threshold: 20
+        multiple_threshold: 50
+      - metric: 'individual_code_regular_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      - metric: 'individual_issue_regular_contributors_by_period'
+        repo_threshold: 30
+        multiple_threshold: 80
+      - metric: 'individual_code_visitor_contributors_by_period'
+        repo_threshold: 50
+        multiple_threshold: 150
+      - metric: 'individual_issue_visitor_contributors_by_period'
+        repo_threshold: 50
+        multiple_threshold: 150
+      # 开发者晋升 (developer_promotion)
+      - metric: 'org_code_core_promotion_count_by_period'
+        repo_threshold: 5
+        multiple_threshold: 15
+      - metric: 'org_issue_core_promotion_count_by_period'
+        repo_threshold: 5
+        multiple_threshold: 15
+      - metric: 'individual_code_core_promotion_count_by_period'
+        repo_threshold: 10
+        multiple_threshold: 30
+      - metric: 'individual_issue_core_promotion_count_by_period'
+        repo_threshold: 10
+        multiple_threshold: 30
+      # 核心开发者留存率 (core_retention)
+      - metric: 'org_code_core_retention_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      - metric: 'org_issue_core_retention_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      - metric: 'individual_code_core_retention_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      - metric: 'individual_issue_core_retention_by_period'
+        repo_threshold: 1
+        multiple_threshold: 1
+      # 核心开发者淡出率 (core_churn)
+      - metric: 'org_code_core_churn_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'org_issue_core_churn_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'individual_code_core_churn_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'individual_issue_core_churn_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      # 核心开发者流失率 (core_loss)
+      - metric: 'org_code_core_loss_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'org_issue_core_loss_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'individual_code_core_loss_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+      - metric: 'individual_issue_core_loss_by_period'
+        repo_threshold: 0.25
+        multiple_threshold: 0.25
+#      # 开发者体验 (developer_experience)
+#      - metric: 'community_participation_vod_by_period'
+#        repo_threshold: 1
+#        multiple_threshold: 1
+#      - metric: 'product_usage_vod_by_period'
+#        repo_threshold: 1
+#        multiple_threshold: 1
+#      # 开发者影响力 (developer_influence)
+#      - metric: 'developer_tech_influence_by_period'
+#        repo_threshold: 1
+#        multiple_threshold: 1
+#      - metric: 'developer_community_influence_by_period'
+#        repo_threshold: 1
+#        multiple_threshold: 1
+#      - metric: 'developer_ecosystem_influence_by_period'
+#        repo_threshold: 1
+#        multiple_threshold: 1
+  supply_chain_security:
+    # ========== 源码管理 > 合法合规 ==========
+    - metric: 'compliance_copyright_statement'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'compliance_license'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'compliance_license_compatibility'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'compliance_copyright_anti_tamper'
+      repo_threshold: 10
+      multiple_threshold: 10
+    # ========== 安全管理 ==========
+    - metric: 'vulnerability_disclosure'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'security_vulnerability'
+      repo_threshold: 10
+      multiple_threshold: 10
+    # ========== 开发与构建 > 开发文档质量 ==========
+    - metric: 'ecology_readme'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'ecology_build_doc'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'ecology_interface_doc'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'ecology_maintainer_doc'
+      repo_threshold: 10
+      multiple_threshold: 10
+    # ========== 开发与构建 > 代码审查质量 ==========
+    - metric: 'dependency_reachable'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'compliance_snippet_reference'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'patent_risk_oin'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'ecology_test_coverage'
+      repo_threshold: 10
+      multiple_threshold: 10
+    # ========== 可信构建 ==========
+    - metric: 'trusted_build_success'
+      repo_threshold: 100
+      multiple_threshold: 100
+    - metric: 'ci_integration'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'build_metadata_available'
+      repo_threshold: 1
+      multiple_threshold: 1
+    - metric: 'reproducible_build'
+      repo_threshold: 1
+      multiple_threshold: 1
+    # ========== 发布与维护 > 发布质量 ==========
+    - metric: 'sbom_in_release'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'security_binary_artifact'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'security_package_sig'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'lifecycle_release_note'
+      repo_threshold: 10
+      multiple_threshold: 10
+    # ========== 发布与维护 > 维护管理 ==========
+    - metric: 'lifecycle_statement'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'avg_vulnerability_fix_time'
+      repo_threshold: 90
+      multiple_threshold: 90
