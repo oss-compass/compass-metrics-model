@@ -192,11 +192,11 @@ metrics_default_threshold:
       repo_threshold: 12
       multiple_threshold: 12
     - metric: 'repo_forks_by_period'
-      repo_threshold: 1
-      multiple_threshold: 1
+      repo_threshold: 100
+      multiple_threshold: 1000
     - metric: 'repo_stars_by_period'
-      repo_threshold: 1
-      multiple_threshold: 1
+      repo_threshold: 100
+      multiple_threshold: 1000
 
   contributor:
     - metric: 'contributor_count' 
