@@ -31,7 +31,15 @@ def get_score_by_criticality_score_with_mapping(metrics_data, metrics_weights_th
         total_weight += weight
 
         data_key = config_key.replace("_time_by_period", "").replace("_by_period", "")
-        param_data = metrics_data.get(data_key)
+
+        if config_key == 'repo_stars_by_period':
+            param_data = metrics_data.get('stars_added')
+        elif config_key == 'repo_forks_by_period':
+            param_data = metrics_data.get('forks_added')
+        else:
+            param_data = metrics_data.get(data_key)
+
+        # param_data = metrics_data.get(data_key)
 
         if isinstance(param_data, dict):
             valid_values = [v for v in param_data.values() if v is not None]
