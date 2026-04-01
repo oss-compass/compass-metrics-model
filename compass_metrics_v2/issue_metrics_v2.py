@@ -123,7 +123,16 @@ def issue_new_unresponsive_ratio_by_period(client, issue_index, end_date, repos_
     )
     unresp_query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     unresp_query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
-    unresp_query["query"]["bool"]["must"].append({"match_phrase": {"num_of_comments_without_bot": 0}})
+    # unresp_query["query"]["bool"]["must"].append({"match_phrase": {"num_of_comments_without_bot": 0}})
+    unresp_query["query"]["bool"]["must"].append({
+        "bool": {
+            "should": [
+                {"match_phrase": {"num_of_comments_without_bot": 0}},
+                {"bool": {"must_not": {"exists": {"field": "num_of_comments_without_bot"}}}}
+            ],
+            "minimum_should_match": 1
+        }
+    })
     unresp_query["query"]["bool"]["must"].append({"terms": {"state": ["open", "progressing"]}})
     unresp = client.search(index=issue_index, body=unresp_query)["aggregations"]["count_of_uuid"]["value"]
 
