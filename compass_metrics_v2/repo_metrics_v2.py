@@ -89,6 +89,32 @@ def get_previous_period_range(end_date: datetime, period: str):
     return prev_start, prev_end
 
 
+def get_latest_count(client, index, repos_list, to_date, date_field="grimoire_creation_date",field="stargazers_count"):
+    """
+    获取指定时间前最新的 stargazers_count 值
+    """
+    query = {
+        "size": 1,
+        "query": {
+            "bool": {
+                "filter": [
+                    {"terms": {"tag": repos_list}},
+                    {"range": {date_field: {"lt": to_date.isoformat() if hasattr(to_date, 'isoformat') else to_date}}}
+                ]
+            }
+        },
+        "sort": [
+            {date_field: {"order": "desc"}}
+        ],
+        "_source": [field, "tag", "grimoire_creation_date"]
+    }
+
+    response = client.search(index=index, body=query)
+    hits = response["hits"]["hits"]
+
+    if hits:
+        return hits[0]["_source"].get(field)or 0
+    return 0
 def cumulative_count(client, index, repos_list, to_date, field="uuid", date_field="grimoire_creation_date"):
     """累计总数：从 2000-01-01 到 to_date（lt）"""
     query = get_uuid_count_query(
@@ -116,10 +142,10 @@ def repo_stars_by_period(client, star_index, end_date, repos_list, period="month
     prev_start, prev_end = get_previous_period_range(end_date, period)
 
 
-    # 上周期累计（截止上周期末）
-    prev_total = cumulative_count(client, star_index, repos_list, prev_end, field="uuid")
-    # 本周期累计（截止当前周期末）
-    current_total = cumulative_count(client, star_index, repos_list, end_date, field="uuid")
+
+    prev_total = get_latest_count(client, star_index, repos_list, prev_end, field="stargazers_count")
+    # 本周期累计（取当前周期最新的 stargazers_count）
+    current_total = get_latest_count(client, star_index, repos_list, end_date, field="stargazers_count")
 
     added = current_total - prev_total if current_total is not None and prev_total is not None else None
 
@@ -140,8 +166,9 @@ def repo_forks_by_period(client, fork_index, end_date, repos_list, period="month
     _, end_date = get_period_range(end_date, period)  # 保留周期校验
     prev_start, prev_end = get_previous_period_range(end_date, period)
 
-    prev_total = cumulative_count(client, fork_index, repos_list, prev_end, field="uuid")
-    current_total = cumulative_count(client, fork_index, repos_list, end_date, field="uuid")
+    prev_total = get_latest_count(client, fork_index, repos_list, prev_end, field="forks_count")
+    # 本周期累计（取当前周期最新的 stargazers_count）
+    current_total = get_latest_count(client, fork_index, repos_list, end_date,  field="forks_count")
 
     added = current_total - prev_total if current_total is not None and prev_total is not None else None
 
