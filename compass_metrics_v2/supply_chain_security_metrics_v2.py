@@ -7,7 +7,7 @@
 """
 
 from __future__ import annotations
-
+from datetime import datetime, timedelta
 import json
 import re
 from typing import Any, Dict, List, Optional
@@ -258,7 +258,8 @@ def _calc_compliance_copyright_anti_tamper(oat_result: Optional[Dict[str, Any]])
     if not oat_result:
         return {
             "compliance_copyright_statement_anti_tamper": -1,
-            "compliance_copyright_statement_anti_tamper_detail": json.dumps({"unavailable": True}),
+            "compliance_copyright_anti_tamper": -1,
+            "compliance_copyright_anti_tamper_detail": json.dumps({"unavailable": True}),
             "tampering_risk": None,
         }
     candidates = [
@@ -280,7 +281,8 @@ def _calc_compliance_copyright_anti_tamper(oat_result: Optional[Dict[str, Any]])
     if not block:
         return {
             "compliance_copyright_statement_anti_tamper": -1,
-            "compliance_copyright_statement_anti_tamper_detail": json.dumps({"unavailable": True}),
+            "compliance_copyright_anti_tamper": -1,
+            "compliance_copyright_anti_tamper_detail": json.dumps({"unavailable": True}),
             "tampering_risk": None,
         }
     cnt = int(block.get("total_count") or 0)
@@ -289,7 +291,8 @@ def _calc_compliance_copyright_anti_tamper(oat_result: Optional[Dict[str, Any]])
     details = [x for x in details if x]
     return {
         "compliance_copyright_statement_anti_tamper": score,
-        "compliance_copyright_statement_anti_tamper_detail": json.dumps(
+        "compliance_copyright_anti_tamper": score,
+        "compliance_copyright_anti_tamper_detail": json.dumps(
             {"total_count": cnt, "sample_files": details[:10]}, ensure_ascii=False
         ),
         "tampering_risk": cnt > 0,
@@ -461,7 +464,7 @@ def _calc_ecology_readme(
         oat_no_readme: Optional[Dict[str, Any]],
 ) -> Dict[str, Any]:
     readme_files = readme_checker_result.get("readme_file") or []
-    score = 0
+    score = 10
     for rf in readme_files:
         parts = rf.split("/")
         if len(parts) == 2 and any(x in parts[1].lower() for x in ("readme", "readme.")):
@@ -557,6 +560,7 @@ def _calc_vulnerability_disclosure(security_policy_result: Dict[str, Any]) -> Di
     avg_close = security_policy_result.get("avg_vuln_close_days") or security_policy_result.get("avg_close_days")
     has_channel = file_size > 0 or bool(urls) or bool(emails)
     return {
+        "vulnerability_disclosure": 10 if has_channel else 0,
         "vulnerability_disclosure_has_channel": has_channel,
         "security_md_exists": file_size > 0,
         "avg_vuln_close_days": avg_close,
@@ -605,7 +609,7 @@ def _calc_lifecycle_statement(lifecycle_doc: Dict[str, Any]) -> Dict[str, Any]:
 def _calc_avg_vulnerability_fix_time(osv_or_platform: Dict[str, Any]) -> Dict[str, Any]:
     days = osv_or_platform.get("avg_vulnerability_fix_days") or osv_or_platform.get("avg_fix_days")
     if days is None:
-        return {"avg_vulnerability_fix_days": None, "avg_vulnerability_fix_unavailable": True}
+        return {"avg_vulnerability_fix_days": -1, "avg_vulnerability_fix_unavailable": True}
     return {"avg_vulnerability_fix_days": float(days), "avg_vulnerability_fix_unavailable": False}
 
 
@@ -692,7 +696,9 @@ def security_vulnerability(client: Any, opencheck_raw_index: str, repo_list: Lis
 
 def vulnerability_disclosure(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     sec = _fetch_command_result(client, opencheck_raw_index, repo_list, "security-policy-checker")
-    return _calc_vulnerability_disclosure(sec or {})
+    if not sec:
+        return {"vulnerability_disclosure": -1, "vulnerability_disclosure_detail": "no security-policy-checker data"}
+    return _calc_vulnerability_disclosure(sec)
 
 
 def ecology_readme(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
@@ -773,27 +779,120 @@ def reproducible_build(client: Any, opencheck_raw_index: str, repo_list: List[st
 def sbom_in_release(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     rel = _fetch_command_result(client, opencheck_raw_index, repo_list, "release-checker")
     if not rel:
-        return {"sbom_in_release": None, "detail": "no release-checker data"}
+        return {"sbom_in_release": 10, "detail": "no release-checker data"}
     return _calc_sbom_in_release(rel)
 
 
 def security_package_sig(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     rel = _fetch_command_result(client, opencheck_raw_index, repo_list, "release-checker")
     if not rel:
-        return {"security_package_sig": -1}
+        return {"security_package_sig": 10}
     return _calc_security_package_sig(rel)
 
 
 def lifecycle_release_note(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     rel = _fetch_command_result(client, opencheck_raw_index, repo_list, "release-checker")
     if not rel:
-        return {"lifecycle_release_note": -1}
+        return {"lifecycle_release_note": 10}
     return _calc_lifecycle_release_note(rel)
 
 
-def lifecycle_statement(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
-    return _calc_lifecycle_statement(
-        _fetch_command_result(client, opencheck_raw_index, repo_list, "lifecycle-doc-checker") or {})
+def lifecycle_statement(client: Any, repo_index: str, repo_list: List[str]) -> Dict[str, Any]:
+    query = {
+        "size": 1,
+        "query": {
+            "bool": {
+                "filter": [
+                    {"terms": {"tag": repo_list}},
+                ]
+            }
+        },
+        "sort": [
+            {"grimoire_creation_date": {"order": "desc"}}
+        ]
+    }
+
+    response = client.search(index=repo_index, body=query)
+    hits = response["hits"]["hits"]
+
+    if not hits:
+        score = 4
+        detail = {}
+    else:
+        source = hits[0]["_source"]
+        archived = source.get("archived", False)
+        releases = source.get("releases", [])
+        sorted_releases = sorted(releases, key=lambda x: x.get("created_at", ""), reverse=True)
+
+        if archived:
+            score = 0
+        elif not sorted_releases:
+            score = 4
+        else:
+            latest_created_at_str = sorted_releases[0].get("created_at")
+            if latest_created_at_str:
+                try:
+                    latest_created_at = datetime.fromisoformat(latest_created_at_str.replace('Z', '+00:00'))
+                except ValueError:
+                    score = 6
+                else:
+                    two_years_ago = datetime.now(latest_created_at.tzinfo) - timedelta(days=730)
+                    score = 10 if two_years_ago <= latest_created_at else 6
+            else:
+                score = 6
+
+        detail = {
+            "archived": archived,
+            "latest_version_name": sorted_releases[0].get("tag_name") if sorted_releases else None,
+            "latest_version_created_at": sorted_releases[0].get("created_at") if sorted_releases else None,
+        }
+
+    lifecycle_statement = score
+    lifecycle_statement_exists = bool(hits)
+    lifecycle_statement_detail = json.dumps(detail, ensure_ascii=False)[:500]
+
+    return {
+        "lifecycle_statement": lifecycle_statement,
+        "lifecycle_statement_exists": lifecycle_statement_exists,
+        "lifecycle_statement_detail": lifecycle_statement_detail,
+    }
+
+    # lifecycle_doc = {}
+    # has_eol = True
+    # keywords_hit = True
+    #
+    # query = {
+    #     "size": 10,
+    #     "query": {
+    #         "bool": {
+    #             "filter": [
+    #                 {"terms": {"tag": repo_list}},
+    #
+    #             ]
+    #         }
+    #     },
+    #     "sort": [
+    #         {"grimoire_creation_date": {"order": "desc"}}
+    #     ]
+    #
+    # }
+    #
+    # response = client.search(index=repo_index, body=query)
+    # hits = response["hits"]["hits"]
+    #
+    #
+    # print("Lifecycle statement hits:", len(hits))
+    #
+    # return {
+    #     "lifecycle_statement": 10 if has_eol else (6 if keywords_hit else 0),
+    #     "lifecycle_statement_exists": bool(has_eol or keywords_hit),
+    #     "lifecycle_statement_detail": json.dumps(lifecycle_doc, ensure_ascii=False)[:500],
+    # }
+
+
+    # return _calc_lifecycle_statement(
+    #     _fetch_command_result(client, repo_index, repo_list, "lifecycle-doc-checker") or {}
+    # )
 
 
 def avg_vulnerability_fix_time(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:

@@ -617,8 +617,8 @@ metrics_default_threshold:
       repo_threshold: 10
       multiple_threshold: 10
     - metric: 'security_binary_artifact'
-      repo_threshold: 10
-      multiple_threshold: 10
+      repo_threshold: 1
+      multiple_threshold: 1
     - metric: 'security_package_sig'
       repo_threshold: 10
       multiple_threshold: 10
