@@ -39,32 +39,31 @@ def get_score_by_criticality_score_with_mapping(metrics_data, metrics_weights_th
         else:
             param_data = metrics_data.get(data_key)
 
-        # param_data = metrics_data.get(data_key)
-
-        if isinstance(param_data, dict):
-            valid_values = [v for v in param_data.values() if v is not None]
-            param_data = sum(valid_values) / len(valid_values) if valid_values else 0
-
         # 获取是否为反向指标的标签和阈值
         is_reverse = weights_thresholds.get("is_reverse", False)
         threshold = weights_thresholds.get("threshold", 1)
-        if threshold <= 0:  # 防止阈值配置错误导致除以 0
+        if threshold <= 0:
             threshold = 1
 
+
+        # 处理字典类型的数据（如 pr_review_time_by_size）
+        if isinstance(param_data, dict):
+            valid_values = [v for v in param_data.values() if v is not None]
+            if not valid_values:
+                total_score += weight * 0
+                continue
+            param_data = sum(valid_values) / len(valid_values)
+
         if param_data is None:
-            if is_reverse:
-                # 反向指标的最差情况是达到或超过 threshold，此时应该拿 0 分
-                param_data = threshold
-            else:
-                # 正向指标的最差情况是 0
-                param_data = 0
+            continue
+
+        if param_data == -1:
+            total_score += weight * 0.5
+            continue
 
         if is_reverse:
-            # 针对越小越好的指标，使用“线性扣分”模型
-            # 公式：权重 * max(0, 1 - (实际值 / 阈值))。超过阈值保底拿 0 分。
             actual_score = weight * max(0, 1 - (param_data / threshold))
         else:
-            # 正向指标依然走原生的底层对数模型
             actual_score = get_param_score(param_data, threshold, weight)
 
         total_score += actual_score

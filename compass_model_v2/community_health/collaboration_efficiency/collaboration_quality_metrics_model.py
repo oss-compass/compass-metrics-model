@@ -21,7 +21,7 @@ PR_MERGE_COLLABORATION_RATIO_WEIGHT = 0.1667
 PR_COMMENT_FREQUENCY_WEIGHT = 0.1667
 PR_REVIEW_TIME_BY_SIZE_WEIGHT = 0.1665
 
-WEIGHT = 0.1667
+WEIGHT = 0.2
 
 
 class CollaborationQualityMetricsModel(BaseMetricsModel):
@@ -59,7 +59,7 @@ class CollaborationQualityMetricsModel(BaseMetricsModel):
                 "threshold": None
             },
             "pr_review_time_by_size_by_period": {
-                "weight": WEIGHT,
+                "weight": 0,
                 "threshold": None
             }
         }

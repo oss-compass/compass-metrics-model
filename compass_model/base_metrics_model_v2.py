@@ -539,6 +539,7 @@ class BaseMetricsModel:
                 **self.custom_fields
             }
             cache_last_metrics_data(metrics_data, last_metrics_data)
+            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
             try:
                 metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
             except Exception as e:
@@ -983,7 +984,7 @@ class BaseMetricsModel:
             "build_metadata_available": lambda: build_metadata_available(self.client,self.openchecker_index, repo_list),
             "reproducible_build": lambda: reproducible_build(self.client,self.openchecker_index, repo_list),
 
-            "lifecycle_statement": lambda: lifecycle_statement(self.client,self.openchecker_index, repo_list),
+            "lifecycle_statement": lambda: lifecycle_statement(self.client,self.repo_index, repo_list),
             "avg_vulnerability_fix_time": lambda: avg_vulnerability_fix_time(self.client,self.openchecker_index, repo_list),
 
             "sbom_in_release": lambda: sbom_in_release(self.client,self.openchecker_index, repo_list),
@@ -1026,6 +1027,7 @@ class BaseMetricsModel:
             "issue_new_handle_time",
             "pr_new_handle_time",
             "pr_new_first_response",
+            "security_binary_artifact",
             "unresponsive"
         ]
 
@@ -1061,8 +1063,9 @@ class BaseMetricsModel:
                 get_score_by_criticality_score_with_mapping(min_metrics_data, new_metrics_weights_thresholds), 5)
 
             # 归一化处理，防止除以 0 的安全措施
-            denominator = 1 - min_score
-            return normalize(score, min_score, denominator) if denominator != 0 else 0.0
+            # denominator = 1 - min_score
+            # return (score - min_score) / denominator if denominator != 0 else 0.0
+            return score
 
         elif self.algorithm == "aggregate_score":
             return get_score_by_aggregate_score(metrics_data, new_metrics_weights_thresholds)

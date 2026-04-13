@@ -18,20 +18,9 @@
 
 from compass_model.base_metrics_model_v2 import BaseMetricsModel
 
-# 权重常量
-ORG_COUNT_WEIGHT = 0.0833
-ORG_CODE_CONTRIBUTORS_WEIGHT = 0.0833
-ORG_CODE_CONTRIBUTORS_RATIO_WEIGHT = 0.0833
-ORG_CODE_CONTRIBUTION_WEIGHT = 0.0833
-ORG_CODE_CONTRIBUTION_RATIO_WEIGHT = 0.0833
-ORG_NON_CODE_CONTRIBUTORS_WEIGHT = 0.0833
-ORG_NON_CODE_CONTRIBUTORS_RATIO_WEIGHT = 0.0833
-ORG_NON_CODE_CONTRIBUTION_WEIGHT = 0.0833
-ORG_NON_CODE_CONTRIBUTION_RATIO_WEIGHT = 0.0833
-GOVERNANCE_ORG_COUNT_WEIGHT = 0.0833
-ORG_MANAGER_COUNT_WEIGHT = 0.0833
-ORG_MANAGER_COUNT_RATIO_WEIGHT = 0.0834
-WEIGHT = 0.1
+
+WEIGHT_ZERO = 0
+WEIGHT = 0.33
 
 
 class OrganizationalGovernanceMetricsModel(BaseMetricsModel):
@@ -47,39 +36,39 @@ class OrganizationalGovernanceMetricsModel(BaseMetricsModel):
         model_name = 'Organizational Governance'
         metrics_weights_thresholds = {
             "participating_orgs_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_code_contributors_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_code_contributors_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_code_contribution_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_code_contribution_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_non_code_contributors_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_non_code_contributors_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_non_code_contribution_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "org_non_code_contribution_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "governance_orgs_by_period": {
