@@ -17,17 +17,8 @@
 from compass_model.base_metrics_model_v2 import BaseMetricsModel
 
 # 权重常量
-PERSONAL_CODE_CONTRIBUTORS_WEIGHT = 0.1
-PERSONAL_CODE_CONTRIBUTORS_RATIO_WEIGHT = 0.1
-PERSONAL_CODE_CONTRIBUTION_WEIGHT = 0.1
-PERSONAL_CODE_CONTRIBUTION_RATIO_WEIGHT = 0.1
-PERSONAL_NON_CODE_CONTRIBUTORS_WEIGHT = 0.1
-PERSONAL_NON_CODE_CONTRIBUTORS_RATIO_WEIGHT = 0.1
-PERSONAL_NON_CODE_CONTRIBUTION_WEIGHT = 0.1
-PERSONAL_NON_CODE_CONTRIBUTION_RATIO_WEIGHT = 0.1
-PERSONAL_MANAGER_COUNT_WEIGHT = 0.1
-PERSONAL_MANAGER_COUNT_RATIO_WEIGHT = 0.1
-WEIGHT = 0.1
+WEIGHT_ZERO = 0
+WEIGHT = 0.5
 
 
 class PersonalGovernanceMetricsModel(BaseMetricsModel):
@@ -43,35 +34,35 @@ class PersonalGovernanceMetricsModel(BaseMetricsModel):
         model_name = 'Personal Governance'
         metrics_weights_thresholds = {
             "individual_code_contributors_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_code_contributors_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_code_contribution_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_code_contribution_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_non_code_contributors_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_non_code_contributors_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_non_code_contribution_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_non_code_contribution_ratio_by_period": {
-                "weight": WEIGHT,
+                "weight": WEIGHT_ZERO,
                 "threshold": None
             },
             "individual_managers_by_period": {
