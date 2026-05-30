@@ -485,17 +485,17 @@ metrics_default_threshold:
         multiple_threshold: 150
       # 开发者晋升 (developer_promotion)
       - metric: 'org_code_core_promotion_count_by_period'
-        repo_threshold: 5
-        multiple_threshold: 15
+        repo_threshold: 1
+        multiple_threshold: 12
       - metric: 'org_issue_core_promotion_count_by_period'
-        repo_threshold: 5
-        multiple_threshold: 15
+        repo_threshold: 1
+        multiple_threshold: 12
       - metric: 'individual_code_core_promotion_count_by_period'
-        repo_threshold: 10
-        multiple_threshold: 30
+        repo_threshold: 1
+        multiple_threshold: 12
       - metric: 'individual_issue_core_promotion_count_by_period'
-        repo_threshold: 10
-        multiple_threshold: 30
+        repo_threshold: 1
+        multiple_threshold: 12
       # 核心开发者留存率 (core_retention)
       - metric: 'org_code_core_retention_by_period'
         repo_threshold: 1
