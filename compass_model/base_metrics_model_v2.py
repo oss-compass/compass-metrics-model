@@ -1024,6 +1024,10 @@ class BaseMetricsModel:
 
         lower_is_better_bases = [
             "issue_new_first_response",
+            "org_code_core_loss_by_period",
+            "org_issue_core_loss_by_period",
+            "individual_code_core_loss_by_period",
+            "individual_issue_core_loss_by_period",
             "issue_new_handle_time",
             "pr_new_handle_time",
             "pr_new_first_response",
