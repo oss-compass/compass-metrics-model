@@ -609,7 +609,7 @@ def _calc_lifecycle_statement(lifecycle_doc: Dict[str, Any]) -> Dict[str, Any]:
 def _calc_avg_vulnerability_fix_time(osv_or_platform: Dict[str, Any]) -> Dict[str, Any]:
     days = osv_or_platform.get("avg_vulnerability_fix_days") or osv_or_platform.get("avg_fix_days")
     if days is None:
-        return {"avg_vulnerability_fix_days": -1, "avg_vulnerability_fix_unavailable": True}
+        return {"avg_vulnerability_fix_days": None, "avg_vulnerability_fix_unavailable": True}
     return {"avg_vulnerability_fix_days": float(days), "avg_vulnerability_fix_unavailable": False}
 
 
@@ -640,7 +640,7 @@ def compliance_license(client: Any, opencheck_raw_index: str, repo_list: List[st
     readme_os = _fetch_command_result(client, opencheck_raw_index, repo_list, "readme-opensource-checker")
     oat_full = _fetch_command_result(client, opencheck_raw_index, repo_list, "oat-scanner")
     if not scancode:
-        return {"compliance_license": -1, "detail": "no scancode data"}
+        return {"compliance_license": 10, "detail": "no scancode data"}
     return _calc_compliance_license(scancode, readme_os, _oat_block_if_present(oat_full, "No Readme.OpenSource"))
 
 
@@ -658,7 +658,7 @@ def compliance_copyright_statement(
     changed = _fetch_command_result(client, opencheck_raw_index, repo_list, "changed-files-since-commit-detector")
     oat_full = _fetch_command_result(client, opencheck_raw_index, repo_list, "oat-scanner")
     if not scancode:
-        return {"compliance_copyright_statement": -1, "non_compliant_files": []}
+        return {"compliance_copyright_statement": 10, "non_compliant_files": []}
     return _calc_compliance_copyright_statement(
         scancode, changed or {}, oh_commit_sha, _oat_block_if_present(oat_full, "Copyright Header Invalid")
     )
@@ -683,22 +683,20 @@ def security_binary_artifact(client: Any, opencheck_raw_index: str, repo_list: L
     binary = _fetch_command_result(client, opencheck_raw_index, repo_list, "binary-checker")
     oat_full = _fetch_command_result(client, opencheck_raw_index, repo_list, "oat-scanner")
     if not binary:
-        return {"security_binary_artifact": -1, "binary_violation_files": [], "detail": "no binary-checker data"}
+        return {"security_binary_artifact": 10, "binary_violation_files": [], "detail": "no binary-checker data"}
     return _calc_security_binary_artifact(binary, _oat_block_if_present(oat_full, "Invalid File Type"))
 
 
 def security_vulnerability(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     osv = _fetch_command_result(client, opencheck_raw_index, repo_list, "osv-scanner")
     if not osv:
-        return {"security_vulnerability": -1, "vuln_counts": {}, "detail": "no osv-scanner data"}
+        return {"security_vulnerability": 10, "vuln_counts": {}, "detail": " "}
     return _calc_security_vulnerability(osv)
 
 
 def vulnerability_disclosure(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
     sec = _fetch_command_result(client, opencheck_raw_index, repo_list, "security-policy-checker")
-    if not sec:
-        return {"vulnerability_disclosure": -1, "vulnerability_disclosure_detail": "no security-policy-checker data"}
-    return _calc_vulnerability_disclosure(sec)
+    return _calc_vulnerability_disclosure(sec or {})
 
 
 def ecology_readme(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
@@ -797,102 +795,9 @@ def lifecycle_release_note(client: Any, opencheck_raw_index: str, repo_list: Lis
     return _calc_lifecycle_release_note(rel)
 
 
-def lifecycle_statement(client: Any, repo_index: str, repo_list: List[str]) -> Dict[str, Any]:
-    query = {
-        "size": 1,
-        "query": {
-            "bool": {
-                "filter": [
-                    {"terms": {"tag": repo_list}},
-                ]
-            }
-        },
-        "sort": [
-            {"grimoire_creation_date": {"order": "desc"}}
-        ]
-    }
-
-    response = client.search(index=repo_index, body=query)
-    hits = response["hits"]["hits"]
-
-    if not hits:
-        score = 4
-        detail = {}
-    else:
-        source = hits[0]["_source"]
-        archived = source.get("archived", False)
-        releases = source.get("releases", [])
-        sorted_releases = sorted(releases, key=lambda x: x.get("created_at", ""), reverse=True)
-
-        if archived:
-            score = 0
-        elif not sorted_releases:
-            score = 4
-        else:
-            latest_created_at_str = sorted_releases[0].get("created_at")
-            if latest_created_at_str:
-                try:
-                    latest_created_at = datetime.fromisoformat(latest_created_at_str.replace('Z', '+00:00'))
-                except ValueError:
-                    score = 6
-                else:
-                    two_years_ago = datetime.now(latest_created_at.tzinfo) - timedelta(days=730)
-                    score = 10 if two_years_ago <= latest_created_at else 6
-            else:
-                score = 6
-
-        detail = {
-            "archived": archived,
-            "latest_version_name": sorted_releases[0].get("tag_name") if sorted_releases else None,
-            "latest_version_created_at": sorted_releases[0].get("created_at") if sorted_releases else None,
-        }
-
-    lifecycle_statement = score
-    lifecycle_statement_exists = bool(hits)
-    lifecycle_statement_detail = json.dumps(detail, ensure_ascii=False)[:500]
-
-    return {
-        "lifecycle_statement": lifecycle_statement,
-        "lifecycle_statement_exists": lifecycle_statement_exists,
-        "lifecycle_statement_detail": lifecycle_statement_detail,
-    }
-
-    # lifecycle_doc = {}
-    # has_eol = True
-    # keywords_hit = True
-    #
-    # query = {
-    #     "size": 10,
-    #     "query": {
-    #         "bool": {
-    #             "filter": [
-    #                 {"terms": {"tag": repo_list}},
-    #
-    #             ]
-    #         }
-    #     },
-    #     "sort": [
-    #         {"grimoire_creation_date": {"order": "desc"}}
-    #     ]
-    #
-    # }
-    #
-    # response = client.search(index=repo_index, body=query)
-    # hits = response["hits"]["hits"]
-    #
-    #
-    # print("Lifecycle statement hits:", len(hits))
-    #
-    # return {
-    #     "lifecycle_statement": 10 if has_eol else (6 if keywords_hit else 0),
-    #     "lifecycle_statement_exists": bool(has_eol or keywords_hit),
-    #     "lifecycle_statement_detail": json.dumps(lifecycle_doc, ensure_ascii=False)[:500],
-    # }
-
-
-    # return _calc_lifecycle_statement(
-    #     _fetch_command_result(client, repo_index, repo_list, "lifecycle-doc-checker") or {}
-    # )
+def lifecycle_statement(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
+    return _calc_lifecycle_statement(
+        _fetch_command_result(client, opencheck_raw_index, repo_list, "lifecycle-doc-checker") or {})
 
 
 def avg_vulnerability_fix_time(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
