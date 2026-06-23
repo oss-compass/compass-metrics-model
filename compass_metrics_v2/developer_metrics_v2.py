@@ -904,8 +904,47 @@ def _get_core_contributor_set_from_maps(code_map, issue_map, dimension="code", c
     return core_set
 
 
+def _get_manager_set_in_period(client, contributors_enriched_index, repo_list, from_date, to_date, org_only=None):
+    """
+    获取周期内管理者集合。org_only: True=仅组织管理者, False=仅个人管理者, None=全部管理者。
+    """
+    must = [
+        {"terms": {"repo_name.keyword": repo_list}},
+        {"range": {"grimoire_creation_date": {"gte": from_date.isoformat(), "lt": to_date.isoformat()}}},
+        {"match_phrase": {"is_bot": "false"}}
+    ]
+    if org_only is True:
+        must.append({"match_phrase": {"ecological_type": "organization manager"}})
+    elif org_only is False:
+        must.append({"match_phrase": {"ecological_type": "individual manager"}})
+    else:
+        must.append({"terms": {"ecological_type.keyword": ["organization manager", "individual manager"]}})
+
+    query = {"size": 0, "query": {"bool": {"must": must}}}
+    query["aggs"] = {"managers": {"terms": {"field": "contributor.keyword", "size": 10000}}}
+    res = client.search(index=contributors_enriched_index, body=query)
+    buckets = res.get("aggregations", {}).get("managers", {}).get("buckets", [])
+    return {b["key"] for b in buckets}
+
+
+def _get_manager_promotion_count(client, contributors_enriched_index, repo_list, from_date, to_date, prev_start, prev_end, org_only=None):
+    """
+    获取晋升为管理者的数量：上周期非管理者，本周期成为管理者。
+    org_only: True=仅组织管理者, False=仅个人管理者, None=全部管理者。
+    """
+    managers_t = _get_manager_set_in_period(client, contributors_enriched_index, repo_list, from_date, to_date, org_only)
+    managers_t1 = _get_manager_set_in_period(client, contributors_enriched_index, repo_list, prev_start, prev_end, org_only)
+    # 获取上一周期所有活跃贡献者（用于计算非管理者集合）
+    all_contributors_t1 = _get_contributor_set_in_period(client, contributors_enriched_index, repo_list, prev_start, prev_end,
+                                                         code_only=None, org_only=org_only)
+    non_managers_t1 = all_contributors_t1 - managers_t1
+    # 晋升为管理者的数量：本周期管理者 AND 上周期非管理者
+    manager_promotion = len(managers_t & non_managers_t1)
+    return manager_promotion
+
+
 def org_code_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """组织代码核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的组织成员数量。"""
+    """组织代码核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的组织成员数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)
     code_map_t, _ = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -915,12 +954,16 @@ def org_code_core_promotion_count_by_period(client, contributors_enriched_index,
     core_t = _get_core_contributor_set_from_maps(code_map_t, {}, dimension="code", core_ratio=0.5)
     core_t1 = _get_core_contributor_set_from_maps(code_map_t1, {}, dimension="code", core_ratio=0.5)
     non_core_t1 = set(code_map_t1.keys()) - core_t1
-    promotion = len(core_t & non_core_t1)
+    core_promotion = len(core_t & non_core_t1)
+    # 加上晋升为管理者的数量
+    manager_promotion = _get_manager_promotion_count(client, contributors_enriched_index, repo_list,
+                                                     from_date, to_date, prev_start, prev_end, org_only=True)
+    promotion = core_promotion + manager_promotion
     return {"org_code_core_promotion_count": promotion, "period": period}
 
 
 def org_issue_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """组织 Issue 核心开发者（含管理者）晋升数量。"""
+    """组织 Issue 核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的组织成员数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)
     _, issue_map_t = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -930,13 +973,17 @@ def org_issue_core_promotion_count_by_period(client, contributors_enriched_index
     core_t = _get_core_contributor_set_from_maps({}, issue_map_t, dimension="issue", core_ratio=0.5)
     core_t1 = _get_core_contributor_set_from_maps({}, issue_map_t1, dimension="issue", core_ratio=0.5)
     non_core_t1 = set(issue_map_t1.keys()) - core_t1
-    promotion = len(core_t & non_core_t1)
+    core_promotion = len(core_t & non_core_t1)
+    # 加上晋升为管理者的数量
+    manager_promotion = _get_manager_promotion_count(client, contributors_enriched_index, repo_list,
+                                                     from_date, to_date, prev_start, prev_end, org_only=True)
+    promotion = core_promotion + manager_promotion
     return {"org_issue_core_promotion_count": promotion, "period": period}
 
 
 def individual_code_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list,
                                                    period="month"):
-    """个人代码核心开发者（含管理者）晋升数量。"""
+    """个人代码核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的个人开发者数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)
     code_map_t, _ = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -946,13 +993,17 @@ def individual_code_core_promotion_count_by_period(client, contributors_enriched
     core_t = _get_core_contributor_set_from_maps(code_map_t, {}, dimension="code", core_ratio=0.5)
     core_t1 = _get_core_contributor_set_from_maps(code_map_t1, {}, dimension="code", core_ratio=0.5)
     non_core_t1 = set(code_map_t1.keys()) - core_t1
-    promotion = len(core_t & non_core_t1)
+    core_promotion = len(core_t & non_core_t1)
+    # 加上晋升为管理者的数量
+    manager_promotion = _get_manager_promotion_count(client, contributors_enriched_index, repo_list,
+                                                     from_date, to_date, prev_start, prev_end, org_only=False)
+    promotion = core_promotion + manager_promotion
     return {"individual_code_core_promotion_count": promotion, "period": period}
 
 
 def individual_issue_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list,
                                                     period="month"):
-    """个人 Issue 核心开发者（含管理者）晋升数量。"""
+    """个人 Issue 核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的个人开发者数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)
     _, issue_map_t = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -962,7 +1013,11 @@ def individual_issue_core_promotion_count_by_period(client, contributors_enriche
     core_t = _get_core_contributor_set_from_maps({}, issue_map_t, dimension="issue", core_ratio=0.5)
     core_t1 = _get_core_contributor_set_from_maps({}, issue_map_t1, dimension="issue", core_ratio=0.5)
     non_core_t1 = set(issue_map_t1.keys()) - core_t1
-    promotion = len(core_t & non_core_t1)
+    core_promotion = len(core_t & non_core_t1)
+    # 加上晋升为管理者的数量
+    manager_promotion = _get_manager_promotion_count(client, contributors_enriched_index, repo_list,
+                                                     from_date, to_date, prev_start, prev_end, org_only=False)
+    promotion = core_promotion + manager_promotion
     return {"individual_issue_core_promotion_count": promotion, "period": period}
 
 
