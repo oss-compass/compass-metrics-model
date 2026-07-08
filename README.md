@@ -1,6 +1,9 @@
 ## Metrics Model 
 Metrics Model makes metrics combine  metrics together, you could find us [here](https://github.com/chaoss/wg-metrics-models) 
 
+### Requirements
+- Python >= 3.8 (required by grimoire_elk dependency)
+
 ### Please create json file as following way:
     
     {
