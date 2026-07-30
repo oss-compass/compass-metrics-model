@@ -34,7 +34,11 @@ class DeveloperBaseMetricsModel(BaseMetricsModel):
                 "threshold": None
             },
             "non_code_contributors_by_period": {
-                "weight": WEIGHT,
+                "weight": 0.17,
+                "threshold": None
+            },
+            "followers_by_period": {
+                "weight": 0.17,
                 "threshold": None
             }
         }

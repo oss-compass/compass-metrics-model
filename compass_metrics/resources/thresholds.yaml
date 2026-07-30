@@ -292,6 +292,9 @@ metrics_default_threshold:
     - metric: 'non_code_contributors_by_period'
       repo_threshold: 96
       multiple_threshold: 96
+    - metric: 'followers_by_period'
+      repo_threshold: 96
+      multiple_threshold: 96  
     - metric: 'participating_orgs_by_period'
       repo_threshold: 10
       multiple_threshold: 10

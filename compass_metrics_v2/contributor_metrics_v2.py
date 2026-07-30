@@ -1437,10 +1437,12 @@ def _get_contribution_sum(client, index, query):
 
 def total_active_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
     """
-    总活跃贡献者数：周期内有任何贡献行为的去重用户数。
+    总活跃贡献者数：周期内有任何实际贡献行为（除 star/fork 外）的去重用户数。    
     """
     from_date, to_date = get_period_range(end_date, period)
-    query = _base_contributor_query(repo_list, from_date, to_date)
+    query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"range": {"contribution_without_observe": {"gt": 0}}}
+    ])
 
     count = _get_contributor_cardinality(client, contributors_enriched_index, query)
 
@@ -1462,16 +1464,37 @@ def code_contributors_by_period(client, contributors_enriched_index, end_date, r
 
 def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
     """
-    活跃非代码贡献者：周期内仅参与讨论但未提交代码的用户数。
-    计算：总活跃贡献者 - 代码贡献者
+    活跃非代码贡献者：周期内有非观察类贡献行为（除 star/fork 外）但未提交代码的去重用户数。
+    计算：有实际贡献的去重用户数 - 代码贡献者数
     """
-    total = total_active_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "total_active_contributors"]
+    from_date, to_date = get_period_range(end_date, period)
+    # 有实际（非观察）贡献行为的贡献者数：contribution_without_observe > 0
+    real_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"range": {"contribution_without_observe": {"gt": 0}}}
+    ])
+    real = _get_contributor_cardinality(client, contributors_enriched_index, real_query)
     code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
         "code_contributors"]
-    non_code = total - code
+    non_code = real - code
     return {"non_code_contributors": max(0, non_code), "period": period}
 
+
+def followers_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
+    """
+    仅观察类贡献者数：周期内仅有 star/fork 行为、无任何实际贡献的去重用户数。
+    计算：全部贡献者（含观察者） - 有实际贡献的去重用户数    
+    """
+    from_date, to_date = get_period_range(end_date, period)
+    # 全部贡献者（含仅 star/fork 的观察者）
+    all_query = _base_contributor_query(repo_list, from_date, to_date)
+    all_count = _get_contributor_cardinality(client, contributors_enriched_index, all_query)
+    # 有实际（非观察）贡献行为的贡献者
+    real_query = _base_contributor_query(repo_list, from_date, to_date, [
+        {"range": {"contribution_without_observe": {"gt": 0}}}
+    ])
+    real = _get_contributor_cardinality(client, contributors_enriched_index, real_query)
+    observer = max(0, all_count - real)
+    return {"followers": observer, "period": period}
 
 def participating_orgs_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
     """

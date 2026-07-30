@@ -60,6 +60,8 @@ def get_score_by_criticality_score_with_mapping(metrics_data, metrics_weights_th
         if param_data == -1:
             total_score += weight * 0.5
             continue
+        if param_data < -1:           
+            continue
 
         if is_reverse:
             actual_score = weight * max(0, 1 - (param_data / threshold))

@@ -89,32 +89,52 @@ def get_previous_period_range(end_date: datetime, period: str):
     return prev_start, prev_end
 
 
-def get_latest_count(client, index, repos_list, to_date, date_field="grimoire_creation_date",field="stargazers_count"):
+def get_latest_count(client, index, repos_list, to_date, date_field="grimoire_creation_date", field="stargazers_count"):
     """
-    获取指定时间前最新的 stargazers_count 值
+    获取指定时间前每个仓库最新的 field 值，并返回所有仓库的总和。    
     """
+    to_date_str = to_date.isoformat() if hasattr(to_date, 'isoformat') else to_date
+
+    if not repos_list:
+        return 0
+
     query = {
-        "size": 1,
+        "size": 0,
         "query": {
             "bool": {
                 "filter": [
                     {"terms": {"tag": repos_list}},
-                    {"range": {date_field: {"lt": to_date.isoformat() if hasattr(to_date, 'isoformat') else to_date}}}
+                    {"range": {date_field: {"lt": to_date_str}}}
                 ]
             }
         },
-        "sort": [
-            {date_field: {"order": "desc"}}
-        ],
-        "_source": [field, "tag", "grimoire_creation_date"]
+        "aggs": {
+            "by_repo": {
+                "terms": {"field": "tag", "size": len(repos_list)},
+                "aggs": {
+                    "latest": {
+                        "top_hits": {
+                            "size": 1,
+                            "sort": [{date_field: {"order": "desc"}}],
+                            "_source": [field]
+                        }
+                    }
+                }
+            }
+        }
     }
 
     response = client.search(index=index, body=query)
-    hits = response["hits"]["hits"]
+    buckets = response.get("aggregations", {}).get("by_repo", {}).get("buckets", [])
 
-    if hits:
-        return hits[0]["_source"].get(field)or 0
-    return 0
+    total = 0
+    for bucket in buckets:
+        hits = bucket.get("latest", {}).get("hits", {}).get("hits", [])
+        if hits:
+            value = hits[0].get("_source", {}).get(field)
+            if value is not None:
+                total += value
+    return total
 def cumulative_count(client, index, repos_list, to_date, field="uuid", date_field="grimoire_creation_date"):
     """累计总数：从 2000-01-01 到 to_date（lt）"""
     query = get_uuid_count_query(

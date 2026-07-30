@@ -139,6 +139,7 @@ total_active_contributors_by_period,
 code_contributors_by_period,
 
 non_code_contributors_by_period,
+followers_by_period,
 participating_orgs_by_period,
 org_code_contributors_by_period,
 org_code_contributors_ratio_by_period,
@@ -883,6 +884,8 @@ class BaseMetricsModel:
             "total_active_contributors_by_period": lambda: total_active_contributors_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
             "code_contributors_by_period": lambda: code_contributors_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
             "non_code_contributors_by_period": lambda: non_code_contributors_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
+            "followers_by_period": lambda: followers_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
+            
 
 
             "commit_count_by_period": lambda: commit_count_by_period(self.client, self.contributors_enriched_index, date,repo_list,period),
