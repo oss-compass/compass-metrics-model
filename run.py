@@ -27,7 +27,7 @@ if __name__ == '__main__':
                  'pr_index', 'issue_comments_index', 'pr_comments_index', 'git_index', 'contributors_index', 'contributors_enriched_index',
                  'from_date', 'end_date', 'repo_index', 'event_index', 'company', 'stargazer_index',
                  'fork_index', 'level', 'community', 'contributors_org_index', 'organizations_index', 'bots_index']:
-      kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
+      kwargs[item] = None if item not in params or params[item] == 'None' else params[item]
    contributor = ContributorDevOrgRepo(**kwargs)
    contributor.run(elastic_url)
 
@@ -35,21 +35,21 @@ if __name__ == '__main__':
    for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date',
                 'out_index', 'community', 'level', 'release_index', 'issue_comments_index', 'pr_comments_index',
                 'contributors_index']:
-       kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
+       kwargs[item] = None if item not in params or params[item] == 'None' else params[item]
    model_activity = ActivityMetricsModel(**kwargs)
    model_activity.metrics_model_metrics(elastic_url)
 
    kwargs = {}
    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index', 'community',
                 'level', 'contributors_index']:
-       kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
+       kwargs[item] = None if item not in params or params[item] == 'None' else params[item]
    model_community = CommunitySupportMetricsModel(**kwargs)
    model_community.metrics_model_metrics(elastic_url)
 
    kwargs = {}
    for item in ['issue_index', 'pr_index', 'json_file', 'git_index', 'from_date', 'end_date', 'out_index',
                'community', 'level', 'company', 'pr_comments_index', 'contributors_index']:
-      kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
+      kwargs[item] = None if item not in params or params[item] == 'None' else params[item]
    model_code = CodeQualityGuaranteeMetricsModel(**kwargs)
    model_code.metrics_model_metrics(elastic_url)
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
    for item in ['issue_index', 'pr_index', 'repo_index', 'json_file', 'git_index',  'from_date', 'end_date',
                 'out_index', 'community', 'level', 'company', 'issue_comments_index', 'pr_comments_index',
                 'contributors_index']:
-       kwargs[item] = None if params[item] and params[item] == 'None' else params[item]
+       kwargs[item] = None if item not in params or params[item] == 'None' else params[item]
    model_organizations = OrganizationsActivityMetricsModel(**kwargs)
    model_organizations.metrics_model_metrics(elastic_url)
 
