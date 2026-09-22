@@ -524,9 +524,10 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             result_contributor[k] = {**contributor_dict[k], "mileage_type": "regular"}
             if current_sum >= target_sum:
                 break
-        for k, v in contributor_dict.items():
-            if v["contribution_weeks"] >= weeks:
-                result_contributor[k] = {**v, "mileage_type": "regular"}
+        if len(date_list) >= 4:
+            for k, v in contributor_dict.items():
+                if v["contribution_weeks"] >= weeks:
+                    result_contributor[k] = {**v, "mileage_type": "regular"}
         core_name = core_contributor.keys()
         return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
 
