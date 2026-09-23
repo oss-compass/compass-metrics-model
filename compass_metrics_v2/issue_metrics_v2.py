@@ -43,7 +43,7 @@ def get_period_range(end_date: datetime, period: str):
     if period not in ("month", "quarter", "year"):
         raise ValueError("period must be one of: month, quarter, year")
 
-    #确定 start_date (逻辑保持不变)
+    # Queries use an exclusive upper bound, so return the next period's start.
     if period == "month":
         start_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     elif period == "year":
@@ -52,41 +52,28 @@ def get_period_range(end_date: datetime, period: str):
         month = ((end_date.month - 1) // 3) * 3 + 1
         start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    #修改 end_date 为该周期的最后一天
     if period == "month":
-        # 下个月的第一天减去 1 秒（或1天）
-        if end_date.month == 12:
-            next_month = end_date.replace(year=end_date.year + 1, month=1, day=1)
-        else:
-            next_month = end_date.replace(month=end_date.month + 1, day=1)
-        actual_end_date = next_month - timedelta(seconds=1)
-
+        actual_end_date = start_date + relativedelta(months=1)
     elif period == "year":
-        actual_end_date = end_date.replace(month=12, day=31, hour=23, minute=59, second=59)
-
+        actual_end_date = start_date + relativedelta(years=1)
     else:  # quarter
-        quarter_end_month = ((end_date.month - 1) // 3) * 3 + 3
-        if quarter_end_month == 12:
-            next_start = end_date.replace(year=end_date.year + 1, month=1, day=1)
-        else:
-            next_start = end_date.replace(month=quarter_end_month + 1, day=1)
-        actual_end_date = next_start - timedelta(seconds=1)
+        actual_end_date = start_date + relativedelta(months=3)
 
     return start_date, actual_end_date
 
 def get_previous_period_range(end_date: datetime, period: str):
     """
-    获取“周期-2”的时间范围：即当前周期的前一个完整周期。
+    获取“周期-2”的时间范围：即当前周期的前一个完整周期，结束时间为排他上界。
     """
     current_start, _ = get_period_range(end_date, period)
     if period == "month":
-        prev_end = current_start - timedelta(microseconds=1)
+        prev_end = current_start
         prev_start = (current_start - relativedelta(months=1)).replace(day=1)
     elif period == "year":
-        prev_end = current_start - timedelta(microseconds=1)
+        prev_end = current_start
         prev_start = (current_start - relativedelta(years=1)).replace(month=1, day=1)
     else:  # quarter
-        prev_end = current_start - timedelta(microseconds=1)
+        prev_end = current_start
         prev_start = current_start - relativedelta(months=3)
         prev_start = prev_start.replace(day=1)
     return prev_start, prev_end
@@ -346,7 +333,7 @@ def issue_new_and_closed_count_by_period(client, issue_index, end_date, repos_li
             "range": {
                 "closed_at": {
                     "gte": from_date.strftime("%Y-%m-%d"),
-                    "lt": (to_date + timedelta(days=1)).strftime("%Y-%m-%d"),
+                    "lt": to_date.strftime("%Y-%m-%d"),
                 }
             }
         }
