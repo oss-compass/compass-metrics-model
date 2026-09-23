@@ -22,7 +22,7 @@ from dateutil.relativedelta import relativedelta
 
 
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def get_period_range(end_date: datetime, period: str):
@@ -235,16 +235,15 @@ def pr_new_handle_time_by_period(client, pr_index, end_date, repos_list, period=
         【无风险版特点】：
         1. 仅使用标准库 (datetime)，无需 dateutil。
         2. ES 查询聚合参数修正为 "cardinality"，防止 "avg" 报错。
-        3. 时间解析采用截断法，兼容带毫秒/不带毫秒、带时区/不带时区的时间字符串。
+        3. 时间解析保留时区偏移，并统一转换到 UTC 后计算时长。
         """
 
     # 1. 获取周期时间范围
     from_date, to_date = get_previous_period_range(end_date, period)
 
-    # 【安全措施】强制去除 to_date 的时区信息
-    # 这样后续计算 (finish - start) 时，两者都是 naive time，不会报错。
+    # Compare all timestamps on the same UTC clock.
     if to_date.tzinfo is not None:
-        to_date = to_date.replace(tzinfo=None)
+        to_date = to_date.astimezone(timezone.utc).replace(tzinfo=None)
 
     # 2. 构建查询
     # 【核心修复】：将原本的 "avg" 改为 "cardinality"。
@@ -263,17 +262,15 @@ def pr_new_handle_time_by_period(client, pr_index, end_date, repos_list, period=
 
     days_list = []
 
-    # 【内部函数】最稳健的时间解析逻辑
     def safe_parse_time(time_str):
         if not time_str or not isinstance(time_str, str):
             return None
         try:
-            # 截取前 19 位： "2023-10-12T10:00:00"
-            # 这样可以忽略后面的 .123456 (毫秒) 或者 Z/+08:00 (时区)
-            # 虽然丢弃了时区，但只要所有时间都这样处理，相对差值是准确的。
-            clean_str = time_str[:19]
-            return datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
-        except Exception:
+            parsed = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
+        except ValueError:
             return None
 
     for item in items:
