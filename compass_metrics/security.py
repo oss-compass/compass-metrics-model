@@ -103,15 +103,20 @@ def security_vul_fixed(client, contributors_index, version, repo_list, page_size
         result['security_vul_fixed_info'] = "Only one scan record"
         return result
 
-    # 获取最早和最新的CVE数量
-    earliest = security_results[1]['vulnerability_count']
-    latest = security_results[0]['vulnerability_count']
+    # A count difference cannot distinguish fixed CVEs from newly introduced ones.
+    def cve_ids(scan):
+        return {
+            cve
+            for package in scan['packages']
+            for vulnerability in package['vulnerabilities']
+            for cve in vulnerability['cve']
+        }
 
-    # 计算修复和未修复的漏洞数量
-    # 已修复 = 最早扫描中有但最新扫描中没有的CVE数量
-    result['security_vul_fixed'] = abs(latest - earliest)
+    earliest_cves = cve_ids(security_results[1])
+    latest_cves = cve_ids(security_results[0])
+    result['security_vul_fixed'] = len(earliest_cves - latest_cves)
     # 未修复 = 最新扫描中的CVE数量
-    result['security_vul_unfixed'] = latest
+    result['security_vul_unfixed'] = security_results[0]['vulnerability_count']
 
     return result
 
