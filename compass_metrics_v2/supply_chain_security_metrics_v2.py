@@ -135,7 +135,7 @@ def _calc_compliance_license(
             score = 0
         oat_detail = [d.get("file") for d in (oat_result.get("details") or []) if isinstance(d, dict)]
         oat_detail = [x for x in oat_detail if x]
-        if oat_result and not oat_detail:
+        if cnt == 0 and not oat_detail:
             score = 10
 
     detail = {
@@ -234,7 +234,7 @@ def _calc_compliance_copyright_statement(
             score = 0
         oat_detail = [d.get("file") for d in (oat_copyright_header_invalid.get("details") or []) if isinstance(d, dict)]
         oat_detail = [x for x in oat_detail if x]
-        if oat_copyright_header_invalid and not oat_detail:
+        if cnt == 0 and not oat_detail:
             score = 10
 
     detail = {
