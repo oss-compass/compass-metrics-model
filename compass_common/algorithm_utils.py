@@ -36,6 +36,8 @@ def get_score_by_criticality_score_with_mapping(metrics_data, metrics_weights_th
             param_data = metrics_data.get('stars_added')
         elif config_key == 'repo_forks_by_period':
             param_data = metrics_data.get('forks_added')
+        elif config_key == 'lines_changed_by_period':
+            param_data = metrics_data.get('lines_added')
         else:
             param_data = metrics_data.get(data_key)
 
