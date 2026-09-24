@@ -53,6 +53,10 @@ class PartnerDiversityMetricsModel(BaseMetricsModel):
             },
         }
 
+        # The ecological influence metrics read the enriched contributor index,
+        # so it has to reach BaseMetricsModel; the model signature already accepts
+        # it, without forwarding it the metrics would query a None index.
         super().__init__(repo_index, git_index, issue_index, pr_index, issue_comments_index, pr_comments_index,
                          contributors_index, release_index, out_index, from_date, end_date, level, community, source,
-                         json_file, model_name, metrics_weights_thresholds, custom_fields=custom_fields)
+                         json_file, model_name, metrics_weights_thresholds, custom_fields=custom_fields,
+                         contributors_enriched_index=contributors_enriched_index)

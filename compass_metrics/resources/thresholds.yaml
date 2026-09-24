@@ -361,6 +361,39 @@ metrics_default_threshold:
     - metric: 'individual_non_code_contribution_ratio_by_period'
       repo_threshold: 1
       multiple_threshold: 1
+    # Ecological influence metrics: counted from the enriched contributor index.
+    # The counts follow the closest contributor metric, the influence metrics are
+    # shares of the contribution volume and therefore bounded by 1.
+    - metric: 'business_org_count'
+      repo_threshold: 30
+      multiple_threshold: 30
+    - metric: 'business_org_contributors'
+      repo_threshold: 300
+      multiple_threshold: 350
+    - metric: 'research_institution_count'
+      repo_threshold: 10
+      multiple_threshold: 10
+    - metric: 'research_institution_developers'
+      repo_threshold: 100
+      multiple_threshold: 100
+    - metric: 'individual_core_contributors'
+      repo_threshold: 20
+      multiple_threshold: 20
+    - metric: 'business_org_influence'
+      repo_threshold: 0.5
+      multiple_threshold: 0.5
+    - metric: 'research_institution_influence'
+      repo_threshold: 0.2
+      multiple_threshold: 0.2
+    - metric: 'individual_contributor_influence'
+      repo_threshold: 0.3
+      multiple_threshold: 0.3
+    - metric: 'open_source_adoption'
+      repo_threshold: 500
+      multiple_threshold: 500
+    - metric: 'commercial_adoption'
+      repo_threshold: 50
+      multiple_threshold: 50
 
   Industry_support:
     - metric: 'doc_quarty'

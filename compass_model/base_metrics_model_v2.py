@@ -168,6 +168,19 @@ individual_non_code_contribution_ratio_by_period
 
 )
 
+from compass_metrics_v2.ecological_influence_metrics_v2 import (
+business_org_count,
+business_org_contributors,
+research_institution_count,
+research_institution_developers,
+individual_core_contributors,
+business_org_influence,
+research_institution_influence,
+individual_contributor_influence,
+open_source_adoption,
+commercial_adoption
+)
+
 from  compass_metrics_v2.git_metrics_v2 import (lines_changed_by_period,commit_count_by_period
 
 )
@@ -816,6 +829,19 @@ class BaseMetricsModel:
             "types_of_contributions": lambda: types_of_contributions(self.client, self.contributors_enriched_index, date, repo_list),
             "contributor_count_year": lambda: contributor_count_year(self.client, self.contributors_index, date, repo_list),
             "org_contributor_count_year": lambda: org_contributor_count_year(self.client, self.contributors_index, date, repo_list),
+            # ecological influence: partner diversity / partner influence and
+            # the adoption signals the enriched contributor index can provide.
+            # Implemented in compass_metrics_v2/ecological_influence_metrics_v2.py.
+            "business_org_count": lambda: business_org_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "business_org_contributors": lambda: business_org_contributors(self.client, self.contributors_enriched_index, date, repo_list),
+            "research_institution_count": lambda: research_institution_count(self.client, self.contributors_enriched_index, date, repo_list),
+            "research_institution_developers": lambda: research_institution_developers(self.client, self.contributors_enriched_index, date, repo_list),
+            "individual_core_contributors": lambda: individual_core_contributors(self.client, self.contributors_enriched_index, date, repo_list),
+            "business_org_influence": lambda: business_org_influence(self.client, self.contributors_enriched_index, date, repo_list),
+            "research_institution_influence": lambda: research_institution_influence(self.client, self.contributors_enriched_index, date, repo_list),
+            "individual_contributor_influence": lambda: individual_contributor_influence(self.client, self.contributors_enriched_index, date, repo_list),
+            "open_source_adoption": lambda: open_source_adoption(self.client, self.contributors_enriched_index, date, repo_list),
+            "commercial_adoption": lambda: commercial_adoption(self.client, self.contributors_enriched_index, date, repo_list),
 
 
 
