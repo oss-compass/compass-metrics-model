@@ -7,3 +7,12 @@ python_dateutil==2.8.2
 PyYAML==6.0.1
 setuptools==59.6.0
 urllib3==1.26.5
+
+# grimoirelab-elk is imported by compass_metrics_model (ElasticSearch helpers and
+# the enriched utils used by the lab models).  It requires Python >= 3.8 and
+# pulls in perceval/grimoirelab-toolkit, so it is installed without a version
+# pin: pick the release that matches the interpreter of your environment.
+grimoirelab-elk
+# run_scheduler_task.py schedules the periodic contributor-org refresh with
+# apscheduler.
+apscheduler
