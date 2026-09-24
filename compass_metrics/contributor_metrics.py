@@ -434,6 +434,36 @@ def contributor_eco_type_list(client, contributors_index, from_date, to_date, re
     return {"contributor_eco_type_list": result_list}
 
 
+# The regular-contributor rule below also marks a contributor as "regular" when
+# they were active in 3/4 of the weeks covered by the analysis window. Counting
+# weeks only makes sense when the window actually contains several weeks, so
+# this constant defines the minimum number of Mondays required before the rule
+# is evaluated at all.
+MIN_WEEKS_FOR_REGULAR_CONTRIBUTOR_RULE = 4
+
+
+def get_contribution_weeks_threshold(from_date, date):
+    """Return how many active weeks turn a contributor into a regular one.
+
+    The regular-contributor split classifies everybody who contributed in at
+    least 3/4 of the weeks between ``from_date`` and ``date`` as regular. That
+    rule needs a sensible number of weeks to compare against. Windows shorter
+    than four weeks (a single day, a few days, three weeks, ...) do not contain
+    enough Mondays to derive such a threshold, and reading an unset value made
+    ``contributor_detail_list()`` fail with ``UnboundLocalError``. Returning
+    ``None`` tells the caller to skip the rule for those windows.
+
+    :param from_date: start of the analysis window (inclusive)
+    :param date: end of the analysis window (inclusive)
+    :return: 3/4 of the number of Mondays in the window, or ``None`` when the
+        window spans fewer than four Mondays
+    """
+    date_list = list(pd.date_range(freq='W-MON', start=from_date, end=date))
+    if len(date_list) < MIN_WEEKS_FOR_REGULAR_CONTRIBUTOR_RULE:
+        return None
+    return len(date_list) * 3 / 4
+
+
 def contributor_detail_list(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False, filter_mileage=None):
     """ Get detailed list of contributors in from_date, to_date time range. 
     :param filter_mileage: Filter by mileage role, choose from core, regular, casual
@@ -467,9 +497,10 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             Throw out the first 50% (core) of contributions, and the next 30% will be done by the smallest group 
             or the group that contributes 3/4 of the time in this timeframe (excluding star and fork contributions).
         """
-        date_list = [x for x in list(pd.date_range(freq='W-MON', start=from_date, end=date))]
-        if len(date_list) >= 4:
-            weeks = len(date_list) * 3 / 4
+        # The "3/4 of the time" rule is only meaningful once the window spans
+        # at least four Mondays. The helper returns None for shorter windows,
+        # which is what keeps one-day or few-days analyses working.
+        weeks = get_contribution_weeks_threshold(from_date, date)
         contribution_count_dict = {k: v["contribution_without_observe"] for k, v in contributor_dict.items()}
         sorted_dict = {k: v for k, v in
                         sorted(contribution_count_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -481,9 +512,13 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             result_contributor[k] = {**contributor_dict[k], "mileage_type": "regular"}
             if current_sum >= target_sum:
                 break
-        for k, v in contributor_dict.items():
-            if v["contribution_weeks"] >= weeks:
-                result_contributor[k] = {**v, "mileage_type": "regular"}
+        # ``weeks`` is None when the window is shorter than four weeks: the
+        # "contributed 3/4 of the time" rule cannot be computed there, so it is
+        # skipped instead of raising UnboundLocalError.
+        if weeks is not None:
+            for k, v in contributor_dict.items():
+                if v["contribution_weeks"] >= weeks:
+                    result_contributor[k] = {**v, "mileage_type": "regular"}
         core_name = core_contributor.keys()
         return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
 
