@@ -8,6 +8,29 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 
+# The CHAOSS "regular contributor" rule counts a contributor as regular when they were active in
+# 3/4 of the weeks covered by the analysis window.  That ratio is only meaningful once the window
+# spans a few weeks: for a one-day, one-week or three-week range the rule cannot be evaluated at
+# all, so the threshold is reported as unavailable and the rule is skipped (the core/regular/
+# casual split itself is still produced).
+MIN_WEEKS_FOR_REGULAR_CONTRIBUTOR_RULE = 4
+
+
+def get_contribution_weeks_threshold(from_date, date):
+    """ Number of weeks a contributor has to be active in to count as a regular contributor.
+
+    The threshold is 3/4 of the Mondays covered by the [from_date, date] window.  ``None`` is
+    returned when the window covers fewer than MIN_WEEKS_FOR_REGULAR_CONTRIBUTOR_RULE Mondays
+    (which also covers a single day window and an inverted or empty range): the "active in 3/4
+    of the covered weeks" rule must then be skipped instead of comparing against an undefined
+    threshold.
+    """
+    date_list = [x for x in list(pd.date_range(freq='W-MON', start=from_date, end=date))]
+    if len(date_list) < MIN_WEEKS_FOR_REGULAR_CONTRIBUTOR_RULE:
+        return None
+    return len(date_list) * 3 / 4
+
+
 def contributor_count(client, contributors_index, date, repo_list, from_date=None):
     """ Determine how many active code commit authors, pr authors, review participants, issue authors,
     and issue comments participants there are in the past 90 days """
@@ -467,9 +490,9 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             Throw out the first 50% (core) of contributions, and the next 30% will be done by the smallest group 
             or the group that contributes 3/4 of the time in this timeframe (excluding star and fork contributions).
         """
-        date_list = [x for x in list(pd.date_range(freq='W-MON', start=from_date, end=date))]
-        if len(date_list) >= 4:
-            weeks = len(date_list) * 3 / 4
+        # get_contribution_weeks_threshold() returns None for windows shorter than four weeks, in
+        # which case the "active in 3/4 of the covered weeks" rule below is skipped entirely.
+        weeks = get_contribution_weeks_threshold(from_date, date)
         contribution_count_dict = {k: v["contribution_without_observe"] for k, v in contributor_dict.items()}
         sorted_dict = {k: v for k, v in
                         sorted(contribution_count_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -481,9 +504,10 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             result_contributor[k] = {**contributor_dict[k], "mileage_type": "regular"}
             if current_sum >= target_sum:
                 break
-        for k, v in contributor_dict.items():
-            if v["contribution_weeks"] >= weeks:
-                result_contributor[k] = {**v, "mileage_type": "regular"}
+        if weeks is not None:
+            for k, v in contributor_dict.items():
+                if v["contribution_weeks"] >= weeks:
+                    result_contributor[k] = {**v, "mileage_type": "regular"}
         core_name = core_contributor.keys()
         return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
 
@@ -515,7 +539,12 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
         contribution_type_dict = {}
         is_bot_set = set()
         repo_name_set = set()
-        for item in list(group):
+        # ``group`` is the shared iterator handed out by groupby, so it is materialised once
+        # here: consuming it directly in the loop used to leave it empty and contribution_weeks
+        # below was always measured as 0, which silently disabled the "active in 3/4 of the
+        # covered weeks" rule for every window.
+        items = list(group)
+        for item in items:
             contribution += item["contribution"]
             contribution_without_observe += item["contribution_without_observe"]
             ecological_type_set.add(item["ecological_type"])
@@ -543,7 +572,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             "contribution_type_list": list(contribution_type_dict.values()),
             "is_bot": True if True in is_bot_set else False,
             "repo_name": list(repo_name_set),
-            "contribution_weeks": len(list(group))
+            "contribution_weeks": len(items)
         }
         if is_bot is contributor_item["is_bot"]:
             if key not in "openharmony_ci":
