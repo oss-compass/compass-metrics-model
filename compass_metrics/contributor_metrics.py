@@ -554,11 +554,11 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
     casual_contributor = get_casual_contributor(contributor_dict, core_contributor, regular_contributor)
     if filter_mileage is None:
         contributor_detail_list = list(core_contributor.values()) + list(regular_contributor.values()) + list(casual_contributor.values())
-    elif filter_mileage is "core":
+    elif filter_mileage == "core":
         contributor_detail_list = list(core_contributor.values())
-    elif filter_mileage is "regular":
+    elif filter_mileage == "regular":
         contributor_detail_list = list(regular_contributor.values())
-    elif filter_mileage is "casual":
+    elif filter_mileage == "casual":
         contributor_detail_list = list(casual_contributor.values())
 
     return {
