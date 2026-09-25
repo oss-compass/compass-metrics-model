@@ -555,7 +555,7 @@ class BaseMetricsModel:
                 "_source": metrics_data
             }
             item_datas.append(item_data)
-            print(len(item_datas))
+            logger.debug(f"Bulk update buffer size: {len(item_datas)}")
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
                 helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []

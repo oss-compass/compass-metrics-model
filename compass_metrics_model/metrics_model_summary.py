@@ -103,7 +103,7 @@ class MetricsSummary:
 
         item_datas = []
         for date in date_list:
-            print(str(date) + "--" + self.summary_name)
+            logger.debug(f"{date}--{self.summary_name}")
             response = self.metrics_model_summary_query(date)
             summary_data = self.metrics_model_after_query(response)['res']
             summary_meta = {

@@ -675,7 +675,7 @@ class BaseMetricsModel:
                 "_source": metrics_data
             }
             item_datas.append(item_data)
-            print(len(item_datas))
+            logger.debug(f"Bulk update buffer size: {len(item_datas)}")
             if len(item_datas) > MAX_BULK_UPDATE_SIZE:
                 helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []
@@ -1009,8 +1009,7 @@ class BaseMetricsModel:
                 metrics.update(result)
                 metric_list[metric_field] = result
             else:
-                print(metric_field)
-                raise Exception("Invalid metric")
+                raise Exception(f"Invalid metric: {metric_field}")
         return metrics, metric_list
 
     def get_metrics_score(self, metrics_data):
