@@ -14,15 +14,18 @@ Date: 2025-02-17 10:25:54
 LastEditors: zyx
 LastEditTime: 2025-03-03 09:26:04
 '''
-import os 
+import os
 import re
 import json
+import logging
 import requests
 from git import Repo
 from compass_metrics.document_metric.utils import GITHUB_TOKEN,GITEE_TOKEN,TMP_PATH,JSON_REPOPATH
 from compass_metrics.document_metric.utils import load_json,check_github_gitee,clone_repo,save_json
 
 import unicodedata
+
+logger = logging.getLogger(__name__)
 GITHUB_HEADERS = {'Authorization': f'token {GITHUB_TOKEN}'}
 GITEE_HEADERS = {'Authorization': f'token {GITEE_TOKEN}'}
 REPOPATH = TMP_PATH
@@ -33,7 +36,7 @@ if not os.path.exists(REPOPATH):
 def contains_chinese(text):
     for char in text:
         if 'CJK' in unicodedata.name(char, ''):
-            print(char ,unicodedata.name(char, '') )
+            logger.debug(f"CJK character found: {char} ({unicodedata.name(char, '')})")
             return True
     return False
 def chinese_ratio_exceeds_threshold(text, threshold=0.05):
@@ -99,7 +102,7 @@ def doc_chinexe_support_git(url,version):
     repo_name = os.path.basename(url)+"-"+version
     
     if repo_name not in os.listdir(REPOPATH):
-        print(f"Cloning {repo_name} repository...")
+        logger.info(f"Cloning {repo_name} repository...")
         clone_repo(url,version)
         
     
@@ -107,7 +110,7 @@ def doc_chinexe_support_git(url,version):
     json_path = os.path.join(JSON_REPOPATH, f"{repo_name}.json")
 
     if f"{repo_name}.json" not in os.listdir(JSON_REPOPATH):
-        return ValueError(f"Start by performing the document quantity metric...")
+        raise ValueError("Start by performing the document quantity metric...")
 
     zh_files = find_zh_files(json_path,url)
     return zh_files

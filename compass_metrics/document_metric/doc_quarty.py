@@ -8,8 +8,11 @@ LastEditTime: 2025-03-24 10:29:58
 '''
 import re
 import os
+import logging
 from compass_metrics.document_metric.utils import TMP_PATH,JSON_REPOPATH,clone_repo
 from compass_metrics.document_metric.utils import save_json,load_json
+
+logger = logging.getLogger(__name__)
 
 REPOPATH = TMP_PATH
 
@@ -101,13 +104,13 @@ def doc_quarty_all(url,version):
     repo_name = os.path.basename(url)+"-"+version
     
     if repo_name not in os.listdir(REPOPATH):
-        print(f"Cloning {repo_name} repository...")
+        logger.info(f"Cloning {repo_name} repository...")
         clone_repo(url,version)
-        
+
     json_path = os.path.join(JSON_REPOPATH, f"{repo_name}.json")
 
     if f"{repo_name}.json" not in os.listdir(JSON_REPOPATH):
-        return ValueError(f"Start by performing the document quantity metric...")
+        raise ValueError("Start by performing the document quantity metric...")
 
     zh_files = find_doc_quarty_files(json_path)
     return zh_files

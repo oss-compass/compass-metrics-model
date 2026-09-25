@@ -1,9 +1,13 @@
 import os
 
 import re
+import logging
 from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
 
 from compass_metrics.utils_code_readability import save_json,JSON_REPOPATH,TMP_PATH
+
+logger = logging.getLogger(__name__)
+
 REPOPATH = TMP_PATH
 
 # Define comment syntax for different languages
@@ -169,7 +173,7 @@ def evaluate_code_readability1(url,version):
     repo_name = os.path.basename(url) + "-" + version
     
     if repo_name not in os.listdir(REPOPATH):
-        print(f"Cloning {repo_name} repository...")
+        logger.info(f"Cloning {repo_name} repository...")
         clone_repo(url,version)
     directory_path = os.path.join(REPOPATH, repo_name)
 
