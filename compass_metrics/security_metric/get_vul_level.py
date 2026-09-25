@@ -29,7 +29,7 @@ def get_vul_levels_metrics(repo_name,client,version):
 
     response = client.search(body=query, index="compass_metric_model_opencheck")
     if response['hits']['total']['value'] == 0:
-        return ValueError("No security metrics found for this repo")
+        raise ValueError("No security metrics found for this repo")
     
     hits = response['hits']['hits']
     security = [hit['_source']['security'] for hit in hits][0]

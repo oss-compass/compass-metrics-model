@@ -39,7 +39,7 @@ def vul_detect_time(repo_url,version):
     elif "gitee.com" in repo_url:
         versions = get_gitee_versions(repo_url)[:5]
     else:
-        return ValueError("Unsupported url. Use 'github' or 'gitee'.")
+        raise ValueError("Unsupported url. Use 'github' or 'gitee'.")
     
     # 找到对应的版本索引
     index = versions.index(version) if version in versions else -1
