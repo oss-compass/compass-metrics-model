@@ -405,9 +405,11 @@ def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_
     return query
 
 
-def get_message_list_query(field="tag", field_values=[], date_field="grimoire_creation_date", size=0,
+def get_message_list_query(field="tag", field_values=None, date_field="grimoire_creation_date", size=0,
                          from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
     """ Getting a list of message data according to conditions """
+    if field_values is None:
+        field_values = []
     query = {
         "size": size,
         "query": {
