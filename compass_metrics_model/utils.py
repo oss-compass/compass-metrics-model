@@ -176,7 +176,7 @@ def decrease_decay(last_data, threshold, days):
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
 def community_decay(item, last_data, level="repo", w={}):
-    if last_data == None:
+    if last_data is None:
         return item
     decay_item = item.copy()
     increment_decay_dict = {}
@@ -208,17 +208,17 @@ def community_decay(item, last_data, level="repo", w={}):
             "code_review_count": w['CODE_REVIEW_THRESHOLD_COMMUNITY']
         }
     for key, value in increment_decay_dict.items():
-        if item[key] == None and last_data.get(key) != None:
+        if item[key] is None and last_data.get(key) is not None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(increment_decay(last_data[key][0], value, days), 4)
     for key, value in decrease_decay_dict.items():
-        if item[key] == None and last_data.get(key) != None:
+        if item[key] is None and last_data.get(key) is not None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
 def activity_decay(item, last_data, level="repo", w={}):
-    if last_data == None:
+    if last_data is None:
         return item
     decay_item = item.copy()
     decrease_decay_dict = {}
@@ -233,13 +233,13 @@ def activity_decay(item, last_data, level="repo", w={}):
             "code_review_count": w['CODE_REVIEW_COUNT_THRESHOLD_ACTIVITY']
         }
     for key, value in decrease_decay_dict.items():
-        if item[key] == None and last_data.get(key) != None:
+        if item[key] is None and last_data.get(key) is not None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
 def code_quality_decay(item, last_data, level="repo", w={}):
-    if last_data == None:
+    if last_data is None:
         return item
     decay_item = item.copy()
     decrease_decay_dict = {}
@@ -258,7 +258,7 @@ def code_quality_decay(item, last_data, level="repo", w={}):
             "git_pr_linked_ratio": w['COMMIT_PR_LINKED_RATIO_THRESHOLD_CODE']
         }
     for key, value in decrease_decay_dict.items():
-        if item[key] == None and last_data.get(key) != None:
+        if item[key] is None and last_data.get(key) is not None:
             days = pendulum.parse(item['grimoire_creation_date']).diff(pendulum.parse(last_data[key][1])).days
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item

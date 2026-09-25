@@ -900,7 +900,7 @@ class ActivityMetricsModel(MetricsModel):
 
     def cache_last_metrics_data(self, item, last_metrics_data):
         for i in ["comment_frequency",  "code_review_count"]:
-            if item[i] != None:
+            if item[i] is not None:
                 data = [item[i],item['grimoire_creation_date']]
                 last_metrics_data[i] = data
 
@@ -1097,8 +1097,8 @@ class CommunitySupportMetricsModel(MetricsModel):
         return pr_closed
 
     def metrics_model_enrich(self, repos_list, label, type=None, level=None, date_list=None):
-        level = level if level != None else self.level
-        date_list = date_list if date_list != None else self.date_list
+        level = level if level is not None else self.level
+        date_list = date_list if date_list is not None else self.date_list
         item_datas = []
         last_metrics_data = {}
         self.bug_issue_open_time_deque = deque(maxlen=90)
@@ -1158,7 +1158,7 @@ class CommunitySupportMetricsModel(MetricsModel):
                     "pr_open_time_avg","pr_open_time_mid",
                     "pr_first_response_time_avg", "pr_first_response_time_mid",
                     "comment_frequency", "code_review_count"]:
-            if item[i] != None:
+            if item[i] is not None:
                 data = [item[i],item['grimoire_creation_date']]
                 last_metrics_data[i] = data
 
@@ -1174,7 +1174,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
         self.git_branch = git_branch
         self.model_name = 'Code_Quality_Guarantee'
         self.pr_index = pr_index
-        self.company = None if company == None or company == 'None' else company
+        self.company = None if company is None or company == 'None' else company
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
 
@@ -1453,8 +1453,8 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
             return None
 
     def metrics_model_enrich(self, repos_list, label, type=None, level=None, date_list=None):
-        level = level if level != None else self.level
-        date_list = date_list if date_list != None else self.date_list
+        level = level if level is not None else self.level
+        date_list = date_list if date_list is not None else self.date_list
         item_datas = []
         last_metrics_data = {}
         self.commit_pr_linked_deque = deque(maxlen=90)
@@ -1530,7 +1530,7 @@ class CodeQualityGuaranteeMetricsModel(MetricsModel):
 
     def cache_last_metrics_data(self, item, last_metrics_data):
         for i in ["code_merge_ratio",  "code_review_ratio", "pr_issue_linked_ratio", "git_pr_linked_ratio"]:
-            if item[i] != None:
+            if item[i] is not None:
                 data = [item[i],item['grimoire_creation_date']]
                 last_metrics_data[i] = data
 
@@ -1545,7 +1545,7 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         self.issue_comments_index = issue_comments_index
         self.pr_comments_index = pr_comments_index
         self.contributors_index = contributors_index
-        self.company = None if company == None or company == 'None' else company
+        self.company = None if company is None or company == 'None' else company
         self.model_name = 'Organizations Activity'
         self.org_name_dict = {}
 
@@ -1655,8 +1655,8 @@ class OrganizationsActivityMetricsModel(MetricsModel):
         return contribution_last
         
     def metrics_model_enrich(self, repos_list, label, type=None, level=None, date_list=None):
-        level = level if level != None else self.level
-        date_list = date_list if date_list != None else self.date_list
+        level = level if level is not None else self.level
+        date_list = date_list if date_list is not None else self.date_list
         item_datas = []
         self.org_name_dict = {}
         for date in date_list:
