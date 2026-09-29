@@ -8,6 +8,7 @@ from compass_metrics.db_dsl import (get_uuid_count_query,
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
 from compass_common.datetime import str_to_datetime
+from compass_common.datetime import get_period_bounds
 from compass_common.dict_utils import deep_get
 from compass_common.algorithm_utils import get_medium
 from compass_common.opensearch_utils import get_all_index_data
@@ -26,17 +27,23 @@ from datetime import datetime
 
 
 def get_period_range(end_date: datetime, period: str):
-    if period not in ("month", "quarter", "year"):
-        raise ValueError("period must be one of: month, quarter, year")
+    """Return the natural ``period`` (month/quarter/year) window containing ``end_date``.
 
-    if period == "month":
-        start_date = end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    elif period == "year":
-        start_date = end_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    else:  # quarter
-        month = ((end_date.month - 1) // 3) * 3 + 1
-        start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
-    return start_date, end_date
+    The window is ``(start, end)`` where ``start`` is the first instant of
+    the period and ``end`` is its last second.  ``end_date`` is only used to
+    locate the period; it is deliberately *not* returned as the upper bound.
+
+    Why this matters: the PR period metrics feed those bounds into
+    ``get_uuid_count_query``/``build_base_pr_query``.  Returning the caller's
+    date (the period start) as the end collapsed every current-period window
+    to an empty ``gte == lt`` range, so ``pr_comment_count_by_period`` and the
+    other ``*_by_period`` metrics counted zero for every period.  The sibling
+    git/issue/contributor modules already return the period's last second; the
+    calendar arithmetic now lives in
+    :func:`compass_common.datetime.get_period_bounds` so the four modules
+    cannot drift apart again.
+    """
+    return get_period_bounds(end_date, period)
 
 
 def get_previous_period_range(end_date: datetime, period: str):
@@ -55,6 +62,17 @@ def get_previous_period_range(end_date: datetime, period: str):
 
 def build_base_pr_query(agg_type, repos_list, field, date_field, from_date, to_date):
     query = get_uuid_count_query(agg_type, repos_list, field, date_field, size=0, from_date=from_date, to_date=to_date)
+    # get_uuid_count_query renders both bounds as "%Y-%m-%d" (dropping the time
+    # part) and applies the upper one as an exclusive "lt" bound.  A period
+    # window ends at 23:59:59 of the last day, which that formatting would drop
+    # entirely -- the very reason the current period used to collapse into an
+    # empty gte == lt range.  Rewrite the range with second precision and an
+    # inclusive "lte" upper bound, mirroring the git/issue/contributor period
+    # metrics so a document dated on the last day of the period is counted.
+    query["query"]["bool"]["filter"][0]["range"][date_field] = {
+        "gte": from_date.isoformat(),
+        "lte": to_date.isoformat(),
+    }
     query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true"}})
     return query
 
@@ -535,8 +553,8 @@ def pr_comment_rank_by_period(client, pr_index, end_date, repos_list, period="mo
                     {"match_phrase": {"pull_request": "true"}},
                 ],
                 "filter": [
-                    {"range": {"grimoire_creation_date": {"gte": from_date.strftime("%Y-%m-%d"),
-                                                          "lt": to_date.strftime("%Y-%m-%d")}}}
+                    {"range": {"grimoire_creation_date": {"gte": from_date.isoformat(),
+                                                          "lte": to_date.isoformat()}}}
                 ],
             }
         },
@@ -595,8 +613,8 @@ def pr_created_and_closed_count_by_period(client, pr_index, end_date, repos_list
     query = build_base_pr_query("cardinality", repos_list, "uuid", "grimoire_creation_date", from_date, to_date)
     query["aggs"]["count_of_uuid"]["cardinality"]["precision_threshold"] = 100000
     query["query"]["bool"]["filter"].append(
-        {"range": {"closed_at": {"gte": from_date.strftime("%Y-%m-%d"),
-                                 "lt": (to_date + timedelta(days=1)).strftime("%Y-%m-%d")}}}
+        {"range": {"closed_at": {"gte": from_date.isoformat(),
+                                 "lte": to_date.isoformat()}}}
     )
     count = client.search(index=pr_index, body=query)["aggregations"]["count_of_uuid"]["value"]
     return {"pr_created_and_closed_count": count, "period": period}

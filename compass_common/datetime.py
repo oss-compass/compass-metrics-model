@@ -18,7 +18,7 @@ import pandas as pd
 
 __all__ = [
     "InvalidDateError", "datetime_utcnow", "datetime_to_utc",
-    "str_to_datetime", "unixtime_to_datetime"
+    "str_to_datetime", "unixtime_to_datetime", "get_period_bounds"
 ]
 
 logger = logging.getLogger(__name__)
@@ -323,3 +323,41 @@ def get_period_range(date, period):
         from_date = date.replace(day=1)
 
     return from_date, to_date
+
+
+def get_period_bounds(date, period):
+    """Return the natural month/quarter/year window that contains ``date``.
+
+    The window is returned as ``(start, end)`` where ``start`` is the first
+    instant of the period and ``end`` is its last second (``23:59:59``).
+
+    The ``*_by_period`` metric helpers build Elasticsearch ``range`` filters at
+    second precision, so the upper bound must be the last moment of the period
+    -- not the period start and not the caller's date.  Returning the caller's
+    date as the end collapses the window into an empty ``gte == lte`` interval,
+    which is exactly the bug that made ``pr_comment_count_by_period`` report
+    zero for every period.  Keeping the calendar arithmetic in one shared
+    helper stops the per-period metric modules from drifting apart.
+
+    Raises ``ValueError`` when ``period`` is not one of ``month`` / ``quarter``
+    / ``year`` so a typo fails loudly instead of silently querying a wrong
+    window.
+    """
+    if period not in ("month", "quarter", "year"):
+        raise ValueError("period must be one of: month, quarter, year")
+
+    if period == "month":
+        start = date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_start = start + relativedelta(months=1)
+    elif period == "year":
+        start = date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_start = start + relativedelta(years=1)
+    else:  # quarter
+        start_month = ((date.month - 1) // 3) * 3 + 1
+        start = date.replace(month=start_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_start = start + relativedelta(months=3)
+
+    # The last second of the period is the first instant of the next period
+    # minus one second.  Deriving it this way keeps month lengths, leap years
+    # and year rollovers correct without hard-coding day counts.
+    return start, next_start - datetime.timedelta(seconds=1)
