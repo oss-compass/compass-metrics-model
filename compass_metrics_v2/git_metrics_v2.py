@@ -539,6 +539,130 @@ def lines_changed_by_period(client, git_index, end_date, repos_list, period="mon
     return {"lines_added": added, "lines_removed": removed, "period": period}
 
 
+def _contributor_lines_query(git_repos, from_date, to_date, top_n=None, include_bot=False):
+    """
+    构造“按贡献者聚合代码行数”的查询。
+
+    贡献量（contributor_code_contribution_by_period）与占比
+    （contributor_code_contribution_ratio_by_period）共用这一个查询，
+    保证两个指标的过滤与聚合口径完全一致，占比之和才能稳定为 1。
+    """
+    query = {
+        "size": 0,
+        "track_total_hits": True,
+        "query": {
+            "bool": {
+                "must": [
+                    {"terms": {"tag": git_repos}}
+                ],
+                "filter": [
+                    {"range": {"grimoire_creation_date": {
+                        "gte": from_date.isoformat(),
+                        "lte": to_date.isoformat()
+                    }}}
+                ]
+            }
+        },
+        "aggs": {
+            "by_author": {
+                "terms": {
+                    "field": "author_name",
+                    "size": top_n if top_n else 10000,
+                    "order": {"lines_changed": "desc"}
+                },
+                "aggs": {
+                    "lines_added": {"sum": {"field": "lines_added"}},
+                    "lines_removed": {"sum": {"field": "lines_removed"}},
+                    "lines_changed": {"sum": {"field": "lines_changed"}},
+                    "commit_count": {
+                        "cardinality": {"field": "hash", "precision_threshold": 100000}
+                    }
+                }
+            }
+        }
+    }
+    if not include_bot:
+        # 只排除“明确标记为机器人”的账号：用 must_not 而不是 term=false，
+        # 这样历史数据中缺失 author_bot 字段的提交不会被误删。
+        query["query"]["bool"]["must_not"] = [{"term": {"author_bot": True}}]
+    return query
+
+
+def _parse_contributor_buckets(buckets):
+    """把 terms 聚合桶转换为贡献者明细，并把可能的 None 归一化成 0。"""
+    contributors = []
+    for bucket in buckets:
+        contributors.append({
+            "author_name": bucket.get("key"),
+            "commit_count": int(bucket.get("commit_count", {}).get("value") or 0),
+            "lines_added": int(bucket.get("lines_added", {}).get("value") or 0),
+            "lines_removed": int(bucket.get("lines_removed", {}).get("value") or 0),
+            "lines_changed": int(bucket.get("lines_changed", {}).get("value") or 0),
+        })
+    return contributors
+
+
+def contributor_code_contribution_by_period(client, git_index, end_date, repos_list, period="month",
+                                            top_n=None, include_bot=False):
+    """
+    各贡献者贡献代码量（《软件产品开源代码安全评价方法》）。
+
+    统计周期内每位贡献者新增 / 删除 / 变更的代码行数以及提交次数：
+      - 以 git 索引的 author_name 维度做 terms 聚合，桶内分别对 lines_added、
+        lines_removed、lines_changed 求和，并用 hash 基数统计提交次数；
+      - 默认剔除机器人账号，避免自动化提交抬高个人贡献量；
+      - top_n 按变更行数降序截取前 N 位贡献者，默认返回全部。
+
+    返回 contributor_code_contribution（周期内变更行数总和，供评分/阈值使用）、
+    contributor_code_contribution_detail（各贡献者明细）、
+    contributor_code_contribution_contributors（贡献者人数）与 period。
+    """
+    from_date, to_date = _get_period_range(end_date, period)
+    git_repos = _git_repo_list(repos_list)
+    query = _contributor_lines_query(git_repos, from_date, to_date, top_n=top_n, include_bot=include_bot)
+    response = client.search(index=git_index, body=query)
+    buckets = response["aggregations"]["by_author"]["buckets"]
+    contributors = _parse_contributor_buckets(buckets)
+    total_lines = sum(item["lines_changed"] for item in contributors)
+    return {
+        "contributor_code_contribution": total_lines,
+        "contributor_code_contribution_detail": contributors,
+        "contributor_code_contribution_contributors": len(contributors),
+        "period": period,
+    }
+
+
+def contributor_code_contribution_ratio_by_period(client, git_index, end_date, repos_list, period="month",
+                                                  top_n=None, include_bot=False):
+    """
+    各贡献者贡献代码量占比（《软件产品开源代码安全评价方法》）。
+
+    在“各贡献者贡献代码量”的基础上，计算每位贡献者变更代码行数占周期总量的比例：
+      - 明细中所有贡献者占比之和为 1，无代码变更时占比为 None；
+      - contributor_code_contribution_ratio 取首位贡献者的占比，
+        可反映代码贡献的集中程度（巴士因子风险）。
+    """
+    detail = contributor_code_contribution_by_period(
+        client, git_index, end_date, repos_list, period=period, top_n=top_n, include_bot=include_bot)
+    contributors = detail["contributor_code_contribution_detail"]
+    total_lines = detail["contributor_code_contribution"]
+    ratios = []
+    for item in contributors:
+        ratio = round(item["lines_changed"] / total_lines, 6) if total_lines > 0 else None
+        ratios.append({
+            "author_name": item["author_name"],
+            "lines_changed": item["lines_changed"],
+            "contribution_ratio": ratio,
+        })
+    top_ratio = ratios[0]["contribution_ratio"] if ratios else None
+    return {
+        "contributor_code_contribution_ratio": top_ratio,
+        "contributor_code_contribution_ratio_detail": ratios,
+        "contributor_code_contribution_total_lines": total_lines,
+        "period": period,
+    }
+
+
 def org_code_contribution_by_period(client, git_index, end_date, repos_list, period="month"):
     """
     组织代码贡献量：周期内组织贡献的代码行数（新增）。

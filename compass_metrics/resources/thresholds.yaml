@@ -361,6 +361,12 @@ metrics_default_threshold:
     - metric: 'individual_non_code_contribution_ratio_by_period'
       repo_threshold: 1
       multiple_threshold: 1
+    - metric: 'contributor_code_contribution_by_period'
+      repo_threshold: 300000
+      multiple_threshold: 300000
+    - metric: 'contributor_code_contribution_ratio_by_period'
+      repo_threshold: 1
+      multiple_threshold: 1
 
   Industry_support:
     - metric: 'doc_quarty'
