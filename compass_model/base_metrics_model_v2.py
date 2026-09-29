@@ -987,7 +987,11 @@ class BaseMetricsModel:
             "build_metadata_available": lambda: build_metadata_available(self.client,self.openchecker_index, repo_list),
             "reproducible_build": lambda: reproducible_build(self.client,self.openchecker_index, repo_list),
 
-            "lifecycle_statement": lambda: lifecycle_statement(self.client,self.repo_index, repo_list),
+            # lifecycle_statement is parsed from the opencheck raw index, exactly like
+            # the sibling supply-chain security metrics: repo_index documents are
+            # addressed by tag/origin and hold no command/label field, so querying it
+            # always yields no hit and the metric silently scores 0.
+            "lifecycle_statement": lambda: lifecycle_statement(self.client,self.openchecker_index, repo_list),
             "avg_vulnerability_fix_time": lambda: avg_vulnerability_fix_time(self.client,self.openchecker_index, repo_list),
 
             "sbom_in_release": lambda: sbom_in_release(self.client,self.openchecker_index, repo_list),

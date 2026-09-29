@@ -796,6 +796,14 @@ def lifecycle_release_note(client: Any, opencheck_raw_index: str, repo_list: Lis
 
 
 def lifecycle_statement(client: Any, opencheck_raw_index: str, repo_list: List[str]) -> Dict[str, Any]:
+    """Score the repository lifecycle statement from the opencheck raw index.
+
+    ``lifecycle-doc-checker`` writes its ``command_result`` into the opencheck
+    raw index, whose documents carry the ``command`` and ``label`` fields that
+    ``base_opencheck_query`` filters on.  Repository documents are addressed by
+    ``tag`` / ``origin`` and have neither field, so querying them here always
+    returns an empty result and a permanent score of 0.
+    """
     return _calc_lifecycle_statement(
         _fetch_command_result(client, opencheck_raw_index, repo_list, "lifecycle-doc-checker") or {})
 
