@@ -6,6 +6,8 @@
 - 个人代码贡献者占比
 - 个人代码贡献量
 - 个人代码贡献量占比
+- 各贡献者贡献代码量
+- 各贡献者贡献代码量占比
 - 个人非代码贡献者
 - 个人非代码贡献者占比
 - 个人非代码贡献量
@@ -42,6 +44,14 @@ class PersonalGovernanceMetricsModel(BaseMetricsModel):
                 "threshold": None
             },
             "individual_code_contribution_by_period": {
+                "weight": WEIGHT_ZERO,
+                "threshold": None
+            },
+            "contributor_code_contribution_by_period": {
+                "weight": WEIGHT_ZERO,
+                "threshold": None
+            },
+            "contributor_code_contribution_ratio_by_period": {
                 "weight": WEIGHT_ZERO,
                 "threshold": None
             },
