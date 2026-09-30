@@ -281,6 +281,8 @@ def time_to_close(client, issue_index, date, repos_list, from_date=None):
                 close_time_repo.append(get_time_diff_days(item['_source']['created_at'], item['_source']['closed_at']))
             else:
                 close_time_repo.append(get_time_diff_days(item['_source']['created_at'], date_str))
+    if len(close_time_repo) == 0:
+        return {"time_to_close_avg": None, "time_to_close_mid": None}
     close_time_avg = sum(close_time_repo) / len(close_time_repo)
     close_time_mid = get_medium(close_time_repo)
     result = {
