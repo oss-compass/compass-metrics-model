@@ -540,7 +540,6 @@ class BaseMetricsModel:
                 **self.custom_fields
             }
             cache_last_metrics_data(metrics_data, last_metrics_data)
-            metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
             try:
                 metrics_data["score"] = self.get_metrics_score(self.metrics_decay(metrics_data, last_metrics_data))
             except Exception as e:
