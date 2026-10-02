@@ -95,6 +95,8 @@ def get_score_by_aggregate_score(metrics_data, metrics_weights_thresholds):
 
 def get_param_score(param, max_value, weight=1):
     """Return paramater score given its current value, max value and parameter weight."""
+    if param == 0 and max_value == 0:
+        return 0.0
     return (math.log(1 + param) / math.log(1 + max(param, max_value))) * weight
 
 
