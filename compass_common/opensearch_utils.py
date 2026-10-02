@@ -118,7 +118,7 @@ def get_generator(client, index, body):
                 break
 
     if not page:
-        return []
+        return
     
     scroll_id = page["_scroll_id"]
     total = page['hits']['total']
@@ -126,18 +126,19 @@ def get_generator(client, index, body):
 
     if scroll_size == 0:
         free_scroll(client, scroll_id)
-        return []
+        return
 
-    while scroll_size > 0:
-
-        for item in page['hits']['hits']:
-            yield item
-        page = get_items(client=client, index=index, body=body, size=page_size, scroll_id=scroll_id)
-        if not page:
-            break
-
-        scroll_size = len(page['hits']['hits'])
-    free_scroll(client, scroll_id)
+    try:
+        while scroll_size > 0:
+            for item in page['hits']['hits']:
+                yield item
+            page = get_items(client=client, index=index, body=body, size=page_size, scroll_id=scroll_id)
+            if not page:
+                break
+            scroll_id = page.get('_scroll_id', scroll_id)
+            scroll_size = len(page['hits']['hits'])
+    finally:
+        free_scroll(client, scroll_id)
 
 def get_items(client, index, body, size, scroll_id=None, scroll="5m"):
     page = None
