@@ -7,14 +7,16 @@ def get_score_by_criticality_score(metrics_data, metrics_weights_thresholds):
     total_weight = 0
     total_score = 0
     for metrics, weights_thresholds in metrics_weights_thresholds.items():
-        total_weight += weights_thresholds["weight"]
+        weight = weights_thresholds["weight"]
+        total_weight += abs(weight)
         param_data = metrics_data[metrics]
         if param_data is None:
-            if weights_thresholds["weight"] >= 0:
+            if weight >= 0:
                 param_data = 0
             else:
                 param_data = weights_thresholds["threshold"]
-        total_score += get_param_score(param_data, weights_thresholds["threshold"], weights_thresholds["weight"])
+        score = get_param_score(param_data, weights_thresholds["threshold"])
+        total_score += abs(weight) * (1 - score if weight < 0 else score)
     try:
         return round(total_score / total_weight, 5)
     except ZeroDivisionError:
