@@ -140,7 +140,7 @@ class ContributorDevOrgRepo:
         self.end_date = end_date
         self.organizations_index = organizations_index
         self.bots_index = bots_index
-        self.company = None if company or company == 'None' else company
+        self.company = None if not company or company == 'None' else company
         self.event_index = event_index
         self.stargazer_index = stargazer_index
         self.fork_index = fork_index
