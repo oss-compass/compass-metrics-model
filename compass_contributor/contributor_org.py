@@ -182,7 +182,7 @@ class ContributorOrgService:
                         "last_date": max(data_list)
                     }
                 org_info_list = list(base_org_info_dict.values())
-                sorted(org_info_list, key=lambda x: x["first_date"])
+                org_info_list.sort(key=lambda x: x["first_date"])
             org_change_date_list = org_info_list
             level = None
             label = None
