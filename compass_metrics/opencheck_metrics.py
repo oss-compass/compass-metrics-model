@@ -505,9 +505,9 @@ def token_permissions(client, openchecker_index, repo_list):
         undeclared_permissions = {"jobLevel": {}, "topLevel": {}}
         for perm in permissions:
             file_path = perm.get("file_path", "")
-            probe = f"{perm.get('locatio_type', '')}LevelPermissions"
+            probe = f"{perm.get('location_type', '')}LevelPermissions"
             permission_level = perm.get("permission_level", "")
-            token_name = perm.get("value", perm.get("name", ""))
+            token_name = perm.get("name") or perm.get("value") or ""
             
             if permission_level in ["none", "read"]:
                 continue
