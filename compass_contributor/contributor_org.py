@@ -80,6 +80,7 @@ class ContributorOrgService:
         def analytic_company_developers(content):
             analytic_result = {}
             lines = content.splitlines()
+            org_name = None
             for line in lines:
                 line = line.strip()
                 if len(line) == 0 or line.startswith("#"):
@@ -88,7 +89,7 @@ class ContributorOrgService:
                     org_name = line[:-1]
                 else:
                     contributor_info = line.split(":")
-                    if len(contributor_info) > 1:
+                    if org_name is not None and len(contributor_info) > 1:
                         contributor = contributor_info[0].strip()
                         time_list = []
                         for item in contributor_info[1].strip().split(","):
@@ -117,6 +118,7 @@ class ContributorOrgService:
         def analytic_developers_affiliations(content):
             analytic_result = {}
             lines = content.splitlines()
+            contributor = None
             for line in lines:
                 line = line.strip()
                 if len(line) == 0 or line.startswith("#"):
@@ -126,7 +128,7 @@ class ContributorOrgService:
                 else:
                     pattern = r'^(.*?)(?:\s+from\s+(\d{4}-\d{2}-\d{2}))?(?:\s+until\s+(\d{4}-\d{2}-\d{2}))?$'
                     match = re.match(pattern, line)
-                    if not match:
+                    if not match or contributor is None:
                         continue
                     company_name = match.group(1).strip()
                     first_date = match.group(2) if match.group(2) else "1970-01-01"
