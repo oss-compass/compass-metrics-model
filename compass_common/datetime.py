@@ -181,14 +181,15 @@ def get_time_diff_date(start, end, date_type="day"):
     if type(end) is not datetime.datetime:
         end = parse(end)
 
-    if date_type == "minute":
-        seconds_date = float(60)
-    elif date_type == "hour":
-        seconds_date = float(60 * 60)
-    elif date_type == "day":
-        seconds_date = float(60 * 60 * 24)
-    elif date_type == "month":
-        seconds_date = float(60 * 60 * 24 * 30)
+    seconds_by_unit = {
+        "minute": 60.0,
+        "hour": 60.0 * 60,
+        "day": 60.0 * 60 * 24,
+        "month": 60.0 * 60 * 24 * 30,
+    }
+    if date_type not in seconds_by_unit:
+        raise ValueError(f"Unsupported date type: {date_type}")
+    seconds_date = seconds_by_unit[date_type]
     
     diff_date = (end - start).total_seconds() / seconds_date
     diff_date = float('%.2f' % diff_date)
