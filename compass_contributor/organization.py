@@ -1,4 +1,4 @@
-from compass_common.opensearch_utils import get_client, get_helpers as helpers
+from compass_common.opensearch_utils import get_all_index_data, get_client, get_helpers as helpers
 from compass_common.datetime import datetime_utcnow
 from compass_metrics.db_dsl import get_base_index_mapping
 from compass_common.uuid_utils import get_uuid
@@ -79,7 +79,7 @@ class OrganizationService:
             }
           }
         }
-        hits = self.client.search(index=self.organizations_index, body=query)["hits"]["hits"]
+        hits = get_all_index_data(self.client, self.organizations_index, query)
         for hit in hits:
             hit_source = hit['_source']
             organizations_dict[hit_source["domain"]] = hit_source["org_name"]

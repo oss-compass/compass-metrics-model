@@ -1,4 +1,4 @@
-from compass_common.opensearch_utils import get_client, get_helpers as helpers
+from compass_common.opensearch_utils import get_all_index_data, get_client, get_helpers as helpers
 from compass_common.datetime import datetime_utcnow
 from compass_common.uuid_utils import get_uuid
 from compass_metrics.db_dsl import get_base_index_mapping
@@ -286,7 +286,7 @@ class ContributorOrgService:
                     }
                 }
             }
-            hits = self.client.search(index=self.contributors_org_index, body=query)["hits"]["hits"]
+            hits = get_all_index_data(self.client, self.contributors_org_index, query)
             for hit in hits:
                 hit_source = hit['_source']
                 contributor_key = f"{hit_source.get('modify_type')}&&{hit_source.get('contributor')}"
