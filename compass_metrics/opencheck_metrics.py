@@ -585,7 +585,7 @@ def dependents_count(client, openchecker_index, repo_list):
     if openchecker_data is not None:
         command_result = deep_get(openchecker_data, ["_source", "command_result"], {})
         bedependent = command_result.get("bedependent")
-        if bedependent and isinstance(bedependent, int) and not isinstance(bedependent, bool):
+        if isinstance(bedependent, int) and not isinstance(bedependent, bool):
             bedependent_count = bedependent
     
     result = {
