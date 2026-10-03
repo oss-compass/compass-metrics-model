@@ -64,10 +64,11 @@ class OrganizationService:
                 }
             }
             item_datas.append(item_data)
-            if len(item_datas) > 1000:
+            if len(item_datas) >= 1000:
                 helpers().bulk(client=self.client, actions=item_datas)
                 item_datas = []
-        helpers().bulk(client=self.client, actions=item_datas)
+        if item_datas:
+            helpers().bulk(client=self.client, actions=item_datas)
 
     def get_dict_domain_exist(self):
         organizations_dict = {}
