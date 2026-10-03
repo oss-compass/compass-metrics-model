@@ -110,7 +110,7 @@ def license(client, openchecker_index, repo_list):
 
 def signed_releases(client, openchecker_index, repo_list):
     """ Does the project cryptographically sign releases? """
-    file_suffix = [".minisig", ".asc (pgp)", "*.sig", ".sign", ".sigstore", ".intoto.jsonl"]
+    file_suffix = [".minisig", ".asc", ".sig", ".sign", ".sigstore", ".intoto.jsonl"]
     
     release_list = []
     signed_release_list = []
@@ -123,7 +123,7 @@ def signed_releases(client, openchecker_index, repo_list):
             matched_files = [
                 sig_file
                 for sig_file in item["signature_files"]
-                if any(suffix in sig_file for suffix in file_suffix)
+                if any(sig_file.lower().endswith(suffix) for suffix in file_suffix)
             ]
             if len(matched_files) > 0:
                 signed_release_list.append(item["release_name"])
