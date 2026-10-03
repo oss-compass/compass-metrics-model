@@ -26,7 +26,7 @@ class OrganizationService:
                                        body=get_base_index_mapping())
 
     def save_by_user_id(self, org_name, user_id):
-        organization = Organization(id, None, org_name, user_id)
+        organization = Organization(None, org_name, user_id)
         self.save(organization)
 
     def save_by_config_file(self):
