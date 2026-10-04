@@ -81,7 +81,7 @@ class Industry_Support:
 
         ans = {"zh_files_number":0, "zh_files_details":[]}
         for key,zh_files in get_zh_files_number.items():
-            ans["zh_files_number"] += int(zh_files["zh_files_number"] / len(self.repo_list))
+            ans["zh_files_number"] += zh_files["zh_files_number"]
 
             ans["zh_files_details"].append(
                 {
@@ -94,6 +94,8 @@ class Industry_Support:
             # ans["zh_files_details"][key]["zh_files_details"] = zh_files["zh_files_details"]
 
         
+        if self.repo_list:
+            ans["zh_files_number"] //= len(self.repo_list)
         return ans #{"zh_files_number":0, "zh_files_details":{repo_url:zh_files_details}}
 
     
