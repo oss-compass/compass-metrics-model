@@ -9,6 +9,7 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
 import json
+import math
 import re
 from typing import Any, Dict, List, Optional
 
@@ -511,6 +512,15 @@ def _calc_ecology_interface_doc(api_doc_checker_result: Dict[str, Any]) -> Dict[
 
 
 def _calc_ecology_test_coverage(sonar_scanner_result: Dict[str, Any]) -> Dict[str, Any]:
+    def parse_ratio(value):
+        if value is None or isinstance(value, bool):
+            return None
+        try:
+            ratio = float(value)
+        except (TypeError, ValueError):
+            return None
+        return ratio if math.isfinite(ratio) and 0 <= ratio <= 100 else None
+
     measures = deep_get(sonar_scanner_result, ["component", "measures"]) or []
     duplication_score = coverage_score = 0
     duplication_ratio = coverage_ratio = None
@@ -520,21 +530,15 @@ def _calc_ecology_test_coverage(sonar_scanner_result: Dict[str, Any]) -> Dict[st
     for m in measures:
         metric = m.get("metric")
         if metric == "duplicated_lines_density":
-            try:
-                duplication_ratio = int(m.get("value") or 0)
-            except (TypeError, ValueError):
-                duplication_ratio = None
+            duplication_ratio = parse_ratio(m.get("value"))
             for lo, hi, sc in ranges_dup:
-                if duplication_ratio is not None and lo <= duplication_ratio <= hi:
+                if duplication_ratio is not None and lo <= int(duplication_ratio) <= hi:
                     duplication_score = sc
                     break
         elif metric == "coverage":
-            try:
-                coverage_ratio = int(m.get("value") or 0)
-            except (TypeError, ValueError):
-                coverage_ratio = None
+            coverage_ratio = parse_ratio(m.get("value"))
             for lo, hi, sc in ranges_cov:
-                if coverage_ratio is not None and lo <= coverage_ratio <= hi:
+                if coverage_ratio is not None and lo <= int(coverage_ratio) <= hi:
                     coverage_score = sc
                     break
 
