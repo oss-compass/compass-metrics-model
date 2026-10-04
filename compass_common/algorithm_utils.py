@@ -8,7 +8,7 @@ def get_score_by_criticality_score(metrics_data, metrics_weights_thresholds):
     total_score = 0
     for metrics, weights_thresholds in metrics_weights_thresholds.items():
         total_weight += weights_thresholds["weight"]
-        param_data = metrics_data[metrics]
+        param_data = metrics_data.get(metrics)
         if param_data is None:
             if weights_thresholds["weight"] >= 0:
                 param_data = 0
@@ -81,7 +81,7 @@ def get_score_by_aggregate_score(metrics_data, metrics_weights_thresholds):
     total_weight = 0
     total_score = 0
     for metrics, weights_thresholds in metrics_weights_thresholds.items():
-        score = metrics_data[metrics]
+        score = metrics_data.get(metrics)
         if score is not None:
             weight = weights_thresholds["weight"]
             total_score += (score * weight)
