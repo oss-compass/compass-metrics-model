@@ -328,13 +328,6 @@ def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date",
                     {
                         "range":
                         {
-                            filter_field: {
-                                "gte": 1
-                            }
-                        }},
-                    {
-                        "range":
-                        {
                             date_field: {
                                 "gte": from_date.strftime("%Y-%m-%d"),
                                 "lt": to_date.strftime("%Y-%m-%d")
@@ -345,6 +338,8 @@ def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date",
             }
         }
     }
+    if filter_field is not None:
+        query["query"]["bool"]["filter"].insert(0, {"range": {filter_field: {"gte": 1}}})
     return query
 
 
