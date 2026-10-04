@@ -7,6 +7,7 @@ LastEditors: zyx
 LastEditTime: 2025-03-24 15:46:06
 '''
 import os
+from html.parser import HTMLParser
 from compass_metrics.document_metric.utils import save_json,clone_repo,TMP_PATH,JSON_REPOPATH
 import re
 
@@ -63,34 +64,44 @@ def count_documents_from_Readme(markdown)->tuple:
                 - "path" (str): The full URL of the link.
     """
 
-    link_count = 0
     links = []
     video_sites = ["youtube.com", "vimeo.com", "dailymotion.com","blibli.com","img","gif","jpg","jpeg","png","svg"]
-    markdown_split = markdown.split('\n')
-    for line in markdown_split:
-        # Check for links in <a> tags
-        if "<a href" in line:
-            link = line.split('href="')[1].split('"')[0].replace(")", "")
-            if not any(video_site in link for video_site in video_sites):
-                link_count += 1
-                links.append(
-                    {
-                    "name": link.replace("http://", "").replace("https://", ""),
-                    "path" : link
-                    }
-                    )
-        # Check for plain text links
-        else:
-            urls = re.findall(r'(https?://\S+)', line)
-            for url in urls:
-                url = url.split(')')[0]
-                if not any(video_site in url for video_site in video_sites):
-                    link_count += 1
-                    links.append({
+
+    class LinkParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.in_anchor = False
+
+        def add_link(self, url):
+            if url and not any(site in url for site in video_sites):
+                links.append({
                     "name": url.replace("http://", "").replace("https://", ""),
-                    "path" : url
-                    })
-    return link_count, links
+                    "path": url,
+                })
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "a":
+                self.in_anchor = True
+                self.add_link(dict(attrs).get("href"))
+            elif not self.in_anchor:
+                # Markdown autolinks are otherwise interpreted as HTML tags.
+                source = self.get_starttag_text()
+                if source.startswith(("<https://", "<http://")):
+                    self.add_link(source[1:-1])
+
+        def handle_endtag(self, tag):
+            if tag == "a":
+                self.in_anchor = False
+
+        def handle_data(self, data):
+            if not self.in_anchor:
+                for url in re.findall(r'(https?://\S+)', data):
+                    self.add_link(url.split(')')[0])
+
+    parser = LinkParser()
+    parser.feed(markdown)
+    parser.close()
+    return len(links), links
 
 def search_readme_in_folder(path)->tuple:
     """
