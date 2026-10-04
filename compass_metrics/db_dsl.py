@@ -3,8 +3,9 @@
 from compass_common.datetime import datetime_utcnow, str_to_datetime
 
 
-def get_updated_since_query(repos_list, date_field="grimoire_creation_date", operation="max", to_date=datetime_utcnow()):
+def get_updated_since_query(repos_list, date_field="grimoire_creation_date", operation="max", to_date=None):
     """ Query statement to get the code commit data of the repository """
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": 0,
         "aggs": {
@@ -154,8 +155,9 @@ def get_repo_message_query(repo_url):
     return query
 
 
-def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=None):
     """ Query statement to get the count of releases in a certain time frame """
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": 0,
         "aggs": {
@@ -218,8 +220,9 @@ def get_contributor_query(repo_list, date_field_list, from_date, to_date, page_s
 
 
 def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation_date", size=0,
-                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow(), repo_field="tag"):
+                         from_date=str_to_datetime("1970-01-01"), to_date=None, repo_field="tag"):
     """ Counting the number of records according to conditions """
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": size,
         "track_total_hits": "true",
@@ -255,7 +258,8 @@ def get_uuid_count_query(option, repo_list, field, date_field="grimoire_creation
     return query
 
 
-def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetime("1970-01-01"), to_date=None):
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": 0,
         "track_total_hits": True,
@@ -299,7 +303,8 @@ def get_pr_closed_uuid_count(option, repos_list, field, from_date=str_to_datetim
     return query
 
 
-def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date", size=0, filter_field=None, from_date=str_to_datetime("1970-01-01"), to_date=None):
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": size,
         "track_total_hits": True,
@@ -348,7 +353,8 @@ def get_pr_message_count(repos_list, field, date_field="grimoire_creation_date",
     return query
 
 
-def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_date=None):
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": 0,
         "track_total_hits": True,
@@ -406,8 +412,9 @@ def get_pr_linked_issue_count(repo, from_date=str_to_datetime("1970-01-01"), to_
 
 
 def get_message_list_query(field="tag", field_values=[], date_field="grimoire_creation_date", size=0,
-                         from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+                         from_date=str_to_datetime("1970-01-01"), to_date=None):
     """ Getting a list of message data according to conditions """
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": size,
         "query": {
@@ -435,8 +442,9 @@ def get_message_list_query(field="tag", field_values=[], date_field="grimoire_cr
     return query
 
 
-def get_updated_issues_count_query(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_updated_issues_count_query(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=None):
     """ Query statement for counting the number of issue updates according to conditions """
+    to_date = datetime_utcnow() if to_date is None else to_date
     query = {
         "size": 0,
         "track_total_hits": "true",
