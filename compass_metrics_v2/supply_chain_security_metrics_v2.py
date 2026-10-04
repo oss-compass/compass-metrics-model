@@ -464,7 +464,7 @@ def _calc_ecology_readme(
         oat_no_readme: Optional[Dict[str, Any]],
 ) -> Dict[str, Any]:
     readme_files = readme_checker_result.get("readme_file") or []
-    score = 10
+    score = 0
     for rf in readme_files:
         parts = rf.split("/")
         if len(parts) == 2 and any(x in parts[1].lower() for x in ("readme", "readme.")):
