@@ -12,6 +12,9 @@ import json
 import re
 from typing import Any, Dict, List, Optional
 
+from cvss import CVSS2, CVSS3, CVSS4
+from cvss.exceptions import CVSSError
+
 from compass_common.dict_utils import deep_get
 
 try:
@@ -368,14 +371,25 @@ def _osv_severity_bucket(vuln: Dict[str, Any]) -> str:
     for s in (vuln.get("severity") or []):
         if isinstance(s, dict):
             try:
-                score = float(s.get("score") or 0)
+                raw_score = s.get("score")
+                try:
+                    score = float(raw_score)
+                except (TypeError, ValueError):
+                    calculator = {
+                        "CVSS_V2": CVSS2,
+                        "CVSS_V3": CVSS3,
+                        "CVSS_V4": CVSS4,
+                    }.get(s.get("type"))
+                    if calculator is None or not isinstance(raw_score, str):
+                        continue
+                    score = calculator(raw_score).scores()[0]
                 if score >= 9:
                     return "CRITICAL"
                 if score >= 7:
                     return "HIGH"
                 if score >= 4:
                     return "MEDIUM"
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, CVSSError):
                 pass
     return "UNKNOWN"
 
