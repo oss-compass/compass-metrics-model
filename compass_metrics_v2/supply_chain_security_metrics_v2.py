@@ -415,8 +415,13 @@ def _calc_security_vulnerability(osv_scanner_result: Dict[str, Any]) -> Dict[str
 
 
 def _calc_security_package_sig(release_checker_result: Dict[str, Any]) -> Dict[str, Any]:
+    signed_part = release_checker_result.get("signed-release-checker") or {}
     sig_list = list(release_checker_result.get("signature_files") or [])
-    if "error" in release_checker_result:
+    if not sig_list:
+        for release in signed_part.get("signed_files") or []:
+            if isinstance(release, dict):
+                sig_list.extend(release.get("signature_files") or [])
+    if "error" in release_checker_result or "error" in signed_part:
         return {
             "security_package_sig": -1,
             "security_package_sig_detail": "[]",
@@ -433,8 +438,13 @@ def _calc_security_package_sig(release_checker_result: Dict[str, Any]) -> Dict[s
 
 
 def _calc_lifecycle_release_note(release_checker_result: Dict[str, Any]) -> Dict[str, Any]:
+    notes_part = release_checker_result.get("notes") or {}
     notes = list(release_checker_result.get("release_notes") or [])
-    if "error" in release_checker_result:
+    if not notes:
+        for release in notes_part.get("release_contents") or []:
+            if isinstance(release, dict):
+                notes.extend(release.get("content_files") or [])
+    if "error" in release_checker_result or "error" in notes_part:
         return {
             "lifecycle_release_note": -1,
             "lifecycle_release_note_detail": "[]",
