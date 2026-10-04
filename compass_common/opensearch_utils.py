@@ -86,15 +86,16 @@ def get_all_index_data(client, index, body):
         free_scroll(client, scroll_id)
         return result_list
 
-    while scroll_size > 0:
-
-        result_list = result_list + page['hits']['hits']
-        page = get_items(client=client, index=index, body=body, size=page_size, scroll_id=scroll_id)
-        if not page:
-            break
-
-        scroll_size = len(page['hits']['hits'])
-    free_scroll(client, scroll_id)
+    try:
+        while scroll_size > 0:
+            result_list.extend(page['hits']['hits'])
+            page = get_items(client=client, index=index, body=body, size=page_size, scroll_id=scroll_id)
+            if not page:
+                break
+            scroll_id = page.get('_scroll_id', scroll_id)
+            scroll_size = len(page['hits']['hits'])
+    finally:
+        free_scroll(client, scroll_id)
     return result_list
 
 
