@@ -37,8 +37,9 @@ def count_documents_from_folder(path, extensions=None)->tuple:
                 continue
             if any(file.endswith(ext) for ext in extensions):
                 try:
-                    with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
-                        content = f.read()
+                    # PDF and Word documents are binary; only check readability.
+                    with open(os.path.join(root, file), 'rb') as f:
+                        f.read(1)
                     document_count += 1
                     document_details.append({
                         "name": file,
