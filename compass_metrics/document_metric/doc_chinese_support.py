@@ -72,17 +72,20 @@ def find_zh_files(json_path,url):
             zh_files["zh_files_number"] += 1
     return zh_files
 
-def get_file_commit_time(repo_url, file_path, platform='gitub'):
-    '''Get the commit time of a file from a GitHub repository'''
+def get_file_commit_time(repo_url, file_path, platform='github'):
+    '''Get the commit time for a document path relative to the checkout cache.'''
     repo_name = repo_url.split('/')[-1]
     owner = repo_url.split('/')[-2]
-    file_path = file_path.replace(repo_name, '')[1:]
-    commits_url = f"https://api.github.com/repos/{owner}/{repo_name}/commits?path={file_path}"
-    # print(commits_url)
+    # Document details begin with the checkout directory (<repo>-<version>).
+    # Remove only that directory, preserving repository names inside the path.
+    file_path = file_path.split('/', 1)[-1]
     if platform == 'github':
-        response = requests.get(commits_url, headers=GITHUB_HEADERS)
+        commits_url = f"https://api.github.com/repos/{owner}/{repo_name}/commits"
+        headers = GITHUB_HEADERS
     else:
-        response = requests.get(commits_url, headers=GITEE_HEADERS)
+        commits_url = f"https://gitee.com/api/v5/repos/{owner}/{repo_name}/commits"
+        headers = GITEE_HEADERS
+    response = requests.get(commits_url, headers=headers, params={'path': file_path})
 
     if response.status_code == 200:
         commit_data = response.json()
