@@ -316,7 +316,8 @@ def issue_closed_count_by_period(client, issue_index, end_date, repos_list, peri
     """
     from_date, to_date = get_period_range(end_date, period)
     query = get_uuid_count_query(
-        "cardinality", repos_list, "uuid", size=0, from_date=from_date, to_date=to_date
+        "cardinality", repos_list, "uuid", date_field="closed_at", size=0,
+        from_date=from_date, to_date=to_date + timedelta(days=1)
     )
     query["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     query["query"]["bool"]["must_not"] = [
