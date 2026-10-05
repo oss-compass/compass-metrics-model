@@ -287,7 +287,7 @@ def bus_factor(client, contributors_index, date, repo_list):
     front_commit_count = 0
     for index, commit_count in enumerate(commit_count_list):
         front_commit_count += commit_count
-        if commit_count_threshold < front_commit_count:
+        if commit_count_threshold > 0 and front_commit_count >= commit_count_threshold:
             bus_factor_count = index + 1
             break
     result = {
