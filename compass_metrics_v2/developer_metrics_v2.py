@@ -760,14 +760,14 @@ def _tier_counts_from_contribution_map(contribution_map, core_ratio=0.5, regular
     cum = 0.0
     core_count = regular_count = visitor_count = 0
     for _, v in sorted_contributors:
-        cum += v
-        ratio = cum / total
-        if ratio <= core_ratio:
+        ratio_before = cum / total
+        if ratio_before < core_ratio:
             core_count += 1
-        elif ratio <= regular_end_ratio:
+        elif ratio_before < regular_end_ratio:
             regular_count += 1
         else:
             visitor_count += 1
+        cum += v
     return core_count, regular_count, visitor_count
 
 
