@@ -511,8 +511,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             or the group that contributes 3/4 of the time in this timeframe (excluding star and fork contributions).
         """
         date_list = [x for x in list(pd.date_range(freq='W-MON', start=from_date, end=date))]
-        if len(date_list) >= 4:
-            weeks = len(date_list) * 3 / 4
+        weeks = len(date_list) * 3 / 4 if len(date_list) >= 4 else None
         contribution_count_dict = {k: v["contribution_without_observe"] for k, v in contributor_dict.items()}
         sorted_dict = {k: v for k, v in
                        sorted(contribution_count_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -525,7 +524,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             if current_sum >= target_sum:
                 break
         for k, v in contributor_dict.items():
-            if v["contribution_weeks"] >= weeks:
+            if weeks is not None and v["contribution_weeks"] >= weeks:
                 result_contributor[k] = {**v, "mileage_type": "regular"}
         core_name = core_contributor.keys()
         return {k: result_contributor[k] for k in result_contributor.keys() if k not in core_name}
@@ -551,6 +550,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
         "individual participant"
     ]
     for key, group in contributor_groups:
+        group_items = list(group)
         contribution = 0
         contribution_without_observe = 0
         ecological_type_set = set()
@@ -558,7 +558,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
         contribution_type_dict = {}
         is_bot_set = set()
         repo_name_set = set()
-        for item in list(group):
+        for item in group_items:
             contribution += item["contribution"]
             contribution_without_observe += item["contribution_without_observe"]
             ecological_type_set.add(item["ecological_type"])
@@ -586,7 +586,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             "contribution_type_list": list(contribution_type_dict.values()),
             "is_bot": True if True in is_bot_set else False,
             "repo_name": list(repo_name_set),
-            "contribution_weeks": len(list(group))
+            "contribution_weeks": len(group_items)
         }
         if is_bot is contributor_item["is_bot"]:
             if key not in "openharmony_ci":
