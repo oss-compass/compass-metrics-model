@@ -59,6 +59,7 @@ def get_period_range(end_date: datetime, period: str):
             next_month = end_date.replace(year=end_date.year + 1, month=1, day=1)
         else:
             next_month = end_date.replace(month=end_date.month + 1, day=1)
+        next_month = next_month.replace(hour=0, minute=0, second=0, microsecond=0)
         actual_end_date = next_month - timedelta(seconds=1)
 
     elif period == "year":
@@ -70,6 +71,7 @@ def get_period_range(end_date: datetime, period: str):
             next_start = end_date.replace(year=end_date.year + 1, month=1, day=1)
         else:
             next_start = end_date.replace(month=quarter_end_month + 1, day=1)
+        next_start = next_start.replace(hour=0, minute=0, second=0, microsecond=0)
         actual_end_date = next_start - timedelta(seconds=1)
 
     return start_date, actual_end_date
