@@ -64,28 +64,33 @@ def calculate_comment_ratio(file_path, comment_syntax):
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
         total_lines = len(lines)
-        comment_lines = sum(1 for line in lines if comment_syntax in line.strip())
-        
-        # Handle multiline comments
+        comment_lines = 0
         language = detect_language(file_path)
-        if language in MULTILINE_COMMENT_SYNTAX:
-            start_syntax, end_syntax = MULTILINE_COMMENT_SYNTAX[language]
-            in_multiline_comment = False
-            for line in lines:
-                stripped_line = line.strip()
-                if in_multiline_comment:
-                    comment_lines += 1
-                    #多行注释的结束
-                    if end_syntax in stripped_line:
+        delimiters = MULTILINE_COMMENT_SYNTAX.get(language)
+        in_multiline_comment = False
+        for line in lines:
+            # A source line contributes at most once, even if it contains both
+            # a line-comment marker and part of a block comment.
+            has_comment = comment_syntax in line.strip() or in_multiline_comment
+            remaining = line
+            if delimiters:
+                start_syntax, end_syntax = delimiters
+                while remaining:
+                    if in_multiline_comment:
+                        end = remaining.find(end_syntax)
+                        if end < 0:
+                            break
+                        remaining = remaining[end + len(end_syntax):]
                         in_multiline_comment = False
-                #使用多行注释符号包裹的单行注释
-                elif start_syntax in stripped_line and end_syntax in stripped_line:
-                    comment_lines += 1
-                #多行注释的开始
-                elif start_syntax in stripped_line and end_syntax not in stripped_line:
-                    in_multiline_comment = True
-                    comment_lines += 1
-        
+                    else:
+                        start = remaining.find(start_syntax)
+                        if start < 0:
+                            break
+                        has_comment = True
+                        remaining = remaining[start + len(start_syntax):]
+                        in_multiline_comment = True
+            comment_lines += int(has_comment)
+
         comment_ratio = (comment_lines / total_lines) * 100 if total_lines > 0 else 0
         return comment_ratio,comment_lines,total_lines
 
