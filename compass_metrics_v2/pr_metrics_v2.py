@@ -1,5 +1,6 @@
 """ Set of pr related metrics """
 
+import logging
 
 from compass_metrics.db_dsl import (get_uuid_count_query,
                                     get_pr_closed_uuid_count,
@@ -23,6 +24,8 @@ from dateutil.relativedelta import relativedelta
 
 
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def get_period_range(end_date: datetime, period: str):
@@ -80,7 +83,7 @@ def pr_new_unresponsive_ratio_by_period(client, pr_index, end_date, repos_list, 
     try:
         total = client.search(index=pr_index, body=total_query)["aggregations"]["count_of_uuid"]["value"]
     except Exception as e:
-        print(f"[Error] Failed to query total PRs: {e}")
+        logger.error(f"Failed to query total PRs: {e}")
         total = 0
 
     # 4. 查询分子：该周期内创建 且 在周期结束前 未响应 的 PR 数
@@ -137,7 +140,7 @@ def pr_new_unresponsive_ratio_by_period(client, pr_index, end_date, repos_list, 
     try:
         unresp = client.search(index=pr_index, body=unresp_query)["aggregations"]["count_of_uuid"]["value"]
     except Exception as e:
-        print(f"[Error] Failed to query unresponsive PRs: {e}")
+        logger.error(f"Failed to query unresponsive PRs: {e}")
         unresp = 0
 
     return {
