@@ -10,6 +10,9 @@ from compass_metrics_model.metrics_model_summary import (
    OrganizationsActivityMetricsSummary
 )
 
+from compass_metrics_model.category_scopes import (
+   load_category_inputs_from_config,
+)
 from compass_contributor.contributor_dev_org_repo import ContributorDevOrgRepo
 
 import yaml
@@ -21,6 +24,8 @@ if __name__ == '__main__':
    CONF = yaml.safe_load(open(cofig_url))
    elastic_url = CONF['url']
    params = CONF['params']
+   (category_scopes, category_source_commit,
+    category_source_digest) = load_category_inputs_from_config(params)
 
    kwargs = {}
    for item in ['json_file', 'issue_index', 
@@ -63,18 +68,30 @@ if __name__ == '__main__':
 
    activity_summary = ActivityMetricsSummary(params['out_index'], 'Activity', params['from_date'], params['end_date'],
                                              params['out_index'])
-   activity_summary.metrics_model_summary(elastic_url)
+   activity_summary.metrics_model_summary(
+      elastic_url, category_scopes,
+      category_source_commit=category_source_commit,
+      category_source_digest=category_source_digest)
 
    community_summary = CommunitySupportMetricsSummary(params['out_index'], 'Community Support and Service',
                                                       params['from_date'], params['end_date'], params['out_index'])
-   community_summary.metrics_model_summary(elastic_url)
+   community_summary.metrics_model_summary(
+      elastic_url, category_scopes,
+      category_source_commit=category_source_commit,
+      category_source_digest=category_source_digest)
 
    codequality_summary = CodeQualityGuaranteeMetricsSummary(params['out_index'], 'Code_Quality_Guarantee',
                                                             params['from_date'], params['end_date'],
                                                             params['out_index'])
-   codequality_summary.metrics_model_summary(elastic_url)
+   codequality_summary.metrics_model_summary(
+      elastic_url, category_scopes,
+      category_source_commit=category_source_commit,
+      category_source_digest=category_source_digest)
 
    organizations_activity_summary = OrganizationsActivityMetricsSummary(params['out_index'], 'Organizations Activity',
                                                                         params['from_date'], params['end_date'],
                                                                         params['out_index'])
-   organizations_activity_summary.metrics_model_summary(elastic_url)
+   organizations_activity_summary.metrics_model_summary(
+      elastic_url, category_scopes,
+      category_source_commit=category_source_commit,
+      category_source_digest=category_source_digest)

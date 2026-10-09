@@ -1,6 +1,8 @@
 url:
   "https://admin:password@localhost:8200"
  
+# collections_dir: 指向 compass-projects-information 仓库的 collections 目录，
+# 用于按项目分类统计。留空表示不做分类统计，保持原有的全局行为。
 params:
   {
       'issue_index': 'gitee_issues-enriched',
@@ -11,6 +13,7 @@ params:
       'from_date': '2020-03-30',
       'end_date': '2022-08-18',
       'out_index': 'mindspore2_metric_model',
+      'collections_dir': '',
       'community': 'mindspore',
       'level': 'repo',
       'company': 'Huawei',

@@ -1,6 +1,8 @@
 url:
   "https://admin:pass@ip:9200"
  
+# collections_dir: 指向 compass-projects-information 仓库的 collections 目录，
+# 用于按项目分类统计。留空表示不做分类统计，保持原有的全局行为。
 params:
   {
     'repo_index':'gitcode-repo_enriched',
@@ -16,6 +18,7 @@ params:
     'fork_index': 'gitcode-fork_enriched',
     'event_index': 'gitcode-event_enriched',
     'out_index': 'metric_model',
+    'collections_dir': '',
     'from_date': '2020-01-01',
     'end_date': '2023-04-15',
     'level': 'repo',
