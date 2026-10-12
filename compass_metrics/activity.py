@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime
 from dateutil.relativedelta import relativedelta
 from typing import List
+from urllib.parse import quote
 
 from compass_common.datetime import str_to_datetime
 from .git_metrics import commit_count
@@ -83,17 +84,16 @@ def activity_quarterly_contribution(client, contributors_index: str, repo_list: 
     }
 
 def get_github_versionPublishAt(repo_url,version):
-    api_url = repo_url.replace("github.com", "api.github.com/repos") + "/releases"
+    # A release may be older than the first page of the releases listing.
+    api_url = (repo_url.rstrip("/").replace("github.com", "api.github.com/repos")
+               + "/releases/tags/" + quote(version, safe=""))
     headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
     response = requests.get(api_url, headers=headers)
     if response.status_code == 200:
-        releases = response.json()
-        for release in releases:
-            if release['tag_name'] == version:
-                return release['published_at']
+        return response.json()['published_at']
     else:
         return None
 
