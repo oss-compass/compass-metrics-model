@@ -50,15 +50,20 @@ def binary_artifacts(client, openchecker_index, repo_list):
     binary_file_suffix = [".crx", ".deb", ".dex", ".dey", ".elf", ".o", ".a", ".so", ".macho", ".iso", ".class", ".jar",
                           ".bundle", ".dylib", ".lib", ".msi", ".dll", ".drv", ".efi", ".exe", ".ocx", ".pyc", ".pyo", ".par", ".rpm", ".wasm", ".whl"]
     binary_artifact_list = []
+    scans_complete = bool(repo_list)
     for repo_url in repo_list:
         openchecker_data = get_openchecker_data(client, openchecker_index, repo_url, "binary-checker")
-        if openchecker_data is not None:
-            binary_file_list = deep_get(openchecker_data, ["_source", "command_result", "binary_file_list"], [])
-            matched_files = [f for f in binary_file_list if '.' in f and f[f.rfind('.'):].lower() in binary_file_suffix]
-            binary_artifact_list.extend(matched_files)
+        command_result = deep_get(openchecker_data, ["_source", "command_result"], {})
+        if (not isinstance(command_result, dict) or command_result.get("error") is not None
+                or not isinstance(command_result.get("binary_file_list"), list)):
+            scans_complete = False
+            continue
+        binary_file_list = command_result["binary_file_list"]
+        matched_files = [f for f in binary_file_list if '.' in f and f[f.rfind('.'):].lower() in binary_file_suffix]
+        binary_artifact_list.extend(matched_files)
     binary_artifact_list = list(set(binary_artifact_list))
     result = {
-        "binary_artifacts": max(10 - len(binary_artifact_list), 0),
+        "binary_artifacts": max(10 - len(binary_artifact_list), 0) if scans_complete else None,
         "binary_artifacts_detail": binary_artifact_list
     }
     return result
@@ -170,8 +175,12 @@ def vulnerabilities(client, openchecker_index, repo_list):
     vulnerabilities_set = set()
     
     openchecker_data = get_openchecker_data(client, openchecker_index, repo_list[0], "osv-scanner")
+    command_result = deep_get(openchecker_data, ["_source", "command_result"], {})
+    if (not isinstance(command_result, dict) or command_result.get("error") is not None
+            or not isinstance(command_result.get("results"), list)):
+        return {"vulnerabilities": None, "vulnerabilities_detail": []}
     if openchecker_data is not None:
-        command_result_list = deep_get(openchecker_data, ["_source", "command_result", "results"], [])
+        command_result_list = command_result["results"]
         for item in command_result_list:
             for package in item["packages"]:
                 vulnerabilities = [vulnerability["id"] for vulnerability in package["vulnerabilities"]]
