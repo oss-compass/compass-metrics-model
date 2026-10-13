@@ -152,7 +152,7 @@ def get_items(client, index, body, size, scroll_id=None, scroll="5m"):
     return page
 
 def too_many_scrolls(res):
-    """Check if result conatins 'too many scroll contexts' error"""
+    """Check if result contains 'too many scroll contexts' error"""
     r = res
     return (
         r
