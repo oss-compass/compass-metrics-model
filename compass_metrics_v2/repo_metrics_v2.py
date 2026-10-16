@@ -50,25 +50,14 @@ def get_period_range(end_date: datetime, period: str):
         month = ((end_date.month - 1) // 3) * 3 + 1
         start_date = end_date.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # 2. 修改 end_date 为该周期的最后一天
+    # End at the last microsecond of the period, regardless of the input time.
     if period == "month":
-        # 下个月的第一天减去 1 秒（或1天）
-        if end_date.month == 12:
-            next_month = end_date.replace(year=end_date.year + 1, month=1, day=1)
-        else:
-            next_month = end_date.replace(month=end_date.month + 1, day=1)
-        actual_end_date = next_month - timedelta(seconds=1)
-
+        next_start = start_date + relativedelta(months=1)
     elif period == "year":
-        actual_end_date = end_date.replace(month=12, day=31, hour=23, minute=59, second=59)
-
+        next_start = start_date + relativedelta(years=1)
     else:  # quarter
-        quarter_end_month = ((end_date.month - 1) // 3) * 3 + 3
-        if quarter_end_month == 12:
-            next_start = end_date.replace(year=end_date.year + 1, month=1, day=1)
-        else:
-            next_start = end_date.replace(month=quarter_end_month + 1, day=1)
-        actual_end_date = next_start - timedelta(seconds=1)
+        next_start = start_date + relativedelta(months=3)
+    actual_end_date = next_start - timedelta(microseconds=1)
 
     return start_date, actual_end_date
 
