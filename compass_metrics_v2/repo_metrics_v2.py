@@ -104,7 +104,7 @@ def get_latest_count(client, index, repos_list, to_date, date_field="grimoire_cr
             "bool": {
                 "filter": [
                     {"terms": {"tag": repos_list}},
-                    {"range": {date_field: {"lt": to_date_str}}}
+                    {"range": {date_field: {"lte": to_date_str}}}
                 ]
             }
         },
