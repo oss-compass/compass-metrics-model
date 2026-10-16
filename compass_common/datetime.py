@@ -176,10 +176,14 @@ def get_time_diff_date(start, end, date_type="day"):
     if start is None or end is None:
         return None
 
-    if type(start) is not datetime.datetime:
+    if not isinstance(start, datetime.datetime):
         start = parse(start)
-    if type(end) is not datetime.datetime:
+    elif start.tzinfo is not None:
+        start = datetime_to_utc(start).replace(tzinfo=None)
+    if not isinstance(end, datetime.datetime):
         end = parse(end)
+    elif end.tzinfo is not None:
+        end = datetime_to_utc(end).replace(tzinfo=None)
 
     if date_type == "minute":
         seconds_date = float(60)
@@ -251,12 +255,7 @@ def get_date_list_by_period(begin_date, end_date,period):
     return date_list
 
 def parse(date_str):
-    try:
-        time_format = "%Y-%m-%dT%H:%M:%S"
-        date = datetime.datetime.strptime(date_str[:19], time_format)
-    except Exception:
-        date = str_to_datetime(date_str).replace(tzinfo=None)
-    return date
+    return datetime_to_utc(str_to_datetime(date_str)).replace(tzinfo=None)
 def get_last_three_years_dates():
     '''Get January 1st of the last three years including the current year'''
     current_year = datetime.datetime.now().year
