@@ -43,11 +43,12 @@ def get_elasticsearch_client(elastic_url):
 def get_opensearch_client(url):
     """ Get opensearch client by url """
     parsed_url = urlparse(url)
+    is_https = parsed_url.scheme == 'https'
     client = OpenSearch(
-        hosts=[{'host': parsed_url.hostname, 'port': parsed_url.port}],
+        hosts=[{'host': parsed_url.hostname, 'port': parsed_url.port or (443 if is_https else 80)}],
         http_compress=True,
-        http_auth=(parsed_url.username, parsed_url.password),
-        use_ssl= parsed_url.scheme == 'https',
+        http_auth=(parsed_url.username, parsed_url.password) if parsed_url.username else None,
+        use_ssl=is_https,
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False
