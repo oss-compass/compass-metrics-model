@@ -172,4 +172,4 @@ def free_scroll(client, scroll_id=None):
     try:
         client.clear_scroll(scroll_id=scroll_id)
     except Exception as e:
-        logger.debug("Error releasing scroll: {}".scroll_id)
+        logger.debug("Error releasing scroll %s: %s", scroll_id, e)
