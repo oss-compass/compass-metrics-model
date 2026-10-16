@@ -230,7 +230,8 @@ def get_date_list_by_period(begin_date, end_date,period):
     # 'YS': 每年 (年初开始, Year Start)
     print(f"period: {period}")
     freq_map = {
-
+        'day': 'D',
+        'week': 'W-MON',
         'month': 'MS',
         'quarter': 'QS',
         'year': 'YS'
@@ -238,7 +239,7 @@ def get_date_list_by_period(begin_date, end_date,period):
 
     # 2. 获取对应的 freq，如果没传或者找不到，默认设为 'W-MON' (按周)
     # 这里的 .get(period, 'W-MON') 意味着如果 period 是乱写的，就默认按周处理
-    freq = freq_map.get(period, 'MS')
+    freq = freq_map.get(period, 'W-MON')
 
     # 3. 生成时间列表 (保留了你原有的转换逻辑)
     # 建议直接用 .tolist()，比 [x for x in list(...)] 更快更简洁
