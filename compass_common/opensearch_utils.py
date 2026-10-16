@@ -147,8 +147,9 @@ def get_items(client, index, body, size, scroll_id=None, scroll="5m"):
         else:
             page = client.scroll(scroll_id=scroll_id, scroll=scroll)
     except Exception as e:
-        if too_many_scrolls(e.info):
+        if too_many_scrolls(getattr(e, 'info', None)):
             return {'too_many_scrolls': True}
+        raise
     return page
 
 def too_many_scrolls(res):
