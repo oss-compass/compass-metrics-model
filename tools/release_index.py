@@ -67,6 +67,6 @@ if __name__ == "__main__":
     repo_url = "https://gitee.com/mindspore/mindspore"
     opensearch_conn_infos = json.load(open("opensearch_message.json"))
     opensearch_client = get_opensearch_client(opensearch_conn_infos)
-    query = newest_message(opensearch_client, repo_url)
+    query = newest_message(repo_url)
     items = opensearch_search(opensearch_client, "gitee_repo-enriched",query)["hits"]["hits"][0]["_source"]["releases"]
-    add_release_message("repo_release_enriched", repo_url, items)
+    add_release_message(opensearch_client, "repo_release_enriched", repo_url, items)
