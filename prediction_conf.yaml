@@ -4,8 +4,8 @@ url:
 params:
   {
       'repo': 'https://github.com/pytorch/pytorch',
-      'activity_index': 'compass_metric_model_activity,
-      'development_index': 'compass_metric_model_codequality,
-      'community_index': 'compass_metric_model_community,
+      'activity_index': 'compass_metric_model_activity',
+      'development_index': 'compass_metric_model_codequality',
+      'community_index': 'compass_metric_model_community',
       'organizations_activity_index': 'compass_metric_model_group_activity'
   }
