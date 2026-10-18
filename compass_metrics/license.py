@@ -227,11 +227,12 @@ def check_license_compatibility(licenses):
             'details': f'Discover unknown licenses: {unknown_licenses}'
         }
 
-    # 检查许可证兼容性
+    # 检查许可证兼容性：一对许可证只要有一个方向允许组合，就不算冲突，
+    # 否则结果会随许可证列表的顺序（来自 set，顺序不稳定）而改变
     incompatible_pairs = []
     for i, lic1 in enumerate(licenses):
         for lic2 in licenses[i + 1:]:
-            if lic2 not in LICENSE_COMPATIBILITY[lic1]:
+            if lic2 not in LICENSE_COMPATIBILITY[lic1] and lic1 not in LICENSE_COMPATIBILITY[lic2]:
                 incompatible_pairs.append((lic1, lic2))
 
     if incompatible_pairs:
