@@ -82,17 +82,19 @@ class StarterProjectHealthMetricsModel(MetricsModel):
         pr_open_time_repo = []
         for item in pr_opens_items:
             if 'state' in item['_source']:
-                if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and \
-                        str_to_datetime(item['_source']['merged_at']) < date:
+                source = item['_source']
+                closed_at = source.get('closed_at') or source.get('updated_at')
+                if source['state'] == 'merged' and source.get('merged_at') and \
+                        str_to_datetime(source['merged_at']) < date:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], item['_source']['merged_at']))
-                if item['_source']['state'] == 'closed' and \
-                        str_to_datetime(item['_source']['closed_at'] or item['_source']['updated_at']) < date:
+                        source['created_at'], source['merged_at']))
+                elif source['state'] == 'closed' and closed_at and \
+                        str_to_datetime(closed_at) < date:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
+                        source['created_at'], closed_at))
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], str(date)))
+                        source['created_at'], str(date)))
         if len(pr_open_time_repo) == 0:
             return None, None
         pr_open_time_repo_avg = float(sum(pr_open_time_repo)/len(pr_open_time_repo))

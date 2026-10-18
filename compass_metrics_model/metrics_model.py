@@ -1025,15 +1025,17 @@ class CommunitySupportMetricsModel(MetricsModel):
         date_str = date.isoformat()
         for item in pr_opens_items:
             if 'state' in item['_source']:
-                if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and item['_source']['merged_at'] < date_str:
+                source = item['_source']
+                closed_at = source.get('closed_at') or source.get('updated_at')
+                if source['state'] == 'merged' and source.get('merged_at') and source['merged_at'] < date_str:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], item['_source']['merged_at']))
-                if item['_source']['state'] == 'closed' and item['_source']['closed_at'] or item['_source']['updated_at'] < date_str:
+                        source['created_at'], source['merged_at']))
+                elif source['state'] == 'closed' and closed_at and closed_at < date_str:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
+                        source['created_at'], closed_at))
                 else:
                     pr_open_time_repo.append(get_time_diff_days(
-                        item['_source']['created_at'], date_str))
+                        source['created_at'], date_str))
         pr_open_time_repo = list(filter(lambda x: x >= 0, pr_open_time_repo))
         if len(pr_open_time_repo) == 0:
             return None, None
