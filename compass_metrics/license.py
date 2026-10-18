@@ -117,6 +117,14 @@ def license_is_weak(client, contributors_index, version, repo_list, page_size=1)
     license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
     licenses = _get_normalized_licenses(license_msg)
 
+    # 没有检测到许可证时不能给出"全部许可证都是宽松型"的结论
+    if not licenses:
+        return {
+            'license_is_weak': 0,
+            'license_list': licenses,
+            'license_is_weak_details': 'No license found'
+        }
+
     # 检查是否所有许可证都是宽松型的
     all_weak = all(license in WEAK_LICENSES for license in licenses)
 
@@ -181,6 +189,15 @@ def license_commercial_allowed(client, contributors_index, version, repo_list, p
     # 获取许可证信息
     license_msg = get_license_msg(client, contributors_index, version, repo_list, page_size)
     licenses = _get_normalized_licenses(license_msg)
+
+    # 没有检测到许可证时不能给出"全部许可证都允许闭源"的结论
+    if not licenses:
+        return {
+            'license_commercial_allowed': 0,
+            'license_list': licenses,
+            'non_commercial_licenses': [],
+            'license_commercial_allowed_details': 'No license found'
+        }
 
     # 检查是否所有许可证都允许闭源
     all_commercial_allowed = all(license in COMMERCIAL_ALLOWED_LICENSES for license in licenses)
