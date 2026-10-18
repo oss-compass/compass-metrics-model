@@ -44,7 +44,7 @@ def count_documents_from_folder(path, extensions=None)->tuple:
                         "name": file,
                         "path": os.path.join(root, file).replace(TMP_PATH, "")[1:].replace("\\", "/")
                     })
-                except:
+                except (OSError, UnicodeDecodeError):
                     continue
     return document_count, document_details
 
