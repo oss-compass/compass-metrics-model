@@ -1,7 +1,7 @@
 import os
 
 import re
-from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo,save_json
+from compass_metrics.utils_code_readability import load_json,check_github_gitee,clone_repo
 
 from compass_metrics.utils_code_readability import save_json,JSON_REPOPATH,TMP_PATH
 REPOPATH = TMP_PATH
