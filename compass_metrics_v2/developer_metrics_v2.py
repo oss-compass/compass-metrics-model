@@ -1,3 +1,4 @@
+from compass_metrics.contribution_utils import contribution_sum_aggregation
 from compass_metrics.db_dsl import get_contributor_query, get_uuid_count_query
 from compass_common.datetime import check_times_has_overlap
 from compass_common.opensearch_utils import get_all_index_data
@@ -95,13 +96,11 @@ def _get_contributor_cardinality(client, index, query, field="contributor.keywor
     return result["aggregations"]["count"]["value"]
 
 
-def _get_contribution_sum(client, index, query):
-    """获取贡献量总和"""
+def _get_contribution_sum(client, index, query, contribution_types, exclude=False):
+    """Sum matching activity entries, rather than the contributor's all-type total."""
     query_copy = query.copy()
     query_copy["aggs"] = {
-        "total_contribution": {
-            "sum": {"field": "contribution"}
-        }
+        "total_contribution": contribution_sum_aggregation(contribution_types, exclude)
     }
     result = client.search(index=index, body=query_copy)
     return result["aggregations"]["total_contribution"]["value"]
@@ -232,10 +231,7 @@ def org_non_code_contribution_by_period(client, contributors_enriched_index, end
     query = _base_contributor_query(repo_list, from_date, to_date, [
         {"match_phrase": {"ecological_type": "organization"}}
     ])
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    total = _get_contribution_sum(client, contributors_enriched_index, query, code_types, exclude=True)
     return {"org_non_code_contribution": total, "period": period}
 
 
@@ -247,10 +243,7 @@ def org_non_code_contribution_ratio_by_period(client, contributors_enriched_inde
     code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
     # 总非代码贡献量
     total_query = _base_contributor_query(repo_list, from_date, to_date)
-    total_query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query, code_types, exclude=True)
 
     # 组织非代码贡献量
     org_non_code = \
@@ -409,10 +402,7 @@ def individual_non_code_contribution_by_period(client, contributors_enriched_ind
     query = _base_contributor_query(repo_list, from_date, to_date, [
         {"match_phrase": {"ecological_type": "individual participant"}}
     ])
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    total = _get_contribution_sum(client, contributors_enriched_index, query)
+    total = _get_contribution_sum(client, contributors_enriched_index, query, code_types, exclude=True)
     return {"individual_non_code_contribution": total, "period": period}
 
 
@@ -425,10 +415,7 @@ def individual_non_code_contribution_ratio_by_period(client, contributors_enrich
     code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
     # 总非代码贡献量
     total_query = _base_contributor_query(repo_list, from_date, to_date)
-    total_query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query)
+    total_non_code = _get_contribution_sum(client, contributors_enriched_index, total_query, code_types, exclude=True)
 
     # 个人非代码贡献量
     individual_non_code = \
