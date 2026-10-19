@@ -3,6 +3,7 @@ from compass_common.datetime import check_times_has_overlap
 from compass_common.opensearch_utils import get_all_index_data
 from datetime import timedelta
 from itertools import groupby
+from compass_metrics.contribution_ranking import highest_contribution_key
 import pandas as pd
 import datetime
 from dateutil.relativedelta import relativedelta
@@ -660,24 +661,8 @@ def highest_contribution_organization(client, contributors_enriched_index, date,
             "is_bot": "true" if is_bot else "false"
         }
     })
-    query["aggs"]["count_of_uuid"]["aggs"] = {
-        "sum_contribution": {
-            "sum": {
-                "field": "contribution"
-            }
-        }
-    }
-    query["aggs"]["max_sum_contribution"] = {
-        "max_bucket": {
-            "buckets_path": "count_of_uuid>sum_contribution"
-        }
-    }
-    keys = client.search(index=contributors_enriched_index, body=query)[
-        'aggregations']['max_sum_contribution']['keys']
-    organization = None
-    if len(keys) > 0:
-        organization = keys[0]
-    return {"highest_contribution_organization": organization}
+    winner = highest_contribution_key(client, contributors_enriched_index, query, "organization.keyword")
+    return {"highest_contribution_organization": winner}
 
 
 def highest_contribution_contributor(client, contributors_enriched_index, date, repo_list, from_date=None,
@@ -692,24 +677,8 @@ def highest_contribution_contributor(client, contributors_enriched_index, date, 
             "is_bot": "true" if is_bot else "false"
         }
     })
-    query["aggs"]["count_of_uuid"]["aggs"] = {
-        "sum_contribution": {
-            "sum": {
-                "field": "contribution"
-            }
-        }
-    }
-    query["aggs"]["max_sum_contribution"] = {
-        "max_bucket": {
-            "buckets_path": "count_of_uuid>sum_contribution"
-        }
-    }
-    keys = client.search(index=contributors_enriched_index, body=query)[
-        'aggregations']['max_sum_contribution']['keys']
-    individual = None
-    if len(keys) > 0:
-        individual = keys[0]
-    return {"highest_contribution_contributor": individual}
+    winner = highest_contribution_key(client, contributors_enriched_index, query, "contributor.keyword")
+    return {"highest_contribution_contributor": winner}
 
 
 def contribution_distribution(client, contributors_enriched_index, date, repo_list, from_date=None, is_bot=False,
