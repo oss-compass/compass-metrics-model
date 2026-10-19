@@ -103,7 +103,7 @@ def get_vul_levels_metrics(repo_name,client,version):
 if __name__ == '__main__':
     repo_list ="https://github.com/qier222/YesPlayMusic"
     # print(get_security_metrics(repo_list))
-    with open("漏洞等级.json", "w") as f:
+    with open("漏洞等级.json", "w", encoding="utf-8") as f:
         json.dump(get_vul_levels_metrics(repo_list), f,indent=4)
     # with open("漏洞修复时间.json", "w") as f:
     #     json.dump(get_timeliness_is_high_metrics(repo_list), f,indent=4)

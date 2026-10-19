@@ -70,7 +70,8 @@ def get_bots_info(source):
 
 def get_all_repo(json_file, origin):
     all_repo = []
-    all_repo_json = json.load(open(json_file))
+    with open(json_file, encoding='utf-8') as json_fd:
+        all_repo_json = json.load(json_fd)
     for project in all_repo_json:
         origin_software_artifact = origin + "-software-artifact"
         origin_governance = origin + "-governance"
