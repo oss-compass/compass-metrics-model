@@ -1,4 +1,3 @@
-from OssPrediction.api import predict
 from compass_common.datetime import datetime_utcnow
 from datetime import timedelta, datetime
 
@@ -93,6 +92,8 @@ def get_activity_metrics_model(client, model_index, repo):
 
 def prediction_activity(repo, model_data_list):
     """ Predict open source project activity """
+    from OssPrediction.api import predict
+
     data_list = []
     for model_data in model_data_list:
         df = pd.DataFrame(model_data)
