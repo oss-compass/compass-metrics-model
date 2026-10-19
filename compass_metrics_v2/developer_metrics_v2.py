@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 
 from dateutil.relativedelta import relativedelta
+from compass_metrics.period_contributors import get_non_code_contributor_counts
 
 
 
@@ -130,17 +131,17 @@ def code_contributors_by_period(client, contributors_enriched_index, end_date, r
     return {"code_contributors": count, "period": period}
 
 
-def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    活跃非代码贡献者：周期内仅参与讨论但未提交代码的用户数。
-    计算：总活跃贡献者 - 代码贡献者
-    """
-    total = total_active_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "total_active_contributors"]
-    code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "code_contributors"]
-    non_code = total - code
-    return {"non_code_contributors": max(0, non_code), "period": period}
+def _non_code_counts_by_period(client, index, end_date, repo_list, period):
+    from_date, to_date = get_period_range(end_date, period)
+    query = _base_contributor_query(repo_list, from_date, to_date)
+    return get_non_code_contributor_counts(client, index, query)
+
+
+def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"non_code_contributors": counts["total"], "period": period}
 
 
 def participating_orgs_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
@@ -187,38 +188,22 @@ def org_code_contributors_ratio_by_period(client, contributors_enriched_index, e
     }
 
 
-def org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    组织非代码贡献者数量：周期内参与非代码贡献的组织贡献者个数。
-    """
-    from_date, to_date = get_period_range(end_date, period)
-    # 非代码贡献类型：排除代码相关的贡献类型
-    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
-    query = _base_contributor_query(repo_list, from_date, to_date, [
-        {"match_phrase": {"ecological_type": "organization"}}
-    ])
-    # 使用脚本过滤掉有代码贡献的用户
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
-    return {"org_non_code_contributors": count, "period": period}
+def org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"org_non_code_contributors": counts["org"], "period": period}
 
 
-def org_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    组织非代码贡献者数量占比：周期内组织非代码贡献者占总非代码贡献者数量的比例。
-    """
-    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "non_code_contributors"]
-    org_non_code = \
-        org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-            "org_non_code_contributors"]
-    ratio = (org_non_code / total_non_code) if total_non_code > 0 else None
+def org_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    total = counts["total"]
     return {
-        "org_non_code_contributors_ratio": ratio,
-        "org_non_code_contributors": org_non_code,
-        "total_non_code_contributors": total_non_code,
+        "org_non_code_contributors_ratio": (counts["org"] / total) if total > 0 else None,
+        "org_non_code_contributors": counts["org"],
+        "total_non_code_contributors": total,
         "period": period
     }
 
@@ -345,7 +330,7 @@ def individual_code_contributors_by_period(client, contributors_enriched_index, 
 
 
 def individual_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                 period="month"):
+                                             period="month"):
     """
     个人代码贡献者数量占比：周期内个人代码贡献者数量占总代码贡献者数量的比例。
     """
@@ -364,43 +349,27 @@ def individual_code_contributors_ratio_by_period(client, contributors_enriched_i
 
 
 def individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                               period="month"):
-    """
-    个人非代码贡献者数量：周期内仅参与非代码贡献行为的个人贡献者数量。
-    """
-    from_date, to_date = get_period_range(end_date, period)
-    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
-    query = _base_contributor_query(repo_list, from_date, to_date, [
-        {"match_phrase": {"ecological_type": "individual participant"}}
-    ])
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
-    return {"individual_non_code_contributors": count, "period": period}
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"individual_non_code_contributors": counts["individual"], "period": period}
 
 
 def individual_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                     period="month"):
-    """
-    个人非代码贡献者数量占比：周期内个人非代码贡献者数量占总非代码贡献者数量的比例。
-    """
-    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "non_code_contributors"]
-    individual_non_code = \
-        individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-            "individual_non_code_contributors"]
-    ratio = (individual_non_code / total_non_code) if total_non_code > 0 else None
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    total = counts["total"]
     return {
-        "individual_non_code_contributors_ratio": ratio,
-        "individual_non_code_contributors": individual_non_code,
-        "total_non_code_contributors": total_non_code,
+        "individual_non_code_contributors_ratio": (counts["individual"] / total) if total > 0 else None,
+        "individual_non_code_contributors": counts["individual"],
+        "total_non_code_contributors": total,
         "period": period
     }
 
 
 def individual_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                               period="month"):
+                                           period="month"):
     """
     个人非代码贡献量：周期内个人贡献者提交的非代码贡献总次数。
     """
@@ -417,7 +386,7 @@ def individual_non_code_contribution_by_period(client, contributors_enriched_ind
 
 
 def individual_non_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                     period="month"):
+                                                 period="month"):
     """
     个人非代码贡献量占比：周期内个人非代码贡献量占非代码总贡献量的比例。
     """
@@ -667,7 +636,7 @@ def new_org_non_code_contributors_by_period(client, contributors_enriched_index,
 
 
 def new_individual_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                               period="month"):
+                                           period="month"):
     """
     新增个人代码开发者数量：本周期内首次产生代码贡献的个人开发者数量。
     """
@@ -682,7 +651,7 @@ def new_individual_code_contributors_by_period(client, contributors_enriched_ind
 
 
 def new_individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                   period="month"):
+                                               period="month"):
     """
     新增个人非代码开发者数量：本周期内首次产生非代码贡献的个人开发者数量。
     """
@@ -826,7 +795,7 @@ def org_issue_visitor_contributors_by_period(client, contributors_enriched_index
 
 
 def individual_code_core_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                period="month"):
+                                            period="month"):
     """个人代码核心开发者（含管理者）数量：本周期内代码贡献度前 50% 的个人开发者。"""
     from_date, to_date = get_period_range(end_date, period)
     code_map, _ = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -836,7 +805,7 @@ def individual_code_core_contributors_by_period(client, contributors_enriched_in
 
 
 def individual_issue_core_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                 period="month"):
+                                             period="month"):
     """个人 Issue 核心开发者（含管理者）数量：本周期内 Issue 活跃度前 50%。"""
     from_date, to_date = get_period_range(end_date, period)
     _, issue_map = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -846,7 +815,7 @@ def individual_issue_core_contributors_by_period(client, contributors_enriched_i
 
 
 def individual_code_regular_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                   period="month"):
+                                               period="month"):
     """个人代码常客开发者数量：代码贡献中间层级。"""
     from_date, to_date = get_period_range(end_date, period)
     code_map, _ = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -856,7 +825,7 @@ def individual_code_regular_contributors_by_period(client, contributors_enriched
 
 
 def individual_issue_regular_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                    period="month"):
+                                                period="month"):
     """个人 Issue 常客开发者数量：Issue 贡献 20%–50%。"""
     from_date, to_date = get_period_range(end_date, period)
     _, issue_map = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -866,7 +835,7 @@ def individual_issue_regular_contributors_by_period(client, contributors_enriche
 
 
 def individual_code_visitor_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                   period="month"):
+                                               period="month"):
     """个人代码访客开发者数量：代码贡献 <20%。"""
     from_date, to_date = get_period_range(end_date, period)
     code_map, _ = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -876,7 +845,7 @@ def individual_code_visitor_contributors_by_period(client, contributors_enriched
 
 
 def individual_issue_visitor_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                    period="month"):
+                                                period="month"):
     """个人 Issue 访客开发者数量：Issue 贡献低频 <20%。"""
     from_date, to_date = get_period_range(end_date, period)
     _, issue_map = _get_contributor_code_and_issue_contribution(client, contributors_enriched_index, repo_list,
@@ -982,7 +951,7 @@ def org_issue_core_promotion_count_by_period(client, contributors_enriched_index
 
 
 def individual_code_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                   period="month"):
+                                               period="month"):
     """个人代码核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的个人开发者数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)
@@ -1002,7 +971,7 @@ def individual_code_core_promotion_count_by_period(client, contributors_enriched
 
 
 def individual_issue_core_promotion_count_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                    period="month"):
+                                                period="month"):
     """个人 Issue 核心开发者（含管理者）晋升数量：上周期非核心，本周期成长为核心的个人开发者数量，加上晋升为管理者的数量。"""
     from_date, to_date = get_period_range(end_date, period)
     prev_start, prev_end = get_previous_period_range(end_date, period)

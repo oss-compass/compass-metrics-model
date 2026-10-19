@@ -6,6 +6,7 @@ from itertools import groupby
 import pandas as pd
 import datetime
 from dateutil.relativedelta import relativedelta
+from compass_metrics.period_contributors import get_non_code_contributor_counts
 
 
 def contributor_count(client, contributors_index, date, repo_list, from_date=None):
@@ -1462,21 +1463,17 @@ def code_contributors_by_period(client, contributors_enriched_index, end_date, r
     return {"code_contributors": count, "period": period}
 
 
-def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    活跃非代码贡献者：周期内有非观察类贡献行为（除 star/fork 外）但未提交代码的去重用户数。
-    计算：有实际贡献的去重用户数 - 代码贡献者数
-    """
+def _non_code_counts_by_period(client, index, end_date, repo_list, period):
     from_date, to_date = get_period_range(end_date, period)
-    # 有实际（非观察）贡献行为的贡献者数：contribution_without_observe > 0
-    real_query = _base_contributor_query(repo_list, from_date, to_date, [
-        {"range": {"contribution_without_observe": {"gt": 0}}}
-    ])
-    real = _get_contributor_cardinality(client, contributors_enriched_index, real_query)
-    code = code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "code_contributors"]
-    non_code = real - code
-    return {"non_code_contributors": max(0, non_code), "period": period}
+    query = _base_contributor_query(repo_list, from_date, to_date)
+    return get_non_code_contributor_counts(client, index, query)
+
+
+def non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"non_code_contributors": counts["total"], "period": period}
 
 
 def followers_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
@@ -1540,38 +1537,22 @@ def org_code_contributors_ratio_by_period(client, contributors_enriched_index, e
     }
 
 
-def org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    组织非代码贡献者数量：周期内参与非代码贡献的组织贡献者个数。
-    """
-    from_date, to_date = get_period_range(end_date, period)
-    # 非代码贡献类型：排除代码相关的贡献类型
-    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
-    query = _base_contributor_query(repo_list, from_date, to_date, [
-        {"match_phrase": {"ecological_type": "organization"}}
-    ])
-    # 使用脚本过滤掉有代码贡献的用户
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
-    return {"org_non_code_contributors": count, "period": period}
+def org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"org_non_code_contributors": counts["org"], "period": period}
 
 
-def org_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list, period="month"):
-    """
-    组织非代码贡献者数量占比：周期内组织非代码贡献者占总非代码贡献者数量的比例。
-    """
-    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "non_code_contributors"]
-    org_non_code = \
-    org_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "org_non_code_contributors"]
-    ratio = (org_non_code / total_non_code) if total_non_code > 0 else None
+def org_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    total = counts["total"]
     return {
-        "org_non_code_contributors_ratio": ratio,
-        "org_non_code_contributors": org_non_code,
-        "total_non_code_contributors": total_non_code,
+        "org_non_code_contributors_ratio": (counts["org"] / total) if total > 0 else None,
+        "org_non_code_contributors": counts["org"],
+        "total_non_code_contributors": total,
         "period": period
     }
 
@@ -1742,7 +1723,7 @@ def individual_code_contributors_by_period(client, contributors_enriched_index, 
 
 
 def individual_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                 period="month"):
+                                             period="month"):
     """
     个人代码贡献者数量占比：周期内个人代码贡献者数量占总代码贡献者数量的比例。
     """
@@ -1761,45 +1742,28 @@ def individual_code_contributors_ratio_by_period(client, contributors_enriched_i
 
 
 def individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                               period="month"):
-    """
-    个人非代码贡献者数量：周期内仅参与非代码贡献行为的个人贡献者数量。
-
-    """
-    from_date, to_date = get_period_range(end_date, period)
-    code_types = ["pr_creation", "pr_comments", "code_author", "code_committer", "pr_merged"]
-    query = _base_contributor_query(repo_list, from_date, to_date, [
-        {"match_phrase": {"ecological_type": "individual participant"}}
-    ])
-    query["query"]["bool"]["must_not"] = [
-        {"terms": {"contribution_type_list.contribution_type.keyword": code_types}}
-    ]
-    count = _get_contributor_cardinality(client, contributors_enriched_index, query)
-    return {"individual_non_code_contributors": count, "period": period}
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    return {"individual_non_code_contributors": counts["individual"], "period": period}
 
 
 def individual_non_code_contributors_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                     period="month"):
-    """
-    个人非代码贡献者数量占比：周期内个人非代码贡献者数量占总非代码贡献者数量的比例。
-    """
-    total_non_code = non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "non_code_contributors"]
-    individual_non_code = \
-    individual_non_code_contributors_by_period(client, contributors_enriched_index, end_date, repo_list, period)[
-        "individual_non_code_contributors"]
-    ratio = (individual_non_code / total_non_code) if total_non_code > 0 else None
+                                     period="month"):
+    """Count actual non-code contributors over the entire selected scope."""
+    counts = _non_code_counts_by_period(client, contributors_enriched_index, end_date, repo_list, period)
+    total = counts["total"]
     return {
-        "individual_non_code_contributors_ratio": ratio,
-        "individual_non_code_contributors": individual_non_code,
-        "total_non_code_contributors": total_non_code,
+        "individual_non_code_contributors_ratio": (counts["individual"] / total) if total > 0 else None,
+        "individual_non_code_contributors": counts["individual"],
+        "total_non_code_contributors": total,
         "period": period
     }
 
 #
 
 def individual_non_code_contribution_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                               period="month"):
+                                           period="month"):
     """
     个人非代码贡献量：周期内个人贡献者提交的非代码贡献总次数。
     """
@@ -1816,7 +1780,7 @@ def individual_non_code_contribution_by_period(client, contributors_enriched_ind
 
 
 def individual_non_code_contribution_ratio_by_period(client, contributors_enriched_index, end_date, repo_list,
-                                                     period="month"):
+                                                 period="month"):
     """
     个人非代码贡献量占比：周期内个人非代码贡献量占非代码总贡献量的比例。
     """
