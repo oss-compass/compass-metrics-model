@@ -1,5 +1,6 @@
 """ Set of issue related metrics """
 
+from compass_common.search_results import total_hits
 from compass_metrics.db_dsl import get_uuid_count_query, get_updated_issues_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
@@ -17,7 +18,7 @@ def issue_first_reponse(client, issue_index, date, repos_list, from_date=None):
     query_issue_first_reponse_avg["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
 
     issue_first_reponse = client.search(index=issue_index, body=query_issue_first_reponse_avg)
-    if issue_first_reponse["hits"]["total"]["value"] == 0:
+    if total_hits(issue_first_reponse) == 0:
         return { "issue_first_reponse_avg": None, "issue_first_reponse_mid": None }
     issue_first_reponse_avg = issue_first_reponse['aggregations']["count_of_uuid"]['value']
 
@@ -94,7 +95,7 @@ def comment_frequency(client, issue_index, date, repo_list, from_date=None):
     query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     issue = client.search(index=issue_index, body=query_issue_comments_count)
     try:
-        comment_count = float(issue['aggregations']["count_of_uuid"]['value'] / issue["hits"]["total"]["value"])
+        comment_count = float(issue['aggregations']["count_of_uuid"]['value'] / total_hits(issue))
     except ZeroDivisionError:
         comment_count = None
     result = {
@@ -328,7 +329,7 @@ def comment_frequency_year(client, issue_index, date, repo_list, from_date=None)
     query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     issue = client.search(index=issue_index, body=query_issue_comments_count)
     try:
-        comment_count = float(issue['aggregations']["count_of_uuid"]['value'] / issue["hits"]["total"]["value"])
+        comment_count = float(issue['aggregations']["count_of_uuid"]['value'] / total_hits(issue))
     except ZeroDivisionError:
         comment_count = None
     result = {

@@ -1,5 +1,6 @@
 """ Set of pr related metrics """
 
+from compass_common.search_results import total_hits
 from compass_metrics.db_dsl import (get_uuid_count_query,
                                     get_pr_closed_uuid_count,
                                     get_pr_message_count,
@@ -56,7 +57,7 @@ def code_review_count(client, pr_index, date, repo_list, from_date=None):
             "avg", repo_list, "num_review_comments_without_bot", size=0, from_date=from_date, to_date=date)
     query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
     prs = client.search(index=pr_index, body=query_pr_comments_count)
-    if prs["hits"]["total"]["value"] == 0:
+    if total_hits(prs) == 0:
         comment_count = None
     else:
         comment_count = prs['aggregations']["count_of_uuid"]['value']
@@ -471,7 +472,7 @@ def code_review_count_year(client, pr_index, date, repo_list):
             "avg", repo_list, "num_review_comments_without_bot", size=0, from_date=(date - relativedelta(years=3)).replace(month=1, day=1), to_date=date)
     query_pr_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "true" }})
     prs = client.search(index=pr_index, body=query_pr_comments_count)
-    if prs["hits"]["total"]["value"] == 0:
+    if total_hits(prs) == 0:
         comment_count = None
     else:
         comment_count = prs['aggregations']["count_of_uuid"]['value']

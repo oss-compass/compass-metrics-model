@@ -1,5 +1,6 @@
 """ Set of issue related metrics """
 
+from compass_common.search_results import total_hits
 from compass_metrics.db_dsl import get_uuid_count_query, get_updated_issues_count_query
 from datetime import timedelta
 from compass_common.datetime import get_time_diff_days
@@ -158,7 +159,7 @@ def issue_new_first_response_time_by_period(client, issue_index, end_date, repos
     )
     avg_query["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
     avg_res = client.search(index=issue_index, body=avg_query)
-    if avg_res["hits"]["total"]["value"] == 0:
+    if total_hits(avg_res) == 0:
         return {
             "issue_new_first_response_avg": None,
             "issue_new_first_response_mid": None,
@@ -281,7 +282,7 @@ def issue_comment_activity_by_period(client, issue_index, end_date, repos_list, 
     )
     query_issue_comments_count["query"]["bool"]["must"].append({"match_phrase": {"pull_request": "false"}})
     res = client.search(index=issue_index, body=query_issue_comments_count)
-    total_comments = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+    total_comments = res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
     return {
         "issue_comment_activity": total_comments,
         "period": period,

@@ -1,5 +1,6 @@
 """ Set of git related metrics """
 
+from compass_common.search_results import total_hits
 from compass_metrics.db_dsl import (get_updated_since_query,
                                     get_uuid_count_query,
                                     get_message_list_query,
@@ -532,7 +533,7 @@ def lines_changed_by_period(client, git_index, end_date, repos_list, period="mon
     def _sum_field(field):
         q = get_uuid_count_query("sum", git_repos, field, "grimoire_creation_date", size=0, from_date=from_date, to_date=to_date)
         res = client.search(index=git_index, body=q)
-        return res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+        return res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
 
     added = _sum_field("lines_added")
     removed = _sum_field("lines_removed")
@@ -555,7 +556,7 @@ def org_code_contribution_by_period(client, git_index, end_date, repos_list, per
         {"match_phrase": {"author_org_name": ""}},
     ]
     res = client.search(index=git_index, body=query)
-    org_added = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+    org_added = res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
     return {"org_code_contribution_lines": org_added, "period": period}
 
 
@@ -589,7 +590,7 @@ def personal_code_contribution_by_period(client, git_index, end_date, repos_list
         {"match_phrase": {"author_org_name": ""}},
     ]
     res = client.search(index=git_index, body=query)
-    personal_added = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+    personal_added = res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
     return {"personal_code_contribution_lines": personal_added, "period": period}
 
 

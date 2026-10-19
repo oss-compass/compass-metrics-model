@@ -1,3 +1,4 @@
+from compass_common.search_results import total_hits
 from datetime import timedelta
 from itertools import groupby
 import pandas as pd
@@ -28,7 +29,7 @@ def get_vul_levels_metrics(repo_name,client,version):
     }
 
     response = client.search(body=query, index="compass_metric_model_opencheck")
-    if response['hits']['total']['value'] == 0:
+    if total_hits(response) == 0:
         return ValueError("No security metrics found for this repo")
     
     hits = response['hits']['hits']

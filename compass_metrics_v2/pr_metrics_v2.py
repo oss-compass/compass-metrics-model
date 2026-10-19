@@ -1,6 +1,7 @@
 """ Set of pr related metrics """
 
 
+from compass_common.search_results import total_hits
 from compass_metrics.db_dsl import (get_uuid_count_query,
                                     get_pr_closed_uuid_count,
                                     get_pr_message_count,
@@ -161,7 +162,7 @@ def pr_new_first_response_time_by_period(client, pr_index, end_date, repos_list,
     avg_query["query"]["bool"]["must"].append({"range": {"time_to_first_attention_without_bot": {"gte": 0}}})
     # print(avg_query)
     avg_res = client.search(index=pr_index, body=avg_query)
-    if avg_res["hits"]["total"]["value"] == 0:
+    if total_hits(avg_res) == 0:
         return {
             "pr_new_first_response_avg": None,
             "pr_new_first_response_mid": None,
@@ -461,7 +462,7 @@ def pr_avg_interactions_by_period(client, pr_index, end_date, repos_list, period
     sum_query = build_base_pr_query("sum", repos_list, "num_review_comments_without_bot", "grimoire_creation_date",
                                     from_date, to_date)
     res = client.search(index=pr_index, body=sum_query)
-    comments_total = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+    comments_total = res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
 
     return {
         "pr_avg_interactions": (comments_total / total) if total > 0 else None,
@@ -517,7 +518,7 @@ def pr_comment_count_by_period(client, pr_index, end_date, repos_list, period="m
     query = build_base_pr_query("sum", repos_list, "num_review_comments_without_bot", "grimoire_creation_date",
                                 from_date, to_date)
     res = client.search(index=pr_index, body=query)
-    total = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
+    total = res["aggregations"]["count_of_uuid"]["value"] if total_hits(res) > 0 else 0
     return {"pr_comment_count": total, "period": period}
 
 
