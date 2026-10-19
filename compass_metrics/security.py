@@ -226,7 +226,7 @@ def base_post_request(request_path, payload, token=None):
             f"{TPC_SERVICE_API_ENDPOINT}/{request_path}",
             json=payload,
             headers=headers
-        )
+, timeout=30)
         response.raise_for_status()
         resp_data = response.json()
         if "error" in resp_data:
