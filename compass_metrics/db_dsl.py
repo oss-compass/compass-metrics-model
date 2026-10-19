@@ -3,8 +3,10 @@
 from compass_common.datetime import datetime_utcnow, str_to_datetime
 
 
-def get_updated_since_query(repos_list, date_field="grimoire_creation_date", operation="max", to_date=datetime_utcnow()):
+def get_updated_since_query(repos_list, date_field="grimoire_creation_date", operation="max", to_date=None):
     """ Query statement to get the code commit data of the repository """
+    if to_date is None:
+        to_date = datetime_utcnow()
     query = {
         "size": 0,
         "aggs": {
@@ -154,8 +156,10 @@ def get_repo_message_query(repo_url):
     return query
 
 
-def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=datetime_utcnow()):
+def get_recent_releases_uuid_count(repo_list, from_date=str_to_datetime("1970-01-01"), to_date=None):
     """ Query statement to get the count of releases in a certain time frame """
+    if to_date is None:
+        to_date = datetime_utcnow()
     query = {
         "size": 0,
         "aggs": {
