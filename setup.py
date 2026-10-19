@@ -19,8 +19,13 @@ setup(name="compass_metrics_model",
           'Topic :: Software Development',
           'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
           'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5'],
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11',
+          'Programming Language :: Python :: 3.12'],
       keywords="Metric Model",
       packages=find_packages(),
       package_data={
@@ -28,7 +33,11 @@ setup(name="compass_metrics_model",
           'compass_metrics': ['resources/*'],
           'compass_contributor': ['conf_utils/*']
       },
-      python_requires='>=3.4',
+      # The package uses f-strings throughout, which are Python 3.6 syntax.
+      python_requires='>=3.6',
       setup_requires=['wheel'],
+      extras_require={
+          'test': ['pytest', 'ruff', 'bandit', 'mypy'],
+      },
       zip_safe=False
       )
