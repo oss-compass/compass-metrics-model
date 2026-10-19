@@ -6,6 +6,7 @@ Date: 2025-01-16 17:34:10
 LastEditors: zyx
 LastEditTime: 2025-03-24 17:18:09
 '''
+import subprocess
 import json
 import os
 import sys
@@ -91,10 +92,14 @@ def clone_repo(repo_url,version):
     clone_path = os.path.join(TMP_PATH, repo_name)
     new_clone_path = os.path.join(TMP_PATH, repo_name + "-"+version)
 
-    clone_command = f'git clone --branch {version} https://{token}@{repo_url} {clone_path}'
+    clone_command = [
+        "git", "clone", "--branch", str(version),
+        f"https://{token}@{repo_url}", clone_path,
+    ]
 
-
-    result = os.system(clone_command)
+    # Pass the arguments as a list: os.system would let a ';' in the branch name
+    # or the url run as a second command.
+    result = subprocess.run(clone_command, capture_output=True).returncode
 
     if result == 0:
         if os.path.exists(clone_path):
