@@ -583,11 +583,18 @@ def personal_code_contribution_by_period(client, git_index, end_date, repos_list
     query = get_uuid_count_query(
         "sum", git_repos, "lines_added", "grimoire_creation_date", size=0, from_date=from_date, to_date=to_date
     )
-    query["query"]["bool"]["must_not"] = [
-        {"exists": {"field": "author_org_name"}},
-        {"match_phrase": {"author_org_name": "Unknown"}},
-        {"match_phrase": {"author_org_name": ""}},
-    ]
+    # Complement the organization selector: absent OR its Unknown/empty matches,
+    # rather than excluding every document that has an organization field.
+    query["query"]["bool"]["must"].append({
+        "bool": {
+            "should": [
+                {"bool": {"must_not": [{"exists": {"field": "author_org_name"}}]}},
+                {"match_phrase": {"author_org_name": "Unknown"}},
+                {"match_phrase": {"author_org_name": ""}},
+            ],
+            "minimum_should_match": 1,
+        }
+    })
     res = client.search(index=git_index, body=query)
     personal_added = res["aggregations"]["count_of_uuid"]["value"] if res["hits"]["total"]["value"] > 0 else 0
     return {"personal_code_contribution_lines": personal_added, "period": period}
