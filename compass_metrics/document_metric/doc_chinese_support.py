@@ -15,6 +15,9 @@ LastEditors: zyx
 LastEditTime: 2025-03-03 09:26:04
 '''
 import os 
+
+# Upper bound for every outbound HTTP call in this module.
+REQUEST_TIMEOUT = 30
 import re
 import json
 import requests
@@ -80,9 +83,9 @@ def get_file_commit_time(repo_url, file_path, platform='gitub'):
     commits_url = f"https://api.github.com/repos/{owner}/{repo_name}/commits?path={file_path}"
     # print(commits_url)
     if platform == 'github':
-        response = requests.get(commits_url, headers=GITHUB_HEADERS)
+        response = requests.get(commits_url, headers=GITHUB_HEADERS, timeout=REQUEST_TIMEOUT)
     else:
-        response = requests.get(commits_url, headers=GITEE_HEADERS)
+        response = requests.get(commits_url, headers=GITEE_HEADERS, timeout=REQUEST_TIMEOUT)
 
     if response.status_code == 200:
         commit_data = response.json()
