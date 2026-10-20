@@ -1,4 +1,7 @@
 import requests
+
+# Upper bound for every outbound HTTP call in this module.
+REQUEST_TIMEOUT = 30
 import configparser
 import os
 
@@ -226,7 +229,7 @@ def base_post_request(request_path, payload, token=None):
             f"{TPC_SERVICE_API_ENDPOINT}/{request_path}",
             json=payload,
             headers=headers
-        )
+        , timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         resp_data = response.json()
         if "error" in resp_data:
