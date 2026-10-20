@@ -7,6 +7,9 @@ LastEditors: zyx
 LastEditTime: 2025-03-04 17:44:17
 '''
 import json
+
+# Upper bound for every outbound HTTP call in this module.
+REQUEST_TIMEOUT = 30
 import os
 import sys
 import requests
@@ -32,7 +35,7 @@ if not os.path.exists(JSON_REPOPATH):
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'
     headers = {'Authorization': f'token {get_github_token()}'}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         return markdown.markdown(response.json()['content'])
     
@@ -42,7 +45,7 @@ def get_github_readme(repo):
 def get_gitee_readme(repo):
     url = f'https://gitee.com/api/v5/repos/{repo}/readme'
     headers = {'Authorization': f'token {get_gitee_token()}'}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         return response.json()['content']
     else:
@@ -126,7 +129,7 @@ if __name__ == '__main__':
             'Accept': 'application/vnd.github.v3+json',
             'Authorization': f'token {get_github_token()}'
         }
-        response = requests.get(api_url, headers=headers)
+        response = requests.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             tags = response.json()
             versions = [tag['name'] for tag in tags]
