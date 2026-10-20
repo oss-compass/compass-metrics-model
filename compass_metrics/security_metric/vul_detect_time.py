@@ -1,4 +1,7 @@
 import requests
+
+# Upper bound for every outbound HTTP call in this module.
+REQUEST_TIMEOUT = 30
 from compass_metrics.security_metric.utils import get_github_token,get_gitee_token
 import datetime
 def get_github_versions(repo_url):
@@ -7,7 +10,7 @@ def get_github_versions(repo_url):
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         tags = response.json()
         versions = [tag['name'] for tag in tags]
@@ -21,7 +24,7 @@ def get_gitee_versions(repo_url):
         'Accept': 'application/json',
         'Authorization': f'token {get_gitee_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         tags = response.json()
         versions = [tag['name'] for tag in tags]
@@ -53,7 +56,7 @@ def vul_detect_time(repo_url,version):
             "package": {"name": package},
             "version": version
         }
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             vul_data = response.json()
             if len(vul_data)>0:
