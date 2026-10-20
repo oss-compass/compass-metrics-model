@@ -8,6 +8,8 @@ LastEditTime: 2025-03-24 17:18:09
 '''
 import json
 import os
+import shlex
+import subprocess
 import sys
 import requests
 import tqdm
@@ -34,7 +36,7 @@ if not os.path.exists(TMP_PATH):
 def get_github_readme(repo):
     url = f'https://api.github.com/repos/{repo}/readme'
     headers = {'Authorization': f'token {get_github_token()}'}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=30)
     if response.status_code == 200:
         return markdown.markdown(response.json()['content'])
     
@@ -44,7 +46,7 @@ def get_github_readme(repo):
 def get_gitee_readme(repo):
     url = f'https://gitee.com/api/v5/repos/{repo}/readme'
     headers = {'Authorization': f'token {get_gitee_token()}'}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=30)
     if response.status_code == 200:
         return response.json()['content']
     else:
@@ -94,7 +96,9 @@ def clone_repo(repo_url,version):
     clone_command = f'git clone --branch {version} https://{token}@{repo_url} {clone_path}'
 
 
-    result = os.system(clone_command)
+    # Run without a shell: the command embeds a token and user-supplied refs, and
+    # os.system would hand both to /bin/sh.
+    result = subprocess.run(shlex.split(clone_command)).returncode
 
     if result == 0:
         if os.path.exists(clone_path):
