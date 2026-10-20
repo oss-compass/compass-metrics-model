@@ -282,7 +282,7 @@ class MetricsModel:
             self.weights_hash = get_dict_hash(weights)
         else:
             weights_data = pkg_resources.resource_string('compass_metrics_model', 'resources/weights.yaml')
-            self.weights = yaml.load(weights_data, Loader=yaml.FullLoader)
+            self.weights = yaml.safe_load(weights_data)
             self.weights_hash = None
 
         if type(custom_fields) == dict:
