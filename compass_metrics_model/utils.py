@@ -65,7 +65,8 @@ def get_score_ahp(item, param_dict):
     except ZeroDivisionError:
         return 0.0
 
-def get_activity_score(item, level="repo", w={}):
+def get_activity_score(item, level="repo", w=None):
+    w = w or {}
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
@@ -94,7 +95,8 @@ def get_activity_score(item, level="repo", w={}):
     score = get_score_ahp(item, param_dict)
     return normalize(score, w['MIN_ACTIVITY_SCORE'], w['MAX_ACTIVITY_SCORE'])
 
-def community_support(item, level="repo", w={}):
+def community_support(item, level="repo", w=None):
+    w = w or {}
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
@@ -125,7 +127,8 @@ def community_support(item, level="repo", w={}):
     score = get_score_ahp(item, param_dict)
     return normalize(score, w['MIN_COMMUNITY_SCORE'], w['MAX_COMMUNITY_SCORE'])
 
-def code_quality_guarantee(item, level="repo", w={}):
+def code_quality_guarantee(item, level="repo", w=None):
+    w = w or {}
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
@@ -151,7 +154,8 @@ def code_quality_guarantee(item, level="repo", w={}):
         }
     return get_score_ahp(item, param_dict)
 
-def organizations_activity(item, level="repo", w={}):
+def organizations_activity(item, level="repo", w=None):
+    w = w or {}
     param_dict = {}
     if level == "community" or level == "project":
         param_dict = {
@@ -175,7 +179,8 @@ def increment_decay(last_data, threshold, days):
 def decrease_decay(last_data, threshold, days):
     return max(last_data - DECAY_COEFFICIENT * threshold * days, 0)
 
-def community_decay(item, last_data, level="repo", w={}):
+def community_decay(item, last_data, level="repo", w=None):
+    w = w or {}
     if last_data == None:
         return item
     decay_item = item.copy()
@@ -217,7 +222,8 @@ def community_decay(item, last_data, level="repo", w={}):
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
-def activity_decay(item, last_data, level="repo", w={}):
+def activity_decay(item, last_data, level="repo", w=None):
+    w = w or {}
     if last_data == None:
         return item
     decay_item = item.copy()
@@ -238,7 +244,8 @@ def activity_decay(item, last_data, level="repo", w={}):
             decay_item[key] = round(decrease_decay(last_data[key][0], value, days), 4)
     return decay_item
 
-def code_quality_decay(item, last_data, level="repo", w={}):
+def code_quality_decay(item, last_data, level="repo", w=None):
+    w = w or {}
     if last_data == None:
         return item
     decay_item = item.copy()
