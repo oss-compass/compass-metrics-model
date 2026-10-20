@@ -1,4 +1,7 @@
 from compass_common.opensearch_utils import get_client, get_helpers as helpers
+
+# Upper bound for every outbound HTTP call in this module.
+REQUEST_TIMEOUT = 30
 from compass_common.datetime import datetime_utcnow
 from compass_common.uuid_utils import get_uuid
 from compass_metrics.db_dsl import get_base_index_mapping
@@ -154,10 +157,10 @@ class ContributorOrgService:
             while True:
                 url = f"{cncf_gitdm_url}/master/{file_url}{i}.txt"
                 logger.info(url)
-                response = requests.head(url)
+                response = requests.head(url, timeout=REQUEST_TIMEOUT)
                 if response.status_code != 200:
                     break
-                content_response = requests.get(url)
+                content_response = requests.get(url, timeout=REQUEST_TIMEOUT)
                 content = content_response.text
                 developers = analytic_switch[file_url]()
                 for contributor, org_info_list in developers.items():
