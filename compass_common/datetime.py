@@ -137,7 +137,7 @@ def str_to_datetime(ts):
         return dt
 
     except ValueError as e:
-        raise InvalidDateError(date=str(ts))
+        raise InvalidDateError(date=str(ts)) from None
 
 
 def unixtime_to_datetime(ut):
@@ -158,7 +158,7 @@ def unixtime_to_datetime(ut):
         dt = dt.replace(tzinfo=dateutil.tz.tzutc())
         return dt
     except Exception:
-        raise InvalidDateError(date=str(ut))
+        raise InvalidDateError(date=str(ut)) from None
 
 
 def get_time_diff_months(start, end):
