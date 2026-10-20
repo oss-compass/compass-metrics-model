@@ -117,7 +117,7 @@ def get_github_versions(repo_url,version):
                 
                 return start_time,end_time
             else:
-                raise Exception(f"Failed to get tags. Status code: {response.status_code}")
+                raise RuntimeError(f"Failed to get tags. Status code: {response.status_code}")
         return start_time,end_time
 
 def get_gitee_versions(repo_url,version):
@@ -221,7 +221,7 @@ def get_gitee_versions(repo_url,version):
                 
                 return start_time,end_time
             else:
-                raise Exception(f"Failed to get tags. Status code: {response.status_code}")
+                raise RuntimeError(f"Failed to get tags. Status code: {response.status_code}")
         return start_time,end_time
 
     
