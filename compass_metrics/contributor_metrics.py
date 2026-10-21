@@ -515,7 +515,10 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
         contribution_type_dict = {}
         is_bot_set = set()
         repo_name_set = set()
-        for item in list(group):
+        # groupby 的迭代器只能消费一次：先物化，contribution_weeks 才能
+        # 取到组大小（原实现 for 循环耗尽迭代器后 len(list(group)) 恒为 0）。
+        group_list = list(group)
+        for item in group_list:
             contribution += item["contribution"]
             contribution_without_observe += item["contribution_without_observe"]
             ecological_type_set.add(item["ecological_type"])
@@ -543,7 +546,7 @@ def contributor_detail_list(client, contributors_enriched_index, date, repo_list
             "contribution_type_list": list(contribution_type_dict.values()),
             "is_bot": True if True in is_bot_set else False,
             "repo_name": list(repo_name_set),
-            "contribution_weeks": len(list(group))
+            "contribution_weeks": len(group_list)
         }
         if is_bot is contributor_item["is_bot"]:
             if key not in "openharmony_ci":
