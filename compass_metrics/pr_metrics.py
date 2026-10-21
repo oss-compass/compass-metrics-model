@@ -31,7 +31,7 @@ def pr_open_time(client, pr_index, date, repos_list,  from_date=None):
             if item['_source']['state'] == 'merged' and item['_source']['merged_at'] and item['_source']['merged_at'] < date_str:
                 pr_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['merged_at']))
-            if item['_source']['state'] == 'closed' and item['_source']['closed_at'] or item['_source']['updated_at'] < date_str:
+            elif item['_source']['state'] == 'closed' and (item['_source']['closed_at'] or item['_source']['updated_at']) < date_str:
                 pr_open_time_repo.append(get_time_diff_days(
                     item['_source']['created_at'], item['_source']['closed_at'] or item['_source']['updated_at']))
             else:
