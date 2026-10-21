@@ -387,7 +387,7 @@ def pr_unresponsive_ratio(client, pr_index, date, repo_list, from_date=None):
     total_count = pr_count(client, pr_index, date, repo_list, from_date)["pr_count"]
 
     result = {
-        "pr_unresponsive_ratio": count/total_count if count > 0 else None
+        "pr_unresponsive_ratio": count/total_count if total_count > 0 else None
     }
     return result
 

@@ -172,7 +172,7 @@ def issue_unresponsive_ratio(client, issue_index, date, repo_list, from_date=Non
     total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
 
     result = {
-        "issue_unresponsive_ratio": count/total_count if count > 0 else None
+        "issue_unresponsive_ratio": count/total_count if total_count > 0 else None
     }
     return result
 
@@ -186,7 +186,7 @@ def issue_completion_ratio(client, issue_index, date, repo_list, from_date=None)
     total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
 
     result = {
-        "issue_completion_ratio": count/total_count if count > 0 else None
+        "issue_completion_ratio": count/total_count if total_count > 0 else None
     }
     return result
 
@@ -314,7 +314,7 @@ def issue_completion_ratio_year(client, issue_index, date, repo_list, from_date=
     total_count = issue_count(client, issue_index, date, repo_list, from_date)["issue_count"]
 
     result = {
-        "issue_completion_ratio_year": count/total_count if count > 0 else None
+        "issue_completion_ratio_year": count/total_count if total_count > 0 else None
     }
     return result
 
