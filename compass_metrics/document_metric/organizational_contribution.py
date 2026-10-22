@@ -26,7 +26,7 @@ def get_github_versions(repo_url,version):
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=10)
     
     if response.status_code == 200:
         releases = response.json()
@@ -38,7 +38,7 @@ def get_github_versions(repo_url,version):
             versions = {}
             while 'next' in response.links.keys():
                 next_url = response.links['next']['url']
-                response = requests.get(next_url, headers=headers)
+                response = requests.get(next_url, headers=headers, timeout=10)
                 if response.status_code == 200:
                     releases += response.json()
                 else:
@@ -74,7 +74,7 @@ def get_github_versions(repo_url,version):
 
         if len(versions) == 0 or not flag: #针对tags做查询
             api_url = repo_url.replace("github.com", "api.github.com/repos") + "/tags"
-            response = requests.get(api_url, headers=headers)
+            response = requests.get(api_url, headers=headers, timeout=10)
             if response.status_code == 200:
                 if repo_name_tags in os.listdir(JSON_REPOPATH):
                     tags = load_json(os.path.join(JSON_REPOPATH,repo_name_tags))
@@ -85,7 +85,7 @@ def get_github_versions(repo_url,version):
                     #获取所有的版本信息
                     while 'next' in response.links.keys():
                         next_url = response.links['next']['url']
-                        response = requests.get(next_url, headers=headers)
+                        response = requests.get(next_url, headers=headers, timeout=10)
                         if response.status_code == 200:
                             tags += response.json()
                         else:
@@ -94,7 +94,7 @@ def get_github_versions(repo_url,version):
                     #对每个tag进行处理
                     for tag in tags:#通过二次发送获取commit
                         api_tags_url = tag["commit"]["url"]
-                        response = requests.get(api_tags_url, headers=headers)
+                        response = requests.get(api_tags_url, headers=headers, timeout=10)
                         if response.status_code == 200:
                             commit_date = response.json()["commit"]["committer"]["date"]
                         else:
@@ -130,7 +130,7 @@ def get_gitee_versions(repo_url,version):
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=10)
     
     if response.status_code == 200:
         releases = response.json()
@@ -142,7 +142,7 @@ def get_gitee_versions(repo_url,version):
             versions = {}
             while 'next' in response.links.keys():
                 next_url = response.links['next']['url']
-                response = requests.get(next_url, headers=headers)
+                response = requests.get(next_url, headers=headers, timeout=10)
                 if response.status_code == 200:
                     releases += response.json()
                 else:
@@ -178,7 +178,7 @@ def get_gitee_versions(repo_url,version):
 
         if len(versions) == 0 or not flag: #针对tags做查询
             api_url = repo_url.replace("gitee.com", "gitee.com/api/v5/repos") + "/tags"
-            response = requests.get(api_url, headers=headers)
+            response = requests.get(api_url, headers=headers, timeout=10)
             if response.status_code == 200:
                 if repo_name_tags in os.listdir(JSON_REPOPATH):
                     tags = load_json(os.path.join(JSON_REPOPATH,repo_name_tags))
@@ -189,7 +189,7 @@ def get_gitee_versions(repo_url,version):
                     #获取所有的版本信息
                     while 'next' in response.links.keys():
                         next_url = response.links['next']['url']
-                        response = requests.get(next_url, headers=headers)
+                        response = requests.get(next_url, headers=headers, timeout=10)
                         if response.status_code == 200:
                             tags += response.json()
                         else:
@@ -198,7 +198,7 @@ def get_gitee_versions(repo_url,version):
                     #对每个tag进行处理
                     for tag in tags:#通过二次发送获取commit
                         api_tags_url = tag["commit"]["url"]
-                        response = requests.get(api_tags_url, headers=headers)
+                        response = requests.get(api_tags_url, headers=headers, timeout=10)
                         if response.status_code == 200:
                             commit_date = response.json()["commit"]["committer"]["date"]
                         else:

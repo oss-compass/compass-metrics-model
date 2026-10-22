@@ -154,10 +154,10 @@ class ContributorOrgService:
             while True:
                 url = f"{cncf_gitdm_url}/master/{file_url}{i}.txt"
                 logger.info(url)
-                response = requests.head(url)
+                response = requests.head(url, timeout=10)
                 if response.status_code != 200:
                     break
-                content_response = requests.get(url)
+                content_response = requests.get(url, timeout=10)
                 content = content_response.text
                 developers = analytic_switch[file_url]()
                 for contributor, org_info_list in developers.items():

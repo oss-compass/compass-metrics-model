@@ -88,7 +88,7 @@ def get_github_versionPublishAt(repo_url,version):
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'token {get_github_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=10)
     if response.status_code == 200:
         releases = response.json()
         for release in releases:
@@ -103,7 +103,7 @@ def get_gitee_versionPublishAt(repo_url,version):
         'Accept': 'application/json',
         'Authorization': f'token {get_gitee_token()}'
     }
-    response = requests.get(api_url, headers=headers)
+    response = requests.get(api_url, headers=headers, timeout=10)
     if response.status_code == 200:
         releases = response.json()
         for release in releases:
