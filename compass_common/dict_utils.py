@@ -4,4 +4,4 @@ def deep_get(dictionary, keys, default=None):
         if dictionary is None:
             return default
         dictionary = dictionary.get(key)
-    return dictionary or default
+    return dictionary if dictionary is not None else default
