@@ -76,7 +76,11 @@ def get_file_commit_time(repo_url, file_path, platform='gitub'):
     '''Get the commit time of a file from a GitHub repository'''
     repo_name = repo_url.split('/')[-1]
     owner = repo_url.split('/')[-2]
-    file_path = file_path.replace(repo_name, '')[1:]
+    # doc_num saves paths as "<repo_dir>/<relative path>" (repo_dir is the
+    # versioned clone directory, e.g. "numpy-1.0"). Drop that leading
+    # component to get the repo-root-relative path the commits API expects.
+    if '/' in file_path:
+        file_path = file_path.split('/', 1)[1]
     commits_url = f"https://api.github.com/repos/{owner}/{repo_name}/commits?path={file_path}"
     # print(commits_url)
     if platform == 'github':
