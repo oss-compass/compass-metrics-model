@@ -45,7 +45,7 @@ class VulnerabilityMetrics:
                 continue
             ans["vul_detect_time"] += avg_time["vul_detect_time"] / len(self.repo_list)
 
-            ans.append(
+            ans["vul_detect_time_details"].append(
                 {
                     "repo_url": key,
                     "vul_detect_time_details": avg_time["vul_detect_time"],
