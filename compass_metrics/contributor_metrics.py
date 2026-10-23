@@ -103,7 +103,7 @@ def pr_review_contributor_count(client, contributors_index, date, repo_list):
     result = {
         "pr_review_contributor_count": contributor_count,
         "pr_review_contributor_count_bot": contributor_count_bot,
-        "pr_review_contributor_count_bot": contributor_count_without_bot
+        "pr_review_contributor_count_without_bot": contributor_count_without_bot
     }
     return result
 
