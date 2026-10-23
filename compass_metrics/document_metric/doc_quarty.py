@@ -107,7 +107,7 @@ def doc_quarty_all(url,version):
     json_path = os.path.join(JSON_REPOPATH, f"{repo_name}.json")
 
     if f"{repo_name}.json" not in os.listdir(JSON_REPOPATH):
-        return ValueError(f"Start by performing the document quantity metric...")
+        raise ValueError(f"Start by performing the document quantity metric...")
 
     zh_files = find_doc_quarty_files(json_path)
     return zh_files
