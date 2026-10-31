@@ -70,7 +70,10 @@ def count_documents_from_Readme(markdown)->tuple:
     for line in markdown_split:
         # Check for links in <a> tags
         if "<a href" in line:
-            link = line.split('href="')[1].split('"')[0].replace(")", "")
+            match = re.search(r'href\s*=\s*["\']([^"\']+)["\']', line)
+            if not match:
+                continue
+            link = match.group(1).replace(")", "")
             if not any(video_site in link for video_site in video_sites):
                 link_count += 1
                 links.append(
