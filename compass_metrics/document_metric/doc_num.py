@@ -140,7 +140,7 @@ def get_documentation_links_from_repo(repo_url,version,platform='github'):
     if repo_name not in os.listdir(TMP_PATH):
         flag,readme_path = clone_repo(repo_url,version)
         if not flag:
-            ValueError("Repository clone failed.")
+            raise ValueError("Repository clone failed.")
         else:
             print(f"Repository cloned to {readme_path}")
 
@@ -150,7 +150,7 @@ def get_documentation_links_from_repo(repo_url,version,platform='github'):
         # print(f"Repository has already cloned to {readme_path}")
         flag,readme = search_readme_in_folder(readme_path)
     else:
-        ValueError("README file not found in folder.")
+        raise ValueError("README file not found in folder.")
     
 
     document_count, document_details = count_documents_from_folder(readme_path)
