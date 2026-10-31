@@ -108,7 +108,7 @@ def search_readme_in_folder(path)->tuple:
     flag = False
 
     for files in os.listdir(path):
-        if not os.path.isfile(files):
+        if not os.path.isfile(os.path.join(path, files)):
             continue
         
 
